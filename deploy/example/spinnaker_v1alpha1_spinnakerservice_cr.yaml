@@ -1,0 +1,6 @@
+apiVersion: spinnaker.armory.io/v1alpha1
+kind: SpinnakerService
+metadata:
+  name: spinnakerinstallation-v001
+spec:
+  halConfigMap: halconfig-v001
