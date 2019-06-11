@@ -71,3 +71,4 @@ An example can be found in `deploy/example`. If you would like to try it out you
 ```
 $ kubectl apply -f deploy/example/
 ```
+*Note:* The example halconfig provided has some environment specific information. Such as what S3 bucket to use for storage and what namespace to install Spinnaker. You will probably want to look through it and change values that make sense for your environment.
