@@ -144,7 +144,8 @@ func newJobForCR(cr *spinnakerv1alpha1.SpinnakerService) *batchv1.Job {
 					Labels:    labels,
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: "OnFailure",
+					ServiceAccountName: "spinnaker-operator",
+					RestartPolicy:      "OnFailure",
 					Containers: []corev1.Container{
 						{
 							Name:    "halyard",

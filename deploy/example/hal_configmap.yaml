@@ -64,7 +64,7 @@ data:
             omitKinds: []
             customResources: []
             cachingPolicies: []
-            kubeconfigFile: encrypted:s3!r:us-west-2!b:andrew-spin-dev-1!f:secrets/kubecfg-andrew1
+            serviceAccount: true
             oauthScopes: []
             oAuthScopes: []
             onlySpinnakerManaged: false

@@ -14,10 +14,19 @@ rules:
   - events
   - configmaps
   - secrets
+  - namespaces
+  verbs:
+  - '*'
+- apiGroups:
+  - batch
+  - extensions
+  resources:
+  - jobs
   verbs:
   - '*'
 - apiGroups:
   - apps
+  - extensions
   resources:
   - deployments
   - daemonsets
