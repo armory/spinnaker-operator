@@ -9,6 +9,8 @@ spec:
     listKind: SpinnakerServiceList
     plural: spinnakerservices
     singular: spinnakerservice
+    shortNames:
+    - spin
   scope: Namespaced
   subresources:
     status: {}
