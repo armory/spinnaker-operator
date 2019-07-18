@@ -3,10 +3,10 @@ package halconfig
 import "gopkg.in/yaml.v2"
 
 type SpinnakerCompleteConfig struct {
-	Files     map[string]string `json:"files",omitempty`
+	Files       map[string]string `json:"files",omitempty`
 	BinaryFiles map[string][]byte `json:"binary",omitempty`
-	Profiles map[string]string  `json:"profiles",omitempty`
-	HalConfig *HalConfig         `json:"halConfig",omitempty`
+	Profiles    map[string]string `json:"profiles",omitempty`
+	HalConfig   *HalConfig        `json:"halConfig",omitempty`
 }
 
 type HalConfig struct {

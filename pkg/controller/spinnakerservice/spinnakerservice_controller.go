@@ -5,6 +5,7 @@ import (
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/halyard"
+	cmp "github.com/google/go-cmp/cmp"
 	extv1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,10 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	cmp "github.com/google/go-cmp/cmp"
 )
 
-var log = logf.Log.WithName("controller_spinnakerservice")
+var log = logf.Log.WithName("spinnakerservice")
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -30,8 +30,8 @@ func Add(mgr manager.Manager) error {
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	h := halyard.NewService()
 	return &ReconcileSpinnakerService{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
+		client:   mgr.GetClient(),
+		scheme:   mgr.GetScheme(),
 		deployer: newDeployer(h, mgr.GetClient()),
 	}
 }
@@ -70,8 +70,8 @@ var _ reconcile.Reconciler = &ReconcileSpinnakerService{}
 type ReconcileSpinnakerService struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client   client.Client
+	scheme   *runtime.Scheme
 	deployer deployer
 }
 
@@ -97,20 +97,25 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{}, err
 	}
 
 	// Check if we need to redeploy
+	reqLogger.Info("Checking current deployment status")
 	if !cmp.Equal(instance.Status.HalConfig, instance.Spec.HalConfig) {
+		reqLogger.Info("Deploying Spinnaker")
 		err := r.deployer.deploy(instance, r.scheme)
 		if err != nil {
-			return reconcile.Result{Requeue: true}, err
+			return reconcile.Result{}, err
 		}
 		return reconcile.Result{Requeue: true}, nil
 	}
 
+	c := newStatusChecker(r.client)
+	if err = c.checks(); err != nil {
+		return reconcile.Result{}, err
+	}
 	// Check if all deployments are up to date
-
 
 	// Define a new Job object
 	// job := newJobForCR(instance)

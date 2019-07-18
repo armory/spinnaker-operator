@@ -2,9 +2,10 @@ package halyard
 
 import (
 	"testing"
-	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestParse(t *testing.T) {
@@ -36,7 +37,6 @@ spec:
 		assert.Equal(t, int32(2), *d.Spec.Replicas)
 	}
 }
-
 
 func TestParseMultiple(t *testing.T) {
 	var deployment = `
