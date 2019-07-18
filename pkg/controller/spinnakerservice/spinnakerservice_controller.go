@@ -4,20 +4,18 @@ import (
 	"context"
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/armory-io/spinnaker-operator/pkg/halyard"
+	extv1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	cmp "github.com/google/go-cmp/cmp"
 )
 
 var log = logf.Log.WithName("controller_spinnakerservice")
@@ -30,7 +28,12 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileSpinnakerService{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	h := halyard.NewService()
+	return &ReconcileSpinnakerService{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		deployer: newDeployer(h, mgr.GetClient()),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -47,12 +50,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner SpinnakerService
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// Watch for potential object owned by SpinnakerService
+	err = c.Watch(&source.Kind{Type: &extv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &spinnakerv1alpha1.SpinnakerService{},
 	})
+
 	if err != nil {
 		return err
 	}
@@ -69,6 +72,7 @@ type ReconcileSpinnakerService struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	deployer deployer
 }
 
 // Reconcile reads that state of the cluster for a SpinnakerService object and makes changes based on the state read
@@ -93,90 +97,102 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return reconcile.Result{Requeue: true}, err
 	}
+
+	// Check if we need to redeploy
+	if !cmp.Equal(instance.Status.HalConfig, instance.Spec.HalConfig) {
+		err := r.deployer.deploy(instance, r.scheme)
+		if err != nil {
+			return reconcile.Result{Requeue: true}, err
+		}
+		return reconcile.Result{Requeue: true}, nil
+	}
+
+	// Check if all deployments are up to date
+
 
 	// Define a new Job object
-	job := newJobForCR(instance)
+	// job := newJobForCR(instance)
 
-	// Set SpinnakerService instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
-		return reconcile.Result{}, err
-	}
+	// // Set SpinnakerService instance as the owner and controller
+	// if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
+	// 	return reconcile.Result{}, err
+	// }
 
-	// Check if this Job already exists
-	found := &batchv1.Job{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-		err = r.client.Create(context.TODO(), job)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
+	// // Check if this Job already exists
+	// found := &batchv1.Job{}
+	// err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
+	// if err != nil && errors.IsNotFound(err) {
+	// 	reqLogger.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+	// 	err = r.client.Create(context.TODO(), job)
+	// 	if err != nil {
+	// 		return reconcile.Result{}, err
+	// 	}
 
-		// Job created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
-	}
+	// 	// Job created successfully - don't requeue
+	// 	return reconcile.Result{}, nil
+	// } else if err != nil {
+	// 	return reconcile.Result{}, err
+	// }
 
-	// Job already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Job already exists", "Job.Namespace", found.Namespace, "Job.Name", found.Name)
+	// // Job already exists - don't requeue
+	// reqLogger.Info("Skip reconcile: Job already exists", "Job.Namespace", found.Namespace, "Job.Name", found.Name)
 	return reconcile.Result{}, nil
 }
 
 // newJobForCR returns a halyard job with the same name/namespace as the cr.
-func newJobForCR(cr *spinnakerv1alpha1.SpinnakerService) *batchv1.Job {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name,
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: batchv1.JobSpec{
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cr.Name,
-					Namespace: cr.Namespace,
-					Labels:    labels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: "spinnaker-operator",
-					RestartPolicy:      "OnFailure",
-					Containers: []corev1.Container{
-						{
-							Name:    "halyard",
-							Image:   "armory/halyard:operator-poc",
-							Command: []string{"/usr/local/bin/hal-cli", "deploy", "apply"},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "halconfig",
-									MountPath: "/root/.hal/config",
-									SubPath:   "config",
-								},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "halconfig",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: cr.Spec.HalConfigMap,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
+// func newJobForCR(cr *spinnakerv1alpha1.SpinnakerService) *batchv1.Job {
+// 	labels := map[string]string{
+// 		"app": cr.Name,
+// 	}
+// 	return &batchv1.Job{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      cr.Name,
+// 			Namespace: cr.Namespace,
+// 			Labels:    labels,
+// 		},
+// 		Spec: batchv1.JobSpec{
+// 			Template: corev1.PodTemplateSpec{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      cr.Name,
+// 					Namespace: cr.Namespace,
+// 					Labels:    labels,
+// 				},
+// 				Spec: corev1.PodSpec{
+// 					ServiceAccountName: "spinnaker-operator",
+// 					RestartPolicy:      "OnFailure",
+// 					Containers: []corev1.Container{
+// 						{
+// 							Name:    "halyard",
+// 							Image:   "armory/halyard:operator-poc",
+// 							Command: []string{"/usr/local/bin/hal-cli", "deploy", "apply"},
+// 							VolumeMounts: []corev1.VolumeMount{
+// 								{
+// 									Name:      "halconfig",
+// 									MountPath: "/root/.hal/config",
+// 									SubPath:   "config",
+// 								},
+// 							},
+// 						},
+// 					},
+// 					Volumes: []corev1.Volume{
+// 						{
+// 							Name: "halconfig",
+// 							VolumeSource: corev1.VolumeSource{
+// 								ConfigMap: &corev1.ConfigMapVolumeSource{
+// 									LocalObjectReference: corev1.LocalObjectReference{
+// 										Name: cr.Spec.HalConfigMap,
+// 									},
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 	}
+// }
 
 /*
 // newHalConfigMap returns a config map containing the hal config.
