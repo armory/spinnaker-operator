@@ -15,7 +15,7 @@ spec:
       serviceAccountName: spinnaker-operator
       containers:
         - name: spinnaker-operator
-          image: armory/spinnaker-operator:poc
+          image: armory/spinnaker-operator:0.0.1
           command:
           - spinnaker-operator
           imagePullPolicy: Always
@@ -30,3 +30,24 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "spinnaker-operator"
+            - name: HALYARD_GENERATED
+              value: "/var/halyard/generated"
+          volumeMounts:
+          - name: spinnaker-generated-volume
+            mountPath: /var/halyard/generated
+        - name: halyard
+          image: armory/halyard-armory:poc
+          volumeMounts:
+          - name: halyard-config-volume
+            mountPath: /opt/spinnaker/config
+          - name: spinnaker-generated-volume
+            mountPath: /var/halyard/generated
+          ports:
+          - containerPort: 8064
+            protocol: TCP
+      volumes:
+      - name: halyard-config-volume
+        configMap:
+          name: my-halyard-config
+      - name: spinnaker-generated-volume
+        emptyDir: {}
