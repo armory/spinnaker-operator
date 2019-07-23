@@ -32,7 +32,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileSpinnakerService{
 		client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
-		deployer: newDeployer(h, mgr.GetClient()),
+		deployer: newDeployer(h, mgr.GetClient(), Transformers),
 	}
 }
 
@@ -72,7 +72,7 @@ type ReconcileSpinnakerService struct {
 	// that reads objects from the cache and writes to the apiserver
 	client   client.Client
 	scheme   *runtime.Scheme
-	deployer deployer
+	deployer Deployer
 }
 
 // Reconcile reads that state of the cluster for a SpinnakerService object and makes changes based on the state read
@@ -115,103 +115,5 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	if err = c.checks(); err != nil {
 		return reconcile.Result{}, err
 	}
-	// Check if all deployments are up to date
-
-	// Define a new Job object
-	// job := newJobForCR(instance)
-
-	// // Set SpinnakerService instance as the owner and controller
-	// if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
-	// 	return reconcile.Result{}, err
-	// }
-
-	// // Check if this Job already exists
-	// found := &batchv1.Job{}
-	// err = r.client.Get(context.TODO(), types.NamespacedName{Name: job.Name, Namespace: job.Namespace}, found)
-	// if err != nil && errors.IsNotFound(err) {
-	// 	reqLogger.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
-	// 	err = r.client.Create(context.TODO(), job)
-	// 	if err != nil {
-	// 		return reconcile.Result{}, err
-	// 	}
-
-	// 	// Job created successfully - don't requeue
-	// 	return reconcile.Result{}, nil
-	// } else if err != nil {
-	// 	return reconcile.Result{}, err
-	// }
-
-	// // Job already exists - don't requeue
-	// reqLogger.Info("Skip reconcile: Job already exists", "Job.Namespace", found.Namespace, "Job.Name", found.Name)
 	return reconcile.Result{}, nil
 }
-
-// newJobForCR returns a halyard job with the same name/namespace as the cr.
-// func newJobForCR(cr *spinnakerv1alpha1.SpinnakerService) *batchv1.Job {
-// 	labels := map[string]string{
-// 		"app": cr.Name,
-// 	}
-// 	return &batchv1.Job{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      cr.Name,
-// 			Namespace: cr.Namespace,
-// 			Labels:    labels,
-// 		},
-// 		Spec: batchv1.JobSpec{
-// 			Template: corev1.PodTemplateSpec{
-// 				ObjectMeta: metav1.ObjectMeta{
-// 					Name:      cr.Name,
-// 					Namespace: cr.Namespace,
-// 					Labels:    labels,
-// 				},
-// 				Spec: corev1.PodSpec{
-// 					ServiceAccountName: "spinnaker-operator",
-// 					RestartPolicy:      "OnFailure",
-// 					Containers: []corev1.Container{
-// 						{
-// 							Name:    "halyard",
-// 							Image:   "armory/halyard:operator-poc",
-// 							Command: []string{"/usr/local/bin/hal-cli", "deploy", "apply"},
-// 							VolumeMounts: []corev1.VolumeMount{
-// 								{
-// 									Name:      "halconfig",
-// 									MountPath: "/root/.hal/config",
-// 									SubPath:   "config",
-// 								},
-// 							},
-// 						},
-// 					},
-// 					Volumes: []corev1.Volume{
-// 						{
-// 							Name: "halconfig",
-// 							VolumeSource: corev1.VolumeSource{
-// 								ConfigMap: &corev1.ConfigMapVolumeSource{
-// 									LocalObjectReference: corev1.LocalObjectReference{
-// 										Name: cr.Spec.HalConfigMap,
-// 									},
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			},
-// 		},
-// 	}
-// }
-
-/*
-// newHalConfigMap returns a config map containing the hal config.
-func newHalConfigMap(cr *spinnakerv1alpha1.SpinnakerService) *corev1.ConfigMap {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-halconfig",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Data: map[string]string{"config": ""}, // TODO(andrewbackes): stringify the halconfig here
-	}
-}
-*/

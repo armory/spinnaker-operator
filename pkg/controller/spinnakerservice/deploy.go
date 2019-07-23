@@ -8,6 +8,7 @@ import (
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,20 +19,22 @@ type manifestGenerator interface {
 	Generate(spinConfig *halconfig.SpinnakerCompleteConfig) ([]runtime.Object, error)
 }
 
-type deployer struct {
-	m      manifestGenerator
-	client client.Client
+// Deployer is in charge of orchestrating the deployment of Spinnaker configuration
+type Deployer struct {
+	m          manifestGenerator
+	client     client.Client
+	generators []TransformerGenerator
 }
 
-func newDeployer(m manifestGenerator, c client.Client) deployer {
-	return deployer{m: m, client: c}
+func newDeployer(m manifestGenerator, c client.Client, transformers []TransformerGenerator) Deployer {
+	return Deployer{m: m, client: c, generators: transformers}
 }
 
 // deploy takes a SpinnakerService definition and transforms it into manifests to create.
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme) error {
+func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme) error {
 	rLogger := log.WithValues("Service", svc.Name)
 	ctx := context.TODO()
 	rLogger.Info("Retrieving complete Spinnaker configuration")
@@ -40,6 +43,21 @@ func (d *deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 		return err
 	}
 
+	transformers := []Transformer{}
+
+	for _, t := range d.generators {
+		tr, err := t.NewTransformer(*svc, d.client)
+		if err != nil {
+			return err
+		}
+		transformers = append(transformers, tr)
+		if err = tr.TransformConfig(c); err != nil {
+			return err
+		}
+	}
+
+	rLogger.Info("Applying options to Spinnaker config")
+
 	rLogger.Info("Generating manifests with Halyard")
 	l, err := d.m.Generate(c)
 	if err != nil {
@@ -47,21 +65,23 @@ func (d *deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	}
 
 	rLogger.Info("Applying options to generated manifests")
-	t := newTransformer(svc, c, scheme)
-	if err = t.transform(l); err != nil {
-		return err
+	status := svc.Status.DeepCopy()
+	for _, t := range transformers {
+		if err = t.TransformManifests(scheme, c, l, status); err != nil {
+			return err
+		}
 	}
 
 	rLogger.Info("Saving manifests")
-	if err = d.saveManifests(ctx, l); err != nil {
+	if err = d.saveManifests(ctx, l, rLogger); err != nil {
 		return err
 	}
 
-	return d.commitConfigToStatus(ctx, svc)
+	return d.commitConfigToStatus(ctx, svc, status)
 }
 
 // completeConfig retrieves the complete config referenced by SpinnakerService
-func (d *deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*halconfig.SpinnakerCompleteConfig, error) {
+func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*halconfig.SpinnakerCompleteConfig, error) {
 	hc := &halconfig.SpinnakerCompleteConfig{}
 	h := svc.Spec.HalConfig
 	if h.ConfigMap != nil {
@@ -87,8 +107,8 @@ func (d *deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*hal
 
 // populateConfigFromConfigMap iterates through the keys and populate string data into the complete config
 // while keeping unknown keys as binary
-func (d *deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfig.SpinnakerCompleteConfig) error {
-	pr := regexp.MustCompile(`^profiles\/[[:alpha:]]+-local.yml$`)
+func (d *Deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfig.SpinnakerCompleteConfig) error {
+	pr := regexp.MustCompile(`^profiles_[[:alpha:]]+-local.yml$`)
 
 	for k := range cm.Data {
 		switch {
@@ -114,8 +134,8 @@ func (d *deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfi
 	return nil
 }
 
-func (d *deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.SpinnakerCompleteConfig) error {
-	pr := regexp.MustCompile(`^profiles\/[[:alpha:]]+-local.yml$`)
+func (d *Deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.SpinnakerCompleteConfig) error {
+	pr := regexp.MustCompile(`^profiles_[[:alpha:]]+-local.yml$`)
 
 	for k := range s.Data {
 		d, err := base64.StdEncoding.DecodeString(string(s.Data[k]))
@@ -143,9 +163,9 @@ func (d *deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.Spinn
 	return nil
 }
 
-func (d *deployer) saveManifests(ctx context.Context, manifests []runtime.Object) error {
+func (d *Deployer) saveManifests(ctx context.Context, manifests []runtime.Object, logger logr.Logger) error {
 	for i := range manifests {
-		// 	reqLogger.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+		logger.Info("Updating manifest: ", "Name", manifests[i])
 		err := d.client.Create(ctx, manifests[i])
 		if err != nil {
 			return err
@@ -154,8 +174,8 @@ func (d *deployer) saveManifests(ctx context.Context, manifests []runtime.Object
 	return nil
 }
 
-func (d *deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService) error {
+func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
 	svc = svc.DeepCopy()
-	svc.Status.HalConfig = svc.Status.HalConfig
+	svc.Status = *status
 	return d.client.Status().Update(ctx, svc)
 }
