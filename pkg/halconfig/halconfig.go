@@ -23,3 +23,12 @@ func ParseHalConfig(data []byte) (HalConfig, error) {
 	err := yaml.Unmarshal(data, &hc)
 	return hc, err
 }
+
+// NewSpinnakerCompleteConfig returns a new initialized complete config
+func NewSpinnakerCompleteConfig() *SpinnakerCompleteConfig {
+	return &SpinnakerCompleteConfig{
+		Files:       make(map[string]string),
+		BinaryFiles: make(map[string][]byte),
+		Profiles:    make(map[string]string),
+	}
+}

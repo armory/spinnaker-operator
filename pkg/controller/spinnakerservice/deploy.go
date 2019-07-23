@@ -82,7 +82,7 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 
 // completeConfig retrieves the complete config referenced by SpinnakerService
 func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*halconfig.SpinnakerCompleteConfig, error) {
-	hc := &halconfig.SpinnakerCompleteConfig{}
+	hc := halconfig.NewSpinnakerCompleteConfig()
 	h := svc.Spec.HalConfig
 	if h.ConfigMap != nil {
 		cm := corev1.ConfigMap{}
@@ -108,7 +108,7 @@ func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*hal
 // populateConfigFromConfigMap iterates through the keys and populate string data into the complete config
 // while keeping unknown keys as binary
 func (d *Deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfig.SpinnakerCompleteConfig) error {
-	pr := regexp.MustCompile(`^profiles_[[:alpha:]]+-local.yml$`)
+	pr := regexp.MustCompile(`^profiles__[[:alpha:]]+-local.yml$`)
 
 	for k := range cm.Data {
 		switch {
@@ -135,7 +135,7 @@ func (d *Deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfi
 }
 
 func (d *Deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.SpinnakerCompleteConfig) error {
-	pr := regexp.MustCompile(`^profiles_[[:alpha:]]+-local.yml$`)
+	pr := regexp.MustCompile(`^profiles__[[:alpha:]]+-local.yml$`)
 
 	for k := range s.Data {
 		d, err := base64.StdEncoding.DecodeString(string(s.Data[k]))
