@@ -149,7 +149,6 @@ func (in *SpinnakerServiceSpec) DeepCopy() *SpinnakerServiceSpec {
 func (in *SpinnakerServiceStatus) DeepCopyInto(out *SpinnakerServiceStatus) {
 	*out = *in
 	out.HalConfig = in.HalConfig
-	in.Files.DeepCopyInto(&out.Files)
 	if in.Deployment != nil {
 		in, out := &in.Deployment, &out.Deployment
 		*out = make(map[string]SpinnakerDeploymentStatus, len(*in))

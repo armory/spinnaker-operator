@@ -32,6 +32,15 @@ spec:
               value: "spinnaker-operator"
         - name: halyard
           image: armory/halyard-armory:op1
+          volumeMounts:
+          - name: halyard-config-volume
+            mountPath: /opt/spinnaker/config
           ports:
           - containerPort: 8064
             protocol: TCP
+      volumes:
+      - name: halyard-config-volume
+        configMap:
+          name: my-halyard-config
+      - name: spinnaker-generated-volume
+        emptyDir: {}

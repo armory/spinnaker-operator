@@ -53,5 +53,6 @@ rules:
   - spinnaker.armory.io
   resources:
   - '*'
+  - spinnakerservices
   verbs:
   - '*'

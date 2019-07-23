@@ -1,0 +1,131 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: spinnakerservices.spinnaker.armory.io
+spec:
+  group: spinnaker.armory.io
+  names:
+    kind: SpinnakerService
+    listKind: SpinnakerServiceList
+    plural: spinnakerservices
+    singular: spinnakerservice
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            halConfig:
+              properties:
+                configMap:
+                  description: Config map reference if Spinnaker config stored in
+                    a configMap
+                  properties:
+                    name:
+                      description: Name of the configMap or secret
+                      type: string
+                    namespace:
+                      description: Optional namespace for the configMap or secret,
+                        defaults to the CR's namespace
+                      type: string
+                  required:
+                  - name
+                  type: object
+                secret:
+                  description: Config map reference if Spinnaker config stored in
+                    a secret
+                  properties:
+                    name:
+                      description: Name of the configMap or secret
+                      type: string
+                    namespace:
+                      description: Optional namespace for the configMap or secret,
+                        defaults to the CR's namespace
+                      type: string
+                  required:
+                  - name
+                  type: object
+              type: object
+          required:
+          - halConfig
+          type: object
+        status:
+          properties:
+            deployment:
+              additionalProperties:
+                properties:
+                  availableReplicas:
+                    description: Total number of available pods (ready for at least
+                      minReadySeconds) targeted by this deployment.
+                    format: int32
+                    type: integer
+                  lastUpdateTime:
+                    format: date-time
+                    type: string
+                  observedGeneration:
+                    description: Copied from DeploymentStatus, "operator-sdk generate
+                      k8s" doesn't like it. The generation observed by the deployment
+                      controller.
+                    format: int64
+                    type: integer
+                  readyReplicas:
+                    description: Total number of ready pods targeted by this deployment.
+                    format: int32
+                    type: integer
+                  replicas:
+                    description: Total number of non-terminated pods targeted by this
+                      deployment (their labels match the selector).
+                    format: int32
+                    type: integer
+                  unavailableReplicas:
+                    description: Total number of unavailable pods targeted by this
+                      deployment. This is the total number of pods that are still
+                      required for the deployment to have 100% available capacity.
+                      They may either be pods that are running but not yet available
+                      or pods that still have not been created.
+                    format: int32
+                    type: integer
+                  updatedReplicas:
+                    description: Total number of non-terminated pods targeted by this
+                      deployment that have the desired template spec.
+                    format: int32
+                    type: integer
+                type: object
+              description: Services deployment information
+              type: object
+            halConfig:
+              description: Spinnaker Halyard configuration current configured
+              properties:
+                name:
+                  description: Name of the configMap or secret
+                  type: string
+                namespace:
+                  description: Optional namespace for the configMap or secret, defaults
+                    to the CR's namespace
+                  type: string
+              required:
+              - name
+              type: object
+            ready:
+              description: Indicates when all services are ready
+              type: boolean
+          type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

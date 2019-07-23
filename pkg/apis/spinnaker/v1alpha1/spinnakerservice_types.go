@@ -7,20 +7,25 @@ import (
 // SpinnakerServiceSpec defines the desired state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceSpec struct {
-	HalConfig SpinnakerFileSource `json: "halConfig",omitempty`
+	HalConfig SpinnakerFileSource `json:"halConfig" protobuf:"bytes,1,opt,name=halConfig"`
 }
 
 // SpinnakerFileSource represents a source for Spinnaker files
+// +k8s:openapi-gen=true
 type SpinnakerFileSource struct {
-	ConfigMap *SpinnakerFileSourceReference `json: "configMap",omitempty`
-	Secret    *SpinnakerFileSourceReference `json: "secret",omitempty`
+	// Config map reference if Spinnaker config stored in a configMap
+	ConfigMap *SpinnakerFileSourceReference `json:"configMap,omitempty"`
+	// Config map reference if Spinnaker config stored in a secret
+	Secret *SpinnakerFileSourceReference `json:"secret,omitempty"`
 }
 
 // SpinnakerFileSourceReference represents a reference to a secret or file
 // that is optionally namespaced
 type SpinnakerFileSourceReference struct {
-	Name      string `json: "name",omitempty`
-	Namespace string `json: "namespace",omitempty`
+	// Name of the configMap or secret
+	Name string `json:"name"`
+	// Optional namespace for the configMap or secret, defaults to the CR's namespace
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // SpinnakerDeploymentStatus represents the deployment status of a single service
@@ -57,11 +62,12 @@ type SpinnakerDeploymentStatus struct {
 // SpinnakerServiceStatus defines the observed state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceStatus struct {
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	HalConfig  SpinnakerFileSourceReference         `json: "halConfig",omitempty`
-	Files      SpinnakerFileSource                  `json: "files",omitempty`
-	Deployment map[string]SpinnakerDeploymentStatus `json: "deployment",omitempty`
-	Ready      bool                                 `json: "ready",omitempty`
+	// Spinnaker Halyard configuration current configured
+	HalConfig SpinnakerFileSourceReference `json:"halConfig,omitempty"`
+	// Services deployment information
+	Deployment map[string]SpinnakerDeploymentStatus `json:"deployment,omitempty"`
+	// Indicates when all services are ready
+	Ready bool `json:"ready,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
