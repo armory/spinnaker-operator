@@ -65,7 +65,27 @@ spec:
           type: object
         status:
           properties:
-            deployment:
+            halConfig:
+              description: Spinnaker Halyard configuration current configured
+              properties:
+                name:
+                  description: Name of the configMap or secret
+                  type: string
+                namespace:
+                  description: Optional namespace for the configMap or secret, defaults
+                    to the CR's namespace
+                  type: string
+              required:
+              - name
+              type: object
+            lastConfigurationTime:
+              description: Last time the configuration was updated
+              format: date-time
+              type: string
+            ready:
+              description: Indicates when all services are ready
+              type: boolean
+            services:
               additionalProperties:
                 properties:
                   availableReplicas:
@@ -107,22 +127,9 @@ spec:
                 type: object
               description: Services deployment information
               type: object
-            halConfig:
-              description: Spinnaker Halyard configuration current configured
-              properties:
-                name:
-                  description: Name of the configMap or secret
-                  type: string
-                namespace:
-                  description: Optional namespace for the configMap or secret, defaults
-                    to the CR's namespace
-                  type: string
-              required:
-              - name
-              type: object
-            ready:
-              description: Indicates when all services are ready
-              type: boolean
+            version:
+              description: Current deployed version of Spinnaker
+              type: string
           type: object
   version: v1alpha1
   versions:

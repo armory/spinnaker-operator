@@ -113,13 +113,26 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 			SchemaProps: spec.SchemaProps{
 				Description: "SpinnakerServiceStatus defines the observed state of SpinnakerService",
 				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Current deployed version of Spinnaker",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastConfigurationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Last time the configuration was updated",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"halConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Spinnaker Halyard configuration current configured",
 							Ref:         ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference"),
 						},
 					},
-					"deployment": {
+					"services": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Services deployment information",
 							Type:        []string{"object"},
@@ -143,6 +156,6 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference"},
+			"./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
