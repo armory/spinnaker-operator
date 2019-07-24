@@ -27,7 +27,7 @@ func NewService() *Service {
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
-func (s *Service) Generate(spinConfig *halconfig.SpinnakerCompleteConfig) ([]runtime.Object, error) {
+func (s *Service) Generate(spinConfig *halconfig.SpinnakerConfig) ([]runtime.Object, error) {
 	req, err := s.newHalyardRequest(spinConfig)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (s *Service) parse(d []byte, a []runtime.Object) ([]runtime.Object, error) 
 	return a, err
 }
 
-func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerCompleteConfig) (*http.Request, error) {
+func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	// Add config
@@ -70,22 +70,22 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerCompleteConfi
 	if err != nil {
 		return nil, err
 	}
-	if err = s.addPart(writer, "config", "config", b); err != nil {
+	if err = s.addPart(writer, "config", b); err != nil {
 		return nil, err
 	}
 
 	for k := range spinConfig.Files {
-		if err := s.addPart(writer, "file", k, []byte(spinConfig.Files[k])); err != nil {
+		if err := s.addPart(writer, k, []byte(spinConfig.Files[k])); err != nil {
 			return nil, err
 		}
 	}
 	for k := range spinConfig.Profiles {
-		if err := s.addPart(writer, "profile", k, []byte(spinConfig.Profiles[k])); err != nil {
+		if err := s.addPart(writer, k, []byte(spinConfig.Profiles[k])); err != nil {
 			return nil, err
 		}
 	}
 	for k := range spinConfig.BinaryFiles {
-		if err := s.addPart(writer, "binary", k, spinConfig.BinaryFiles[k]); err != nil {
+		if err := s.addPart(writer, k, spinConfig.BinaryFiles[k]); err != nil {
 			return nil, err
 		}
 	}
@@ -100,8 +100,8 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerCompleteConfi
 	return req, err
 }
 
-func (s *Service) addPart(writer *multipart.Writer, param string, key string, content []byte) error {
-	part, err := writer.CreateFormFile(param, key)
+func (s *Service) addPart(writer *multipart.Writer, param string, content []byte) error {
+	part, err := writer.CreateFormFile(param, param)
 	if err != nil {
 		return err
 	}

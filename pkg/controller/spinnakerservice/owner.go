@@ -20,12 +20,12 @@ func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.Spinnak
 }
 
 // TransformConfig is a nop
-func (t *ownerTransformer) TransformConfig(hc *halconfig.SpinnakerCompleteConfig) error {
+func (t *ownerTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
 	return nil
 }
 
 // transform adjusts settings to the configuration
-func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerCompleteConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
 	// Set owner
 	for i := range manifests {
 		o, ok := manifests[i].(metav1.Object)

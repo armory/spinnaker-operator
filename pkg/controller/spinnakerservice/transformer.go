@@ -18,8 +18,8 @@ func init() {
 // It can change the Spinnaker configuration itself with TransformConfig.
 // It can also change the manifests before they are updated.
 type Transformer interface {
-	TransformConfig(hc *halconfig.SpinnakerCompleteConfig) error
-	TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerCompleteConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) error
+	TransformConfig(hc *halconfig.SpinnakerConfig) error
+	TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) error
 }
 
 // TransformerGenerator generates transformers for the given SpinnakerService

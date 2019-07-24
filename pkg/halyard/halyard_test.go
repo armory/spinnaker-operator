@@ -3,6 +3,10 @@ package halyard
 import (
 	"testing"
 
+	"io/ioutil"
+
+	halconfig "github.com/armory-io/spinnaker-operator/pkg/halconfig"
+
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,5 +87,30 @@ items:
 		d, ok := a[0].(*v1beta1.Deployment)
 		assert.True(t, ok)
 		assert.Equal(t, "my-nginx", d.ObjectMeta.Name)
+	}
+}
+
+func TestRequest(t *testing.T) {
+	s := Service{url: "http://localhost:8064"}
+	type halConfig struct {
+		Version string
+	}
+	hc := &halconfig.SpinnakerConfig{
+		// HalConfig: ,
+	}
+	// hc.HalConfig = &halconfig.HalConfig{
+	// 	Version:               "1.14.2",
+	// 	DeploymentEnvironment: halconfig.DeploymentEnvironment{Type: "Distributed"},
+	// }
+
+	req, err := s.newHalyardRequest(hc)
+	if assert.Nil(t, err) {
+		f, _, err := req.FormFile("config")
+		if assert.Nil(t, err) {
+			b, err := ioutil.ReadAll(f)
+			if assert.Nil(t, err) {
+				assert.Equal(t, "rr", string(b))
+			}
+		}
 	}
 }
