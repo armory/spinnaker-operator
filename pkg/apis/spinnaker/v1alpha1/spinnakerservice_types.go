@@ -30,6 +30,9 @@ type SpinnakerFileSourceReference struct {
 
 // SpinnakerDeploymentStatus represents the deployment status of a single service
 type SpinnakerDeploymentStatus struct {
+	// Name of the service deployed
+	Name string `json:"name"`
+	// Last time the service was updated by the operator
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Copied from DeploymentStatus, "operator-sdk generate k8s" doesn't like it.
 	// The generation observed by the deployment controller.
@@ -69,7 +72,7 @@ type SpinnakerServiceStatus struct {
 	// Spinnaker Halyard configuration current configured
 	HalConfig SpinnakerFileSourceReference `json:"halConfig,omitempty"`
 	// Services deployment information
-	Services map[string]SpinnakerDeploymentStatus `json:"services,omitempty"`
+	Services []SpinnakerDeploymentStatus `json:"services,omitempty"`
 	// Indicates when all services are ready
 	Ready bool `json:"ready,omitempty"`
 }

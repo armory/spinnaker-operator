@@ -135,8 +135,8 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 					"services": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Services deployment information",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Ref: ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus"),

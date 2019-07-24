@@ -152,9 +152,9 @@ func (in *SpinnakerServiceStatus) DeepCopyInto(out *SpinnakerServiceStatus) {
 	out.HalConfig = in.HalConfig
 	if in.Services != nil {
 		in, out := &in.Services, &out.Services
-		*out = make(map[string]SpinnakerDeploymentStatus, len(*in))
-		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+		*out = make([]SpinnakerDeploymentStatus, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	return

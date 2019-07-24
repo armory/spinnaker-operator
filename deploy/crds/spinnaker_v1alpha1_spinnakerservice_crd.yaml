@@ -86,7 +86,8 @@ spec:
               description: Indicates when all services are ready
               type: boolean
             services:
-              additionalProperties:
+              description: Services deployment information
+              items:
                 properties:
                   availableReplicas:
                     description: Total number of available pods (ready for at least
@@ -94,7 +95,11 @@ spec:
                     format: int32
                     type: integer
                   lastUpdateTime:
+                    description: Last time the service was updated by the operator
                     format: date-time
+                    type: string
+                  name:
+                    description: Name of the service deployed
                     type: string
                   observedGeneration:
                     description: Copied from DeploymentStatus, "operator-sdk generate
@@ -124,9 +129,10 @@ spec:
                       deployment that have the desired template spec.
                     format: int32
                     type: integer
+                required:
+                - name
                 type: object
-              description: Services deployment information
-              type: object
+              type: array
             version:
               description: Current deployed version of Spinnaker
               type: string
