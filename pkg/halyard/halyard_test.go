@@ -1,6 +1,7 @@
 package halyard
 
 import (
+	"strings"
 	"testing"
 
 	"io/ioutil"
@@ -95,21 +96,24 @@ func TestRequest(t *testing.T) {
 	type halConfig struct {
 		Version string
 	}
-	hc := &halconfig.SpinnakerConfig{
-		// HalConfig: ,
-	}
-	// hc.HalConfig = &halconfig.HalConfig{
-	// 	Version:               "1.14.2",
-	// 	DeploymentEnvironment: halconfig.DeploymentEnvironment{Type: "Distributed"},
-	// }
-
-	req, err := s.newHalyardRequest(hc)
+	hc := &halconfig.SpinnakerConfig{}
+	c := `
+name: default
+version: 1.14.2
+deploymentEnvironment:
+  size: SMALL
+  type: Distributed
+`
+	err := hc.ParseHalConfig([]byte(c))
 	if assert.Nil(t, err) {
-		f, _, err := req.FormFile("config")
+		req, err := s.newHalyardRequest(hc)
 		if assert.Nil(t, err) {
-			b, err := ioutil.ReadAll(f)
+			f, _, err := req.FormFile("config")
 			if assert.Nil(t, err) {
-				assert.Equal(t, "rr", string(b))
+				b, err := ioutil.ReadAll(f)
+				if assert.Nil(t, err) {
+					assert.True(t, strings.Contains(string(b), "deploymentEnvironment"))
+				}
 			}
 		}
 	}

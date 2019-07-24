@@ -152,11 +152,10 @@ func (d *Deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.Spinn
 		switch {
 		case k == "config":
 			// Read Halconfig
-			c, err := halconfig.ParseHalConfig(d)
+			err := hc.ParseHalConfig(d)
 			if err != nil {
 				return err
 			}
-			hc.HalConfig = &c
 		case pr.MatchString(k):
 			hc.Profiles[k] = string(d)
 		default:
