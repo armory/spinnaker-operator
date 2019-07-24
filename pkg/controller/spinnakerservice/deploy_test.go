@@ -12,7 +12,7 @@ import (
 
 func TestParseConfigMapMissingConfig(t *testing.T) {
 	d := Deployer{}
-	hc := &halconfig.SpinnakerCompleteConfig{}
+	hc := &halconfig.SpinnakerConfig{}
 	cm := corev1.ConfigMap{
 		Data: map[string]string{},
 	}
@@ -24,7 +24,7 @@ func TestParseConfigMapMissingConfig(t *testing.T) {
 
 func TestParseConfigMapUnparseableConfigYaml(t *testing.T) {
 	d := Deployer{}
-	hc := &halconfig.SpinnakerCompleteConfig{}
+	hc := &halconfig.SpinnakerConfig{}
 	cm := corev1.ConfigMap{
 		Data: map[string]string{
 			"config": `$$$$h`,
@@ -39,7 +39,7 @@ func TestParseConfigMapUnparseableConfigYaml(t *testing.T) {
 
 func TestParseConfigMap(t *testing.T) {
 	d := Deployer{}
-	hc := halconfig.NewSpinnakerCompleteConfig()
+	hc := halconfig.NewSpinnakerConfig()
 	cm := corev1.ConfigMap{
 		Data: map[string]string{
 			"config": `

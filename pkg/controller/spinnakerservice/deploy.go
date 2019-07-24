@@ -16,7 +16,7 @@ import (
 )
 
 type manifestGenerator interface {
-	Generate(spinConfig *halconfig.SpinnakerCompleteConfig) ([]runtime.Object, error)
+	Generate(spinConfig *halconfig.SpinnakerConfig) ([]runtime.Object, error)
 }
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
@@ -45,6 +45,7 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 
 	transformers := []Transformer{}
 
+	rLogger.Info("Applying options to Spinnaker config")
 	for _, t := range d.generators {
 		tr, err := t.NewTransformer(*svc, d.client)
 		if err != nil {
@@ -56,8 +57,6 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 		}
 	}
 
-	rLogger.Info("Applying options to Spinnaker config")
-
 	rLogger.Info("Generating manifests with Halyard")
 	l, err := d.m.Generate(c)
 	if err != nil {
@@ -66,8 +65,9 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 
 	rLogger.Info("Applying options to generated manifests")
 	status := svc.Status.DeepCopy()
-	for _, t := range transformers {
-		if err = t.TransformManifests(scheme, c, l, status); err != nil {
+	// Traverse transformers in reverse order
+	for i := range transformers {
+		if err = transformers[len(transformers)-i-1].TransformManifests(scheme, c, l, status); err != nil {
 			return err
 		}
 	}
@@ -81,12 +81,16 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 }
 
 // completeConfig retrieves the complete config referenced by SpinnakerService
-func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*halconfig.SpinnakerCompleteConfig, error) {
-	hc := halconfig.NewSpinnakerCompleteConfig()
+func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*halconfig.SpinnakerConfig, error) {
+	hc := halconfig.NewSpinnakerConfig()
 	h := svc.Spec.HalConfig
 	if h.ConfigMap != nil {
 		cm := corev1.ConfigMap{}
-		err := d.client.Get(context.TODO(), types.NamespacedName{Name: h.ConfigMap.Name, Namespace: h.ConfigMap.Namespace}, &cm)
+		ns := h.ConfigMap.Namespace
+		if ns == "" {
+			ns = svc.ObjectMeta.Namespace
+		}
+		err := d.client.Get(context.TODO(), types.NamespacedName{Name: h.ConfigMap.Name, Namespace: ns}, &cm)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +99,11 @@ func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*hal
 	}
 	if h.Secret != nil {
 		s := corev1.Secret{}
-		err := d.client.Get(context.TODO(), types.NamespacedName{Name: h.Secret.Name, Namespace: h.Secret.Namespace}, &s)
+		ns := h.ConfigMap.Namespace
+		if ns == "" {
+			ns = svc.ObjectMeta.Namespace
+		}
+		err := d.client.Get(context.TODO(), types.NamespacedName{Name: h.Secret.Name, Namespace: ns}, &s)
 		if err != nil {
 			return nil, err
 		}
@@ -107,18 +115,17 @@ func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*hal
 
 // populateConfigFromConfigMap iterates through the keys and populate string data into the complete config
 // while keeping unknown keys as binary
-func (d *Deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfig.SpinnakerCompleteConfig) error {
+func (d *Deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfig.SpinnakerConfig) error {
 	pr := regexp.MustCompile(`^profiles__[[:alpha:]]+-local.yml$`)
 
 	for k := range cm.Data {
 		switch {
 		case k == "config":
 			// Read Halconfig
-			c, err := halconfig.ParseHalConfig([]byte(cm.Data[k]))
+			err := hc.ParseHalConfig([]byte(cm.Data[k]))
 			if err != nil {
 				return err
 			}
-			hc.HalConfig = &c
 		case pr.MatchString(k):
 			hc.Profiles[k] = cm.Data[k]
 		default:
@@ -134,7 +141,7 @@ func (d *Deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfi
 	return nil
 }
 
-func (d *Deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.SpinnakerCompleteConfig) error {
+func (d *Deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.SpinnakerConfig) error {
 	pr := regexp.MustCompile(`^profiles__[[:alpha:]]+-local.yml$`)
 
 	for k := range s.Data {
