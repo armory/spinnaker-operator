@@ -5,6 +5,7 @@ import (
 	"strings"
 	"fmt"
 	"strconv"
+	"errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -39,7 +40,7 @@ func NewSpinnakerConfig() *SpinnakerConfig {
 func (s *SpinnakerConfig) GetHalConfigPropString(prop string) (string, error) {
 	c, err := getConfigProp(s.HalConfig, prop)
 	if err != nil {
-		return "", err
+		return "", nil
 	}
 	if c.Kind() == reflect.String {
 		return c.String(), nil
@@ -47,11 +48,52 @@ func (s *SpinnakerConfig) GetHalConfigPropString(prop string) (string, error) {
 	return "", fmt.Errorf("%s is not a string, found %s", prop, c.Kind().String())
 }
 
+// SetHalConfigProp sets a property in the config
+func (s *SpinnakerConfig) SetHalConfigProp(prop string, value interface{}) (error) {
+	addr := strings.Split(prop, ".")
+	c, err := getConfigPropFromKeys(s.HalConfig, addr[:len(addr) - 1])
+	if err != nil {
+		return nil
+	}
+	name := addr[len(addr)-1]
+	v := reflect.ValueOf(value)
+
+	if c.Kind() == reflect.Map {
+		c.SetMapIndex(reflect.ValueOf(name), v)
+		return nil
+	}
+
+	if c.Kind() != reflect.Ptr {
+		return errors.New("Object must be a pointer to a struct")
+	}
+
+	sVal := c.FieldByName(name)
+
+	if !sVal.IsValid() {
+		return fmt.Errorf("No such field: %s in obj", name)
+	}
+
+	if !sVal.CanSet() {
+		return fmt.Errorf("Cannot set %s field value", name)
+	}
+
+	sType := sVal.Type()
+	if sType != v.Type() {
+		invalidTypeError := errors.New("Provided value type didn't match obj field type")
+		return invalidTypeError
+	}
+
+	sVal.Set(v)
+	return nil
+}
+
+
+
 // GetHalConfigPropBool returns a boolean property in halconfig
-func (s *SpinnakerConfig) GetHalConfigPropBool(prop string) (bool, error) {
+func (s *SpinnakerConfig) GetHalConfigPropBool(prop string, defaultVal bool) (bool, error) {
 	c, err := getConfigProp(s.HalConfig, prop)
 	if err != nil {
-		return false, err
+		return defaultVal, nil
 	}
 	if c.Kind() == reflect.Bool {
 		return c.Bool(), nil
@@ -61,9 +103,12 @@ func (s *SpinnakerConfig) GetHalConfigPropBool(prop string) (bool, error) {
 
 func getConfigProp(obj interface{}, prop string) (reflect.Value, error) {
 	addr := strings.Split(prop, ".")
-	c := reflect.ValueOf(obj)
+	return getConfigPropFromKeys(obj, addr)
+}
 
-	for _, k := range addr {
+func getConfigPropFromKeys(obj interface{}, propKeys []string) (reflect.Value, error) {
+	c := reflect.ValueOf(obj)
+	for _, k := range propKeys {
 		p, err := inspectProperty(c, k)
 		if err != nil {
 			return p, err
@@ -72,6 +117,7 @@ func getConfigProp(obj interface{}, prop string) (reflect.Value, error) {
 	}
 	return c, nil
 }
+
 
 func inspectProperty(v reflect.Value, key string) (reflect.Value, error) {
 	var i reflect.Value

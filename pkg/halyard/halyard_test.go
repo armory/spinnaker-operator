@@ -113,6 +113,7 @@ deploymentEnvironment:
 				b, err := ioutil.ReadAll(f)
 				if assert.Nil(t, err) {
 					assert.True(t, strings.Contains(string(b), "deploymentEnvironment"))
+					assert.True(t, strings.Contains(string(b), "version"))
 				}
 			}
 		}
