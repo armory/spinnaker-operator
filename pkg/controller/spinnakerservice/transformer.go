@@ -11,7 +11,7 @@ import (
 var Transformers []TransformerGenerator
 
 func init() {
-	Transformers = append(Transformers, &ownerTransformerGenerator{})
+	Transformers = append(Transformers, &ownerTransformerGenerator{}, &targetTransformerGenerator{})
 }
 
 // Transformer affects how Spinnaker is deployed.
@@ -19,7 +19,7 @@ func init() {
 // It can also change the manifests before they are updated.
 type Transformer interface {
 	TransformConfig(hc *halconfig.SpinnakerConfig) error
-	TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) error
+	TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) ([]runtime.Object, error)
 }
 
 // TransformerGenerator generates transformers for the given SpinnakerService

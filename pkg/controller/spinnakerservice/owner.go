@@ -25,7 +25,7 @@ func (t *ownerTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error 
 }
 
 // transform adjusts settings to the configuration
-func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) ([]runtime.Object, error) {
 	// Set owner
 	for i := range manifests {
 		o, ok := manifests[i].(metav1.Object)
@@ -33,9 +33,9 @@ func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halcon
 			// Set SpinnakerService instance as the owner and controller
 			err := controllerutil.SetControllerReference(&t.svc, o, scheme)
 			if err != nil {
-				return err
+				return manifests, err
 			}
 		}
 	}
-	return nil
+	return manifests, nil
 }

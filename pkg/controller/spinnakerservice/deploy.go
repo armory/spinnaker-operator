@@ -67,7 +67,7 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	status := svc.Status.DeepCopy()
 	// Traverse transformers in reverse order
 	for i := range transformers {
-		if err = transformers[len(transformers)-i-1].TransformManifests(scheme, c, l, status); err != nil {
+		if l, err = transformers[len(transformers)-i-1].TransformManifests(scheme, c, l, status); err != nil {
 			return err
 		}
 	}
