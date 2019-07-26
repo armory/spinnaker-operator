@@ -129,7 +129,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 					"halConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Spinnaker Halyard configuration current configured",
-							Ref:         ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference"),
+							Ref:         ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource"),
 						},
 					},
 					"services": {
@@ -156,6 +156,6 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }

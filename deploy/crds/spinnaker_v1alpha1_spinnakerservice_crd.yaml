@@ -68,15 +68,34 @@ spec:
             halConfig:
               description: Spinnaker Halyard configuration current configured
               properties:
-                name:
-                  description: Name of the configMap or secret
-                  type: string
-                namespace:
-                  description: Optional namespace for the configMap or secret, defaults
-                    to the CR's namespace
-                  type: string
-              required:
-              - name
+                configMap:
+                  description: Config map reference if Spinnaker config stored in
+                    a configMap
+                  properties:
+                    name:
+                      description: Name of the configMap or secret
+                      type: string
+                    namespace:
+                      description: Optional namespace for the configMap or secret,
+                        defaults to the CR's namespace
+                      type: string
+                  required:
+                  - name
+                  type: object
+                secret:
+                  description: Config map reference if Spinnaker config stored in
+                    a secret
+                  properties:
+                    name:
+                      description: Name of the configMap or secret
+                      type: string
+                    namespace:
+                      description: Optional namespace for the configMap or secret,
+                        defaults to the CR's namespace
+                      type: string
+                  required:
+                  - name
+                  type: object
               type: object
             lastConfigurationTime:
               description: Last time the configuration was updated

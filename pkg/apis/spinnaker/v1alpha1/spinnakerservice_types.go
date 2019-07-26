@@ -70,7 +70,7 @@ type SpinnakerServiceStatus struct {
 	// Last time the configuration was updated
 	LastConfigurationTime metav1.Time `json:"lastConfigurationTime,omitempty"`
 	// Spinnaker Halyard configuration current configured
-	HalConfig SpinnakerFileSourceReference `json:"halConfig,omitempty"`
+	HalConfig SpinnakerFileSource `json:"halConfig,omitempty"`
 	// Services deployment information
 	Services []SpinnakerDeploymentStatus `json:"services,omitempty"`
 	// Indicates when all services are ready
