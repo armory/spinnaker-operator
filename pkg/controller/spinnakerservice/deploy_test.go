@@ -4,9 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	corev1 "k8s.io/api/core/v1"
+	cmp "github.com/google/go-cmp/cmp"
+
 )
 
 func TestParseConfigMapMissingConfig(t *testing.T) {
@@ -59,4 +62,16 @@ version: 1.14.2
 		assert.Equal(t, 2, len(hc.Profiles))
 		assert.Equal(t, 1, len(hc.Files))
 	}
+}
+
+
+func TestStatusCheck(t *testing.T) {
+	h := spinnakerv1alpha1.SpinnakerFileSource{
+		ConfigMap: &spinnakerv1alpha1.SpinnakerFileSourceReference{ Name: "test"},
+	}
+	instance := &spinnakerv1alpha1.SpinnakerService{
+		Spec: spinnakerv1alpha1.SpinnakerServiceSpec{HalConfig: h},
+		Status: spinnakerv1alpha1.SpinnakerServiceStatus{HalConfig: h},
+	}
+	assert.True(t, cmp.Equal(instance.Status.HalConfig, instance.Spec.HalConfig))
 }

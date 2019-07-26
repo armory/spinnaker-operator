@@ -85,13 +85,13 @@ providers:
 		if assert.Nil(t, err) {
 			assert.Equal(t, "other", v)
 		}
-		// b, err := h.GetHalConfigPropBool("providers.aws.enabled")
-		// if assert.Nil(t, err) {
-		// 	assert.Equal(t, true, b)
-		// }
-		// v, err = h.GetHalConfigPropString("providers.aws.bakeryDefaults.baseImages.0")
-		// if assert.Nil(t, err) {
-		// 	assert.Equal(t, "test", v)
-		// }
+		b, err := h.GetHalConfigPropBool("providers.aws.enabled", false)
+		if assert.Nil(t, err) {
+			assert.Equal(t, true, b)
+		}
+		v, err = h.GetHalConfigPropString("providers.aws.bakeryDefaults.baseImages.0")
+		if assert.Nil(t, err) {
+			assert.Equal(t, "test", v)
+		}
 	}
 }

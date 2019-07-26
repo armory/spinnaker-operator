@@ -64,23 +64,21 @@ items:
           image: nginx
           ports:
           - containerPort: 80
-- apiVersion: extensions/v1beta1
-  kind: Deployment
+- apiVersion: v1
+  kind: Service
   metadata:
     name: my-other-nginx
   spec:
-    replicas: 1
-    template:
-      metadata:
-        labels:
-          run: my-nginx
-      spec:
-        containers:
-        - name: my-nginx
-          image: nginx
-          ports:
-          - containerPort: 80
-`
+    clusterIP: 10.100.107.90
+    externalTrafficPolicy: Cluster
+    ports:
+    - nodePort: 30739
+      port: 80
+      protocol: TCP
+      targetPort: 8084
+    selector:
+      app: spin
+      cluster: spin-gate`
 	s := Service{}
 	a, err := s.parse([]byte(deployment), make([]runtime.Object, 0))
 	if assert.Nil(t, err) {
@@ -88,6 +86,7 @@ items:
 		d, ok := a[0].(*v1beta1.Deployment)
 		assert.True(t, ok)
 		assert.Equal(t, "my-nginx", d.ObjectMeta.Name)
+		// sv, ok := a[1].()
 	}
 }
 
