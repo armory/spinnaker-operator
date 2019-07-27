@@ -8,6 +8,7 @@ import (
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,7 +17,7 @@ import (
 )
 
 type manifestGenerator interface {
-	Generate(spinConfig *halconfig.SpinnakerConfig) ([]runtime.Object, error)
+	Generate(spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
 }
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
@@ -67,13 +68,13 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	status := svc.Status.DeepCopy()
 	// Traverse transformers in reverse order
 	for i := range transformers {
-		if l, err = transformers[len(transformers)-i-1].TransformManifests(scheme, c, l, status); err != nil {
+		if err = transformers[len(transformers)-i-1].TransformManifests(scheme, c, l, status); err != nil {
 			return err
 		}
 	}
 
 	rLogger.Info("Saving manifests")
-	if err = d.saveManifests(ctx, l, rLogger); err != nil {
+	if err = d.deployConfig(ctx, scheme, l, status, rLogger); err != nil {
 		return err
 	}
 
@@ -169,12 +170,26 @@ func (d *Deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.Spinn
 	return nil
 }
 
-func (d *Deployer) saveManifests(ctx context.Context, manifests []runtime.Object, logger logr.Logger) error {
-	for i := range manifests {
-		logger.Info("Updating manifest: ", "Name", manifests[i])
-		err := d.client.Create(ctx, manifests[i])
-		if err != nil {
-			return err
+func (d *Deployer) saveManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig, logger logr.Logger) error {
+	for k := range gen.Config {
+		s := gen.Config[k]
+		logger.Info(fmt.Sprintf("Saving deployment manifest for %s", k))
+		if s.Deployment != nil {
+			if err := d.client.Create(ctx, s.Deployment); err != nil {
+				return err
+			}
+		}
+		logger.Info(fmt.Sprintf("Saving service manifest for %s", k))
+		if s.Service != nil {
+			if err := d.client.Create(ctx, s.Service); err != nil {
+				return err
+			}
+		}
+		for i := range s.Resources {
+			logger.Info(fmt.Sprintf("Saving resource manifest for %s", k))
+			if err := d.client.Create(ctx, s.Resources[i]); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

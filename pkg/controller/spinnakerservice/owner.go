@@ -3,7 +3,7 @@ package spinnakerservice
 import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -25,17 +25,21 @@ func (t *ownerTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error 
 }
 
 // transform adjusts settings to the configuration
-func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) ([]runtime.Object, error) {
-	// Set owner
-	for i := range manifests {
-		o, ok := manifests[i].(metav1.Object)
-		if ok {
-			// Set SpinnakerService instance as the owner and controller
-			err := controllerutil.SetControllerReference(&t.svc, o, scheme)
-			if err != nil {
-				return manifests, err
+func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+	// Set SpinnakerService instance as the owner and controller
+	for k := range gen.Config {
+		s := gen.Config[k]
+		if s.Deployment != nil {
+			if err := controllerutil.SetControllerReference(&t.svc, s.Deployment, scheme); err != nil {
+				return err
 			}
 		}
+		if s.Service != nil {
+			if err := controllerutil.SetControllerReference(&t.svc, s.Service, scheme); err != nil {
+				return err
+			}
+		}
+		// Don't own the resources, they'll be owned by the Deployment
 	}
-	return manifests, nil
+	return nil
 }

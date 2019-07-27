@@ -7,13 +7,10 @@ import (
 
 	halconfig "github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	yaml "gopkg.in/yaml.v2"
-	api "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"bytes"
 	"io/ioutil"
-
-	"k8s.io/client-go/kubernetes/scheme"
+	"github.com/armory-io/spinnaker-operator/pkg/generated"
 )
 
 // Service is the Halyard implementation of the ManifestGenerator
@@ -27,7 +24,7 @@ func NewService() *Service {
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
-func (s *Service) Generate(spinConfig *halconfig.SpinnakerConfig) ([]runtime.Object, error) {
+func (s *Service) Generate(spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
 	req, err := s.newHalyardRequest(spinConfig)
 	if err != nil {
 		return nil, err
@@ -42,24 +39,13 @@ func (s *Service) Generate(spinConfig *halconfig.SpinnakerConfig) ([]runtime.Obj
 	if err != nil {
 		return nil, err
 	}
-	return s.parse(b, make([]runtime.Object, 0))
+	return s.parse(b)
 }
 
-func (s *Service) parse(d []byte, a []runtime.Object) ([]runtime.Object, error) {
-	decode := scheme.Codecs.UniversalDeserializer().Decode
-	obj, _, err := decode(d, nil, nil)
-	l, ok := obj.(*api.List)
-	if ok {
-		for i := range l.Items {
-			a, err = s.parse(l.Items[i].Raw, a)
-			if err != nil {
-				return a, err
-			}
-		}
-	} else {
-		a = append(a, obj)
-	}
-	return a, err
+func (s *Service) parse(d []byte) (*generated.SpinnakerGeneratedConfig, error) {
+	sgc := &generated.SpinnakerGeneratedConfig{}
+	err := yaml.Unmarshal(d, sgc)
+	return sgc, err
 }
 
 func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*http.Request, error) {

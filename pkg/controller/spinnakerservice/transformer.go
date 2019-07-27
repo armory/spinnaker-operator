@@ -3,6 +3,7 @@ package spinnakerservice
 import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -19,7 +20,7 @@ func init() {
 // It can also change the manifests before they are updated.
 type Transformer interface {
 	TransformConfig(hc *halconfig.SpinnakerConfig) error
-	TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, manifests []runtime.Object, status *spinnakerv1alpha1.SpinnakerServiceStatus) ([]runtime.Object, error)
+	TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error
 }
 
 // TransformerGenerator generates transformers for the given SpinnakerService
