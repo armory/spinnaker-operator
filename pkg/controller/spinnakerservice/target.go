@@ -22,7 +22,7 @@ func (g *targetTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.Spinna
 
 // TransformConfig is a nop
 func (t *targetTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	return nil
+	return hc.SetHalConfigProp("deploymentEnvironment.location", t.svc.ObjectMeta.Namespace)
 }
 
 // transform adjusts settings to the configuration
