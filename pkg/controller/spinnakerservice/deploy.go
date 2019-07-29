@@ -7,8 +7,8 @@ import (
 	"regexp"
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
+	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -196,7 +196,6 @@ func (d *Deployer) saveManifests(ctx context.Context, gen *generated.SpinnakerGe
 }
 
 func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
-	svc = svc.DeepCopy()
-	svc.Status = *status
-	return d.client.Status().Update(ctx, svc)
+	svc.Spec.HalConfig.DeepCopyInto(&svc.Status.HalConfig)
+	return d.client.Status().Update(context.TODO(), svc)
 }
