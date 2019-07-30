@@ -5,12 +5,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"regexp"
+	"time"
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,8 +79,13 @@ func (d *Deployer) deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	if err = d.deployConfig(ctx, scheme, l, status, rLogger); err != nil {
 		return err
 	}
+	v, err := c.GetHalConfigPropString("version")
+	if err != nil {
+		rLogger.Info("Unable to retrieve version from config, ignoring error")
+	}
 
-	return d.commitConfigToStatus(ctx, svc, status)
+	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
+	return d.commitConfigToStatus(ctx, svc, status, v)
 }
 
 // completeConfig retrieves the complete config referenced by SpinnakerService
@@ -195,7 +202,11 @@ func (d *Deployer) saveManifests(ctx context.Context, gen *generated.SpinnakerGe
 	return nil
 }
 
-func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus, version string) error {
 	svc.Spec.HalConfig.DeepCopyInto(&svc.Status.HalConfig)
-	return d.client.Status().Update(context.TODO(), svc)
+	svc.Status.Version = version
+	svc.Status.LastConfigurationTime = metav1.NewTime(time.Now())
+	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
+	// return d.client.Status().Update(context.TODO(), svc)
+	return d.client.Update(ctx, svc)
 }

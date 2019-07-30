@@ -112,7 +112,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	}
 
 	c := newStatusChecker(r.client)
-	if err = c.checks(); err != nil {
+	if err = c.checks(instance); err != nil {
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
