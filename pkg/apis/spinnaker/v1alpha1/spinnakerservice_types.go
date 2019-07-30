@@ -66,14 +66,19 @@ type SpinnakerDeploymentStatus struct {
 // +k8s:openapi-gen=true
 type SpinnakerServiceStatus struct {
 	// Current deployed version of Spinnaker
+	// +optional
 	Version string `json:"version,omitempty"`
 	// Last time the configuration was updated
+	// +optional
 	LastConfigurationTime metav1.Time `json:"lastConfigurationTime,omitempty"`
 	// Spinnaker Halyard configuration current configured
+	// +optional
 	HalConfig SpinnakerFileSource `json:"halConfig,omitempty"`
 	// Services deployment information
+	// +optional
 	Services []SpinnakerDeploymentStatus `json:"services,omitempty"`
 	// Indicates when all services are ready
+	// +optional
 	Ready bool `json:"ready,omitempty"`
 }
 
