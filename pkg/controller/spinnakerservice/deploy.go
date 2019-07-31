@@ -2,9 +2,7 @@ package spinnakerservice
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"regexp"
 	"time"
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
@@ -102,12 +100,12 @@ func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*hal
 		if err != nil {
 			return nil, err
 		}
-		err = d.populateConfigFromConfigMap(cm, hc)
+		err = hc.FromConfigMap(cm)
 		return hc, err
 	}
 	if h.Secret != nil {
 		s := corev1.Secret{}
-		ns := h.ConfigMap.Namespace
+		ns := h.Secret.Namespace
 		if ns == "" {
 			ns = svc.ObjectMeta.Namespace
 		}
@@ -115,66 +113,10 @@ func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService) (*hal
 		if err != nil {
 			return nil, err
 		}
-		err = d.populateConfigFromSecret(s, hc)
+		err = hc.FromSecret(s)
 		return hc, err
 	}
 	return hc, fmt.Errorf("SpinnakerService does not reference configMap or secret. No configuration found")
-}
-
-// populateConfigFromConfigMap iterates through the keys and populate string data into the complete config
-// while keeping unknown keys as binary
-func (d *Deployer) populateConfigFromConfigMap(cm corev1.ConfigMap, hc *halconfig.SpinnakerConfig) error {
-	pr := regexp.MustCompile(`^profiles__[[:alpha:]]+-local.yml$`)
-
-	for k := range cm.Data {
-		switch {
-		case k == "config":
-			// Read Halconfig
-			err := hc.ParseHalConfig([]byte(cm.Data[k]))
-			if err != nil {
-				return err
-			}
-		case pr.MatchString(k):
-			hc.Profiles[k] = cm.Data[k]
-		default:
-			hc.Files[k] = cm.Data[k]
-		}
-	}
-
-	if hc.HalConfig == nil {
-		return fmt.Errorf("Config key could not be found in config map %s", cm.ObjectMeta.Name)
-	}
-
-	hc.BinaryFiles = cm.BinaryData
-	return nil
-}
-
-func (d *Deployer) populateConfigFromSecret(s corev1.Secret, hc *halconfig.SpinnakerConfig) error {
-	pr := regexp.MustCompile(`^profiles__[[:alpha:]]+-local.yml$`)
-
-	for k := range s.Data {
-		d, err := base64.StdEncoding.DecodeString(string(s.Data[k]))
-		if err != nil {
-			return err
-		}
-		switch {
-		case k == "config":
-			// Read Halconfig
-			err := hc.ParseHalConfig(d)
-			if err != nil {
-				return err
-			}
-		case pr.MatchString(k):
-			hc.Profiles[k] = string(d)
-		default:
-			hc.Files[k] = string(d)
-		}
-	}
-
-	if hc.HalConfig == nil {
-		return fmt.Errorf("Config key could not be found in config map %s", s.ObjectMeta.Name)
-	}
-	return nil
 }
 
 func (d *Deployer) saveManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig, logger logr.Logger) error {

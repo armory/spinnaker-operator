@@ -66,7 +66,11 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*htt
 		}
 	}
 	for k := range spinConfig.Profiles {
-		if err := s.addPart(writer, k, []byte(spinConfig.Profiles[k])); err != nil {
+		b, err := yaml.Marshal(spinConfig.Profiles[k])
+		if err != nil {
+			return nil, err
+		}
+		if err = s.addPart(writer, k, b); err != nil {
 			return nil, err
 		}
 	}
