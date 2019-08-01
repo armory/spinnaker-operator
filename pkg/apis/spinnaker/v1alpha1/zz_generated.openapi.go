@@ -11,10 +11,11 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource":    schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSource(ref),
-		"./pkg/apis/spinnaker/v1alpha1.SpinnakerService":       schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref),
-		"./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec":   schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref),
-		"./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus": schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource":       schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSource(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus": schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSourceStatus(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerService":          schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec":      schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus":    schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref),
 	}
 }
 
@@ -41,6 +42,32 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSource(ref common.Reference
 		},
 		Dependencies: []string{
 			"./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference"},
+	}
+}
+
+func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSourceStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SpinnakerFileSourceStatus represents a source for Spinnaker files",
+				Properties: map[string]spec.Schema{
+					"configMap": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Config map reference if Spinnaker config stored in a configMap",
+							Ref:         ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReferenceStatus"),
+						},
+					},
+					"secret": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Config map reference if Spinnaker config stored in a secret",
+							Ref:         ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReferenceStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReferenceStatus"},
 	}
 }
 
@@ -129,7 +156,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 					"halConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Spinnaker Halyard configuration current configured",
-							Ref:         ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource"),
+							Ref:         ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus"),
 						},
 					},
 					"services": {
@@ -156,6 +183,6 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }

@@ -62,6 +62,26 @@ type SpinnakerDeploymentStatus struct {
 	UnavailableReplicas int32 `json:"unavailableReplicas,omitempty" protobuf:"varint,5,opt,name=unavailableReplicas"`
 }
 
+// SpinnakerFileSourceStatus represents a source for Spinnaker files
+// +k8s:openapi-gen=true
+type SpinnakerFileSourceStatus struct {
+	// Config map reference if Spinnaker config stored in a configMap
+	ConfigMap *SpinnakerFileSourceReferenceStatus `json:"configMap,omitempty"`
+	// Config map reference if Spinnaker config stored in a secret
+	Secret *SpinnakerFileSourceReferenceStatus `json:"secret,omitempty"`
+}
+
+// SpinnakerFileSourceReferenceStatus represents a reference to a specific version of a secret or file
+type SpinnakerFileSourceReferenceStatus struct {
+	// Name of the configMap or secret
+	Name string `json:"name"`
+	// Optional namespace for the configMap or secret, defaults to the CR's namespace
+	Namespace string `json:"namespace"`
+	ResourceVersion string `json:"resourceVersion"`
+}
+
+
+
 // SpinnakerServiceStatus defines the observed state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceStatus struct {
@@ -73,7 +93,7 @@ type SpinnakerServiceStatus struct {
 	LastConfigurationTime metav1.Time `json:"lastConfigurationTime,omitempty"`
 	// Spinnaker Halyard configuration current configured
 	// +optional
-	HalConfig SpinnakerFileSource `json:"halConfig,omitempty"`
+	HalConfig SpinnakerFileSourceStatus `json:"halConfig,omitempty"`
 	// Services deployment information
 	// +optional
 	Services []SpinnakerDeploymentStatus `json:"services,omitempty"`

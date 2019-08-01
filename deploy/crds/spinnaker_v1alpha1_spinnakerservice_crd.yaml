@@ -79,8 +79,12 @@ spec:
                       description: Optional namespace for the configMap or secret,
                         defaults to the CR's namespace
                       type: string
+                    resourceVersion:
+                      type: string
                   required:
                   - name
+                  - namespace
+                  - resourceVersion
                   type: object
                 secret:
                   description: Config map reference if Spinnaker config stored in
@@ -93,8 +97,12 @@ spec:
                       description: Optional namespace for the configMap or secret,
                         defaults to the CR's namespace
                       type: string
+                    resourceVersion:
+                      type: string
                   required:
                   - name
+                  - namespace
+                  - resourceVersion
                   type: object
               type: object
             lastConfigurationTime:
