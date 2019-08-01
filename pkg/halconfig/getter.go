@@ -3,8 +3,8 @@ package halconfig
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 func getObjectPropBool(obj interface{}, prop string, defaultVal bool) (bool, error) {
@@ -23,15 +23,30 @@ func getObjectPropString(obj interface{}, prop string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if c.Kind() == reflect.String {
+	switch c.Kind() {
+	case reflect.String:
 		return c.String(), nil
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(c.Int(), 10), nil
+	case reflect.Bool:
+		if c.Bool() {
+			return "true", nil
+		}
+		return "false", nil
 	}
 	return "", fmt.Errorf("%s is not a string, found %s", prop, c.Kind().String())
 }
 
 func getObjectProp(obj interface{}, prop string) (reflect.Value, error) {
 	addr := strings.Split(prop, ".")
-	return getObjectPropFromKeys(obj, addr)
+	v, err := getObjectPropFromKeys(obj, addr)
+	if err != nil && len(addr) > 1 {
+		// Attempt to access the property as "x.y.z" if user specified
+		// x.y.z: somevalue
+		// Not perfect, but most common
+		return getObjectPropFromKeys(obj, []string{prop})
+	}
+	return v, err
 }
 
 func getObjectPropFromKeys(obj interface{}, propKeys []string) (reflect.Value, error) {

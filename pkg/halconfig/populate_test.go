@@ -2,6 +2,7 @@ package halconfig
 
 import (
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -25,8 +26,8 @@ func TestParseConfigMap(t *testing.T) {
 name: default
 version: 1.14.2
 `,
-			"profiles__gate-local.yml": "test: 2",
-			"profiles__orca-local.yml": "test2: true",
+			"profiles__gate-local.yml": "test:\n  deep: abc",
+			"profiles__orca-local.yml": "test.other: def",
 			"files__somefile":          "test3",
 		},
 	}
@@ -38,6 +39,12 @@ version: 1.14.2
 		}
 		assert.Equal(t, 2, len(hc.Profiles))
 		assert.Equal(t, 1, len(hc.Files))
+		s, err := hc.GetServiceConfigPropString("gate", "test.deep")
+		assert.Nil(t, err)
+		assert.Equal(t, "abc", s)
+		s, err = hc.GetServiceConfigPropString("orca", "test.other")
+		assert.Nil(t, err)
+		assert.Equal(t, "def", s)
 	}
 }
 
