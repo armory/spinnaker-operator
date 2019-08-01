@@ -1,4 +1,4 @@
-package spinnakerservice
+package deployer
 
 import (
 	"testing"

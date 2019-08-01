@@ -1,4 +1,4 @@
-package spinnakerservice
+package deployer
 
 import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"

@@ -1,4 +1,4 @@
-package spinnakerservice
+package deployer
 
 import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
@@ -12,7 +12,7 @@ import (
 var Transformers []TransformerGenerator
 
 func init() {
-	Transformers = append(Transformers, &ownerTransformerGenerator{}, &targetTransformerGenerator{})
+	Transformers = append(Transformers, &ownerTransformerGenerator{}, &targetTransformerGenerator{}, &exposeTransformerGenerator{})
 }
 
 // Transformer affects how Spinnaker is deployed.
