@@ -3,11 +3,18 @@ kind: CustomResourceDefinition
 metadata:
   name: spinnakerservices.spinnaker.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.version
+    description: Version
+    name: version
+    type: string
   group: spinnaker.io
   names:
     kind: SpinnakerService
     listKind: SpinnakerServiceList
     plural: spinnakerservices
+    shortNames:
+    - spinsvc
     singular: spinnakerservice
   scope: Namespaced
   subresources:

@@ -105,6 +105,8 @@ type SpinnakerServiceStatus struct {
 // SpinnakerService is the Schema for the spinnakerservices API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="version",type="string",JSONPath=".status.version",description="Version"
+// +kubebuilder:resource:path=spinnakerservices,shortName=spinsvc
 type SpinnakerService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
