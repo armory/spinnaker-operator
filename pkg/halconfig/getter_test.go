@@ -8,17 +8,17 @@ import (
 
 func TestGetProp(t *testing.T) {
 	type inner struct {
-		StrB string
+		StrB  string
 		BoolB bool
 	}
 	m := struct {
-		StrA string
+		StrA  string
 		BoolA bool
 		Inner inner
 	}{
 		"A",
 		true,
-		inner{ StrB: "B", BoolB: true },
+		inner{StrB: "B", BoolB: true},
 	}
 	v, err := getObjectPropString(m, "StrA")
 	if assert.Nil(t, err) {

@@ -1,11 +1,11 @@
 package generated
 
 import (
-	"testing"
-	yaml "gopkg.in/yaml.v2"
 	"github.com/stretchr/testify/assert"
-
+	yaml "gopkg.in/yaml.v2"
+	"testing"
 )
+
 func TestParse(t *testing.T) {
 	var deployment = `
 config:
@@ -129,7 +129,7 @@ config:
               livenessProbe: null
   `
 	g := &SpinnakerGeneratedConfig{}
-  	err := yaml.Unmarshal([]byte(deployment), g)
+	err := yaml.Unmarshal([]byte(deployment), g)
 	if assert.Nil(t, err) {
 		if assert.Equal(t, 1, len(g.Config)) {
 			i := g.Config["igor"]

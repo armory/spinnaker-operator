@@ -9,8 +9,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"bytes"
-	"io/ioutil"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
+	"io/ioutil"
 )
 
 // Service is the Halyard implementation of the ManifestGenerator

@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
-
 func TestRequest(t *testing.T) {
 	s := Service{url: "http://localhost:8064"}
 	type halConfig struct {

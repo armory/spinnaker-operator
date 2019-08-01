@@ -1,11 +1,11 @@
 package halconfig
 
 import (
-	"fmt"
-	"regexp"
 	"encoding/base64"
+	"fmt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	"regexp"
 )
 
 var profileRegex = regexp.MustCompile(`^profiles__([[:alpha:]]+)-local.yml$`)

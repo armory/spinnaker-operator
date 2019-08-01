@@ -48,7 +48,6 @@ providers:
 	}
 }
 
-
 func TestSetHalConfig(t *testing.T) {
 	h := SpinnakerConfig{}
 	var c = `

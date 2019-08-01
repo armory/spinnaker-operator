@@ -76,11 +76,9 @@ type SpinnakerFileSourceReferenceStatus struct {
 	// Name of the configMap or secret
 	Name string `json:"name"`
 	// Optional namespace for the configMap or secret, defaults to the CR's namespace
-	Namespace string `json:"namespace"`
+	Namespace       string `json:"namespace"`
 	ResourceVersion string `json:"resourceVersion"`
 }
-
-
 
 // SpinnakerServiceStatus defines the observed state of SpinnakerService
 // +k8s:openapi-gen=true

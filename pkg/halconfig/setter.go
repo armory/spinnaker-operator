@@ -2,8 +2,8 @@ package halconfig
 
 import (
 	"errors"
-	"reflect"
 	"fmt"
+	"reflect"
 	"strings"
 )
 

@@ -62,14 +62,13 @@ func (d *Deployer) IsConfigUpToDate(instance *spinnakerv1alpha1.SpinnakerService
 	return false
 }
 
-
 func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus, config runtime.Object) error {
 	cm, ok := config.(*corev1.ConfigMap)
 	if ok {
 		status.HalConfig = spinnakerv1alpha1.SpinnakerFileSourceStatus{
 			ConfigMap: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
-				Name: cm.ObjectMeta.Name,
-				Namespace: cm.ObjectMeta.Namespace,
+				Name:            cm.ObjectMeta.Name,
+				Namespace:       cm.ObjectMeta.Namespace,
 				ResourceVersion: cm.ObjectMeta.ResourceVersion,
 			},
 		}
@@ -78,8 +77,8 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alp
 	if ok {
 		status.HalConfig = spinnakerv1alpha1.SpinnakerFileSourceStatus{
 			Secret: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
-				Name: sec.ObjectMeta.Name,
-				Namespace: sec.ObjectMeta.Namespace,
+				Name:            sec.ObjectMeta.Name,
+				Namespace:       sec.ObjectMeta.Namespace,
 				ResourceVersion: sec.ObjectMeta.ResourceVersion,
 			},
 		}
