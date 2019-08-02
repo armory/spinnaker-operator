@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: halconfig-v001
+  name: spinconfig-v001
 data:
   config: |
     name: default
-    version: 1.13.8
+    version: 1.15.0
     providers:
       appengine:
         enabled: false
@@ -249,4 +249,5 @@ data:
       trust:
         enabled: false
   profiles__gate-local.yml: |
-    default.apiPort: 8085
+    default:
+      apiPort: 8085
