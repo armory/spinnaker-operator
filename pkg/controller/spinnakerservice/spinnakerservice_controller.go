@@ -9,16 +9,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -48,7 +44,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileSpinnakerService{
 		client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
-		deployer: deploy.NewDeployer(h, mgr.GetClient(), rawClient, log),
+		deployer: deploy.NewDeployer(h, mgr.GetClient(), rawClient, log, mgr.GetRecorder("spinnaker-controller")),
 	}
 }
 
@@ -78,7 +74,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// +kubebuilder:rbac:groups="",resources=pods,verbs=get;watch;list
 	namespace, _ := k8sutil.GetWatchNamespace()
-	cw := ConfigWatcher{
+	cw := configWatcher{
 		client:    mgr.GetClient(),
 		namespace: namespace,
 	}
@@ -151,62 +147,4 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
-}
-
-type ConfigWatcher struct {
-	client    client.Client
-	namespace string
-	queue     []spinnakerv1alpha1.SpinnakerService
-}
-
-func (c *ConfigWatcher) MatchesConfig(meta metav1.Object) bool {
-	// Get SpinnakerService in either all namespaces and single namespace
-	ss, err := c.getSpinnakerServices()
-	if err != nil {
-		return false
-	}
-	for k := range ss {
-		hcm := ss[k].Status.HalConfig.ConfigMap
-		if hcm != nil && hcm.Name == meta.GetName() && hcm.Namespace == meta.GetNamespace() {
-			c.queue = append(c.queue, ss[k])
-			//TODO fix that
-			return true
-		}
-	}
-	return false
-}
-
-func (c *ConfigWatcher) getSpinnakerServices() ([]spinnakerv1alpha1.SpinnakerService, error) {
-	list := &spinnakerv1alpha1.SpinnakerServiceList{}
-	var opts *client.ListOptions
-	if c.namespace == "" {
-		opts = &client.ListOptions{}
-	} else {
-		opts = &client.ListOptions{Namespace: c.namespace}
-	}
-	err := c.client.List(context.TODO(), opts, list)
-	if err != nil {
-		return nil, err
-	}
-	return list.Items, nil
-}
-
-func (c *ConfigWatcher) Predicate() predicate.Predicate {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return c.MatchesConfig(e.MetaOld)
-		},
-	}
-}
-func (c *ConfigWatcher) Map(handler.MapObject) []reconcile.Request {
-	reqs := make([]reconcile.Request, 0)
-	for k := range c.queue {
-		reqs = append(reqs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      c.queue[k].ObjectMeta.Name,
-				Namespace: c.queue[k].ObjectMeta.Namespace,
-			},
-		})
-	}
-	return reqs
 }

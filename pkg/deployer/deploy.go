@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	rest "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -21,18 +21,23 @@ type manifestGenerator interface {
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
 type Deployer struct {
-	m          manifestGenerator
-	client     client.Client
-	generators []TransformerGenerator
-	log        logr.Logger
-	rawClient  *kubernetes.Clientset
-	restConfig *rest.Config
-	// corev1Client *rest.RESTClient
+	m           manifestGenerator
+	client      client.Client
+	generators  []TransformerGenerator
+	log         logr.Logger
+	rawClient   *kubernetes.Clientset
+	evtRecorder record.EventRecorder
 }
 
 // NewDeployer makes a new deployer
-func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, log logr.Logger) *Deployer {
-	return &Deployer{m: m, client: c, generators: Transformers, rawClient: r, log: log}
+func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, log logr.Logger, evtRecorder record.EventRecorder) *Deployer {
+	return &Deployer{
+		m:           m,
+		client:      c,
+		generators:  Transformers,
+		rawClient:   r,
+		evtRecorder: evtRecorder,
+		log:         log}
 }
 
 // Deploy takes a SpinnakerService definition and transforms it into manifests to create.
@@ -47,6 +52,13 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	if err != nil {
 		return err
 	}
+
+	v, err := c.GetHalConfigPropString("version")
+	if err != nil {
+		rLogger.Info("Unable to retrieve version from config, ignoring error")
+	}
+
+	d.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "Config", "New configuration detected, version: %s", v)
 
 	transformers := []Transformer{}
 
@@ -81,10 +93,8 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	if err = d.deployConfig(ctx, scheme, l, status, rLogger); err != nil {
 		return err
 	}
-	v, err := c.GetHalConfigPropString("version")
-	if err != nil {
-		rLogger.Info("Unable to retrieve version from config, ignoring error")
-	}
+
+	d.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "Config", "Spinnaker version %s deployment set", v)
 
 	status.Version = v
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
