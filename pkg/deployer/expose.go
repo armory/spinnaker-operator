@@ -14,8 +14,8 @@ import (
 
 type exposeTransformer struct {
 	svc      spinnakerv1alpha1.SpinnakerService
-	gateUrl  string
-	deckUrl  string
+	gateURL  string
+	deckURL  string
 	gateX509 int32
 }
 
@@ -27,8 +27,8 @@ func (g *exposeTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.Spinna
 
 // TransformConfig is a nop
 func (t *exposeTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	t.gateUrl, _ = hc.GetHalConfigPropString("security.apiSecurity.overrideBaseUrl")
-	t.deckUrl, _ = hc.GetHalConfigPropString("security.uiSecurity.overrideBaseUrl")
+	t.gateURL, _ = hc.GetHalConfigPropString("security.apiSecurity.overrideBaseUrl")
+	t.deckURL, _ = hc.GetHalConfigPropString("security.uiSecurity.overrideBaseUrl")
 	s, err := hc.GetServiceConfigPropString("gate", "default.apiPort")
 	if err == nil {
 		p, err := strconv.ParseInt(s, 10, 32)
