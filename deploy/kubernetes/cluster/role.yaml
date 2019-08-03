@@ -1,29 +1,35 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: spinnaker-operator
+  name: spinnaker-operator-role
 rules:
 - apiGroups:
   - ""
   resources:
   - pods
-  - services
+  - ingresses/status
   - endpoints
-  - persistentvolumeclaims
+  verbs:
+  - 'get'
+  - 'list'
+  - 'watch'
+- apiGroups:
+  - ""
+  resources:
+  - services
   - events
   - configmaps
   - secrets
   - namespaces
+  - ingresses
   verbs:
-  - '*'
-- apiGroups:
-  - batch
-  - extensions
-  resources:
-  - jobs
-  verbs:
-  - '*'
+  - create
+  - get
+  - list
+  - update
+  - watch
+  - patch
 - apiGroups:
   - apps
   - extensions
@@ -33,7 +39,12 @@ rules:
   - replicasets
   - statefulsets
   verbs:
-  - '*'
+  - create
+  - get
+  - list
+  - update
+  - watch
+  - patch
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -42,16 +53,13 @@ rules:
   - get
   - create
 - apiGroups:
-  - apps
-  resourceNames:
-  - spinnaker-operator
+  - spinnaker.io
   resources:
-  - deployments/finalizers
+  - spinnakerservices
   verbs:
+  - create
+  - get
+  - list
   - update
-- apiGroups:
-  - spinnaker.armory.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
+  - watch
+  - patch
