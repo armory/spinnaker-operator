@@ -37,6 +37,17 @@ all: build
 test: build-dirs Makefile
 	@go test -cover ./...
 
+.PHONY: test-docker
+test-docker: build-dirs Makefile
+	@docker build \
+	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator-test:$(VERSION) \
+	-f build/Dockerfile-test .
+	@echo "Running tests..."
+	@docker run \
+	-v $(PWD):/opt/spinnaker-operator-test \
+	$(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator-test:$(VERSION) \
+	go test -cover ./...
+
 .PHONY: build-dirs
 build-dirs:
 	@echo "Creating build directories ${BUILD_DIR}"
