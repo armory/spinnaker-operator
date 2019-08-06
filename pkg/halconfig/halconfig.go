@@ -1,32 +1,29 @@
 package halconfig
 
-import (
-	yaml "gopkg.in/yaml.v2"
-)
+import "fmt"
 
 // SpinnakerConfig represents the entire configuration loaded with profiles and required files
 type SpinnakerConfig struct {
-	Files       map[string]string      `json:"files,omitempty"`
-	BinaryFiles map[string][]byte      `json:"binary,omitempty"`
-	Profiles    map[string]interface{} `json:"profiles,omitempty"`
-	HalConfig   interface{}            `json:"halConfig,omitempty"`
-}
-
-// ParseHalConfig parses the Halyard configuration
-func (s *SpinnakerConfig) ParseHalConfig(data []byte) error {
-	var hc interface{}
-	err := yaml.Unmarshal(data, &hc)
-	s.HalConfig = hc
-	return err
+	Files           map[string]string      `json:"files,omitempty"`
+	ServiceSettings map[string]interface{} `json:"serviceSettings,omitempty"`
+	BinaryFiles     map[string][]byte      `json:"binary,omitempty"`
+	Profiles        map[string]interface{} `json:"profiles,omitempty"`
+	HalConfig       interface{}            `json:"halConfig,omitempty"`
 }
 
 // NewSpinnakerConfig returns a new initialized complete config
 func NewSpinnakerConfig() *SpinnakerConfig {
 	return &SpinnakerConfig{
-		Files:       make(map[string]string),
-		BinaryFiles: make(map[string][]byte),
-		Profiles:    make(map[string]interface{}),
+		Files:           make(map[string]string),
+		BinaryFiles:     make(map[string][]byte),
+		Profiles:        make(map[string]interface{}),
+		ServiceSettings: make(map[string]interface{}),
 	}
+}
+
+// GetServiceSettingsPropString returns a service settings prop for a given service
+func (s *SpinnakerConfig) GetServiceSettingsPropString(svc, prop string) (string, error) {
+	return getObjectPropString(s.ServiceSettings, fmt.Sprintf("%s.%s", svc, prop))
 }
 
 // GetHalConfigPropString returns a property stored in halconfig

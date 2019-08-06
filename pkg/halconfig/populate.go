@@ -14,14 +14,8 @@ var profileRegex = regexp.MustCompile(`^profiles__([[:alpha:]]+)-local.yml$`)
 // while keeping unknown keys as binary
 func (s *SpinnakerConfig) FromConfigMap(cm corev1.ConfigMap) error {
 	for k := range cm.Data {
-		if k == "config" {
-			// Read Halconfig
-			err := s.ParseHalConfig([]byte(cm.Data[k]))
-			if err != nil {
-				return err
-			}
-		} else {
-			s.fromBytes(k, []byte(cm.Data[k]))
+		if err := s.parse(k, []byte(cm.Data[k])); err != nil {
+			return err
 		}
 	}
 
@@ -40,14 +34,8 @@ func (s *SpinnakerConfig) FromSecret(sec corev1.Secret) error {
 		if err != nil {
 			return err
 		}
-		if k == "config" {
-			// Read Halconfig
-			err := s.ParseHalConfig(d)
-			if err != nil {
-				return err
-			}
-		} else {
-			s.fromBytes(k, d)
+		if err := s.parse(k, d); err != nil {
+			return err
 		}
 	}
 
@@ -57,15 +45,34 @@ func (s *SpinnakerConfig) FromSecret(sec corev1.Secret) error {
 	return nil
 }
 
-func (s *SpinnakerConfig) fromBytes(k string, data []byte) {
+func (s *SpinnakerConfig) parse(key string, data []byte) error {
+	if key == "config" {
+		// Read Halconfig
+		err := s.ParseHalConfig(data)
+		if err != nil {
+			return err
+		}
+	} else if key == "serviceSettings" {
+		err := s.ParseServiceSettings(data)
+		if err != nil {
+			return err
+		}
+	} else {
+		return s.fromBytes(key, data)
+	}
+	return nil
+}
+
+func (s *SpinnakerConfig) fromBytes(k string, data []byte) error {
 	a := profileRegex.FindStringSubmatch(k)
 	if len(a) > 1 {
 		var p interface{}
 		err := yaml.Unmarshal(data, &p)
 		if err == nil {
 			s.Profiles[a[1]] = p
-			return
+			return err
 		}
 	}
 	s.Files[k] = string(data)
+	return nil
 }
