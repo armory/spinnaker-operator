@@ -59,12 +59,23 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*htt
 	if err = s.addPart(writer, "config", b); err != nil {
 		return nil, err
 	}
+	// Add service settings
+	b, err = yaml.Marshal(spinConfig.ServiceSettings)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.addPart(writer, "serviceSettings", b); err != nil {
+		return nil, err
+	}
 
+	// Add required files
 	for k := range spinConfig.Files {
 		if err := s.addPart(writer, k, []byte(spinConfig.Files[k])); err != nil {
 			return nil, err
 		}
 	}
+
+	// Add profile files
 	for k := range spinConfig.Profiles {
 		b, err := yaml.Marshal(spinConfig.Profiles[k])
 		if err != nil {
@@ -74,6 +85,8 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*htt
 			return nil, err
 		}
 	}
+
+	// Add binary files (configMap)
 	for k := range spinConfig.BinaryFiles {
 		if err := s.addPart(writer, k, spinConfig.BinaryFiles[k]); err != nil {
 			return nil, err
