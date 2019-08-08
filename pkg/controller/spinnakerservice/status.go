@@ -59,5 +59,5 @@ func (s *statusChecker) checks(instance *spinnakerv1alpha1.SpinnakerService) err
 	svc := instance.DeepCopy()
 	svc.Status.Services = svcs
 	// Go through the list
-	return s.client.Update(context.Background(), svc)
+	return s.client.Status().Update(context.Background(), svc)
 }

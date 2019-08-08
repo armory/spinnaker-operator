@@ -93,8 +93,8 @@ run-dev:
 # Depends on operator-sdk for now
 .PHONE: debug
 debug:
-	OPERATOR_NAME=local-operator operator-sdk up local \
-	--kubeconfig ~/.kube/config \
-	--namespace ${NAMESPACE} \
-	--enable-delve
+	OPERATOR_NAME=local-operator \
+    WATCH_NAMESPACE=test \
+	dlv debug --headless  --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
+	--kubeconfig ~/.kube/config
 
