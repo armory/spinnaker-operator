@@ -90,5 +90,4 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alp
 	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
 	// TODO Investigate issue on earlier Kubernetes version, works fine in 1.13
 	return d.client.Status().Update(ctx, s)
-	//return d.client.Update(ctx, svc)
 }
