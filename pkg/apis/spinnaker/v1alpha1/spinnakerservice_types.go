@@ -7,7 +7,8 @@ import (
 // SpinnakerServiceSpec defines the desired state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceSpec struct {
-	HalConfig SpinnakerFileSource `json:"halConfig" protobuf:"bytes,1,opt,name=halConfig"`
+	SpinnakerConfig SpinnakerFileSource `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
+	Expose          ExposeConfig        `json:"expose,omitempty"`
 }
 
 // SpinnakerFileSource represents a source for Spinnaker files
@@ -26,6 +27,20 @@ type SpinnakerFileSourceReference struct {
 	Name string `json:"name"`
 	// Optional namespace for the configMap or secret, defaults to the CR's namespace
 	Namespace string `json:"namespace,omitempty"`
+}
+
+// ExposeConfig represents the configuration for exposing Spinnaker
+// +k8s:openapi-gen=true
+type ExposeConfig struct {
+	Type    string              `json:"type,omitempty"`
+	Service ExposeConfigService `json:"service,omitempty"`
+}
+
+// ExposeConfigService represents the configuration for exposing Spinnaker using k8s services
+// +k8s:openapi-gen=true
+type ExposeConfigService struct {
+	Type        string            `json:"type,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // SpinnakerDeploymentStatus represents the deployment status of a single service

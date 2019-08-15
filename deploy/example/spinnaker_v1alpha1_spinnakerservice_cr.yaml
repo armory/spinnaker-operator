@@ -3,6 +3,13 @@ kind: SpinnakerService
 metadata:
   name: spinnaker
 spec:
-  halConfig:
+  spinnakerConfig:
     configMap:
       name: spinconfig-v001
+  expose:
+    type: service
+    service:
+      type: LoadBalancer
+      annotations:
+        "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"
+        "service.beta.kubernetes.io/aws-load-balancer-ssl-ports": "80,443"

@@ -53,8 +53,14 @@ build-dirs:
 	@echo "Creating build directories ${BUILD_DIR}"
 	@mkdir -p $(BUILD_DIR)
 
+# Regenerates CRD yamls out of any changes in spinnakerservice_types.go
+.PHONY: generate
+generate: build-dirs
+	operator-sdk generate k8s
+	operator-sdk generate openapi
+
 .PHONY: build
-build: build-dirs Makefile
+build: build-dirs Makefile generate
 	@echo "Building: $(BINARIES)"
 	@go build -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
 

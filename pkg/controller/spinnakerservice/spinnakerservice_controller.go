@@ -31,8 +31,8 @@ func Add(mgr manager.Manager) error {
 }
 
 type deployer interface {
-	GetConfigObject(svc *spinnakerv1alpha1.SpinnakerService) (runtime.Object, error)
-	IsConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) bool
+	GetSpinnakerConfigObject(svc *spinnakerv1alpha1.SpinnakerService) (runtime.Object, error)
+	IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) (bool, error)
 	Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object) error
 }
 
@@ -127,12 +127,13 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 
 	// Check if we need to redeploy
 	reqLogger.Info("Checking current deployment status")
-	c, err := r.deployer.GetConfigObject(instance)
+	c, err := r.deployer.GetSpinnakerConfigObject(instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	// Check if config has changed
-	if !r.deployer.IsConfigUpToDate(instance, c) {
+	upToDate, err := r.deployer.IsSpinnakerUpToDate(instance, c)
+	if !upToDate {
 		reqLogger.Info("Deploying Spinnaker")
 		err := r.deployer.Deploy(instance, r.scheme, c)
 		if err != nil {

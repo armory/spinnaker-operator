@@ -40,10 +40,13 @@ func (t *exposeTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error
 }
 
 // transform adjusts settings to the configuration
-func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig,
+	gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+
 	gateSvc, ok := gen.Config["gate"]
 	if ok && gateSvc.Service != nil {
-		gateSvc.Service.Spec.Type = "LoadBalancer"
+		gateSvc.Service.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
+		gateSvc.Service.Annotations = t.svc.Spec.Expose.Service.Annotations
 		if t.gateX509 > 0 {
 			if len(gateSvc.Service.Spec.Ports) > 0 {
 				gateSvc.Service.Spec.Ports[0].Name = "gate-tcp"
@@ -58,7 +61,8 @@ func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halco
 	}
 	deckSvc, ok := gen.Config["deck"]
 	if ok {
-		deckSvc.Service.Spec.Type = "LoadBalancer"
+		deckSvc.Service.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
+		deckSvc.Service.Annotations = t.svc.Spec.Expose.Service.Annotations
 	}
 	return nil
 }
