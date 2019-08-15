@@ -60,7 +60,7 @@ generate: build-dirs
 	operator-sdk generate openapi
 
 .PHONY: build
-build: build-dirs Makefile generate
+build: build-dirs Makefile
 	@echo "Building: $(BINARIES)"
 	@go build -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
 
