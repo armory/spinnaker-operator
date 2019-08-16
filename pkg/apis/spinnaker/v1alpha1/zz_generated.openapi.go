@@ -243,6 +243,20 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 							Format:      "",
 						},
 					},
+					"deckUrl": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Exposed Deck URL",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"gateUrl": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Exposed Gate URL",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

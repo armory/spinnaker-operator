@@ -1,7 +1,13 @@
 package deployer
 
 import (
+	"context"
+	"fmt"
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"strconv"
+	"strings"
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
@@ -14,21 +20,41 @@ import (
 
 type exposeTransformer struct {
 	svc      spinnakerv1alpha1.SpinnakerService
-	gateURL  string
-	deckURL  string
 	gateX509 int32
+	log      logr.Logger
+	client   client.Client
 }
 
 type exposeTransformerGenerator struct{}
 
-func (g *exposeTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client) (Transformer, error) {
-	return &exposeTransformer{svc: svc}, nil
+func (g *exposeTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
+	return &exposeTransformer{svc: svc, log: log, client: client}, nil
 }
 
 // TransformConfig is a nop
 func (t *exposeTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	t.gateURL, _ = hc.GetHalConfigPropString("security.apiSecurity.overrideBaseUrl")
-	t.deckURL, _ = hc.GetHalConfigPropString("security.uiSecurity.overrideBaseUrl")
+	// Set exposed urls to hal config if overrideBaseUrl is not set
+	if gateUrl, err := hc.GetHalConfigPropString("security.apiSecurity.overrideBaseUrl"); err != nil {
+		if gateUrl == "" {
+			lbUrl := t.findLoadBalancerUrl("spin-gate")
+			t.log.Info(fmt.Sprintf("Gate overrideBaseUrl not found, setting to %s", lbUrl))
+			err := hc.SetHalConfigProp("security.apiSecurity.overrideBaseUrl", lbUrl)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if deckUrl, err := hc.GetHalConfigPropString("security.uiSecurity.overrideBaseUrl"); err != nil {
+		if deckUrl == "" {
+			lbUrl := t.findLoadBalancerUrl("spin-deck")
+			t.log.Info(fmt.Sprintf("Deck overrideBaseUrl not found, setting to %s", lbUrl))
+			err := hc.SetHalConfigProp("security.uiSecurity.overrideBaseUrl", lbUrl)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	s, err := hc.GetServiceConfigPropString("gate", "default.apiPort")
 	if err == nil {
 		p, err := strconv.ParseInt(s, 10, 32)
@@ -45,8 +71,7 @@ func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halco
 
 	gateSvc, ok := gen.Config["gate"]
 	if ok && gateSvc.Service != nil {
-		gateSvc.Service.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
-		gateSvc.Service.Annotations = t.svc.Spec.Expose.Service.Annotations
+		t.applyExposeServiceConfig("gate-tcp", gateSvc.Service)
 		if t.gateX509 > 0 {
 			if len(gateSvc.Service.Spec.Ports) > 0 {
 				gateSvc.Service.Spec.Ports[0].Name = "gate-tcp"
@@ -60,9 +85,58 @@ func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halco
 		}
 	}
 	deckSvc, ok := gen.Config["deck"]
-	if ok {
-		deckSvc.Service.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
-		deckSvc.Service.Annotations = t.svc.Spec.Expose.Service.Annotations
+	if ok && deckSvc.Service != nil {
+		t.applyExposeServiceConfig("deck-tcp", deckSvc.Service)
 	}
 	return nil
+}
+
+func (t *exposeTransformer) applyExposeServiceConfig(portName string, svc *corev1.Service) {
+	if strings.ToLower(t.svc.Spec.Expose.Type) != "service" {
+		return
+	}
+	if len(svc.Spec.Ports) > 0 {
+		svc.Spec.Ports[0].Name = portName
+	}
+	svc.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
+	svc.Annotations = t.svc.Spec.Expose.Service.Annotations
+}
+
+func (t *exposeTransformer) findLoadBalancerUrl(svcName string) string {
+	svc, err := t.getService(svcName, t.svc.Namespace)
+	if err != nil || svc == nil {
+		return ""
+	}
+	ingresses := svc.Status.LoadBalancer.Ingress
+	if len(ingresses) == 0 {
+		return ""
+	}
+	port := int32(0)
+	for _, p := range svc.Spec.Ports {
+		if strings.Contains(p.Name, "tcp") {
+			port = p.Port
+			break
+		}
+	}
+	protocol := "http://"
+	if port == 443 {
+		protocol = "https://"
+	}
+	url := fmt.Sprintf("%s%s:%d", protocol, ingresses[0].Hostname, port)
+	return url
+}
+
+func (t *exposeTransformer) getService(name string, namespace string) (*corev1.Service, error) {
+	svc := &corev1.Service{}
+	err := t.client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, svc)
+	if err != nil {
+		if statusError, ok := err.(*errors.StatusError); ok {
+			if statusError.ErrStatus.Code == 404 {
+				// if the service doesn't exist that's a normal scenario, not an error
+				return nil, nil
+			}
+		}
+		return nil, err
+	}
+	return svc, nil
 }

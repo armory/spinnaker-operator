@@ -86,6 +86,12 @@ spec:
           type: object
         status:
           properties:
+            deckUrl:
+              description: Exposed Deck URL
+              type: string
+            gateUrl:
+              description: Exposed Gate URL
+              type: string
             halConfig:
               description: Spinnaker Halyard configuration current configured
               properties:

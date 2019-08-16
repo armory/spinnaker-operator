@@ -4,6 +4,7 @@ import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,5 +26,5 @@ type Transformer interface {
 
 // TransformerGenerator generates transformers for the given SpinnakerService
 type TransformerGenerator interface {
-	NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client) (Transformer, error)
+	NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error)
 }

@@ -64,7 +64,7 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 
 	rLogger.Info("Applying options to Spinnaker config")
 	for _, t := range d.generators {
-		tr, err := t.NewTransformer(*svc, d.client)
+		tr, err := t.NewTransformer(*svc, d.client, d.log)
 		if err != nil {
 			return err
 		}

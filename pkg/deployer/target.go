@@ -4,6 +4,7 @@ import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,13 +12,14 @@ import (
 
 type targetTransformer struct {
 	svc spinnakerv1alpha1.SpinnakerService
+	log logr.Logger
 }
 
 type targetTransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *targetTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client) (Transformer, error) {
-	return &targetTransformer{svc: svc}, nil
+func (g *targetTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
+	return &targetTransformer{svc: svc, log: log}, nil
 }
 
 // TransformConfig is a nop

@@ -4,6 +4,7 @@ import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -11,12 +12,13 @@ import (
 
 type ownerTransformer struct {
 	svc spinnakerv1alpha1.SpinnakerService
+	log logr.Logger
 }
 
 type ownerTransformerGenerator struct{}
 
-func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client) (Transformer, error) {
-	return &ownerTransformer{svc: svc}, nil
+func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
+	return &ownerTransformer{svc: svc, log: log}, nil
 }
 
 // TransformConfig is a nop

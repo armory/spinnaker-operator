@@ -187,10 +187,60 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alp
 		}
 	}
 	status.LastConfigurationTime = metav1.NewTime(time.Now())
+	status.DeckUrl = d.findExposedUrl("spin-deck", svc, config)
+	status.GateUrl = d.findExposedUrl("spin-gate", svc, config)
 
 	s := svc.DeepCopy()
 	s.Status = *status
 	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
 	// TODO Investigate issue on earlier Kubernetes version, works fine in 1.13
 	return d.client.Status().Update(ctx, s)
+}
+
+func (d *Deployer) findExposedUrl(svcName string, svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) string {
+	// first look if there is a url configured in hal config
+	overrideUrl := d.findOverrideUrl(svcName, svc, config)
+	if overrideUrl != "" {
+		return overrideUrl
+	} else {
+		// if no override url, take url from exposed load balancer, if any
+		return d.findLoadBalancerUrl(svcName, svc.Namespace)
+	}
+}
+
+func (d *Deployer) findOverrideUrl(svcName string, svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) string {
+	hc, err := d.completeConfig(svc, config)
+	if err != nil {
+		return ""
+	}
+	hcPropName := "security.uiSecurity.overrideBaseUrl"
+	if svcName == "spin-gate" {
+		hcPropName = "security.apiSecurity.overrideBaseUrl"
+	}
+	url, _ := hc.GetHalConfigPropString(hcPropName)
+	return url
+}
+
+func (d *Deployer) findLoadBalancerUrl(svcName string, namespace string) string {
+	svc, err := d.getService(svcName, namespace)
+	if err != nil || svc == nil {
+		return ""
+	}
+	ingresses := svc.Status.LoadBalancer.Ingress
+	if len(ingresses) == 0 {
+		return ""
+	}
+	port := int32(0)
+	for _, p := range svc.Spec.Ports {
+		if strings.Contains(p.Name, "tcp") {
+			port = p.Port
+			break
+		}
+	}
+	protocol := "http://"
+	if port == 443 {
+		protocol = "https://"
+	}
+	url := fmt.Sprintf("%s%s:%d", protocol, ingresses[0].Hostname, port)
+	return url
 }
