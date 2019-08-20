@@ -120,13 +120,13 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref common.Referenc
 			SchemaProps: spec.SchemaProps{
 				Description: "SpinnakerServiceSpec defines the desired state of SpinnakerService",
 				Properties: map[string]spec.Schema{
-					"halConfig": {
+					"spinnakerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource"),
 						},
 					},
 				},
-				Required: []string{"halConfig"},
+				Required: []string{"spinnakerConfig"},
 			},
 		},
 		Dependencies: []string{

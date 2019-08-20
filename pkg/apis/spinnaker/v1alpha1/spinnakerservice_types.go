@@ -7,7 +7,7 @@ import (
 // SpinnakerServiceSpec defines the desired state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceSpec struct {
-	HalConfig SpinnakerFileSource `json:"halConfig" protobuf:"bytes,1,opt,name=halConfig"`
+	SpinnakerConfig SpinnakerFileSource `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
 }
 
 // SpinnakerFileSource represents a source for Spinnaker files

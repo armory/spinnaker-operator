@@ -3,6 +3,6 @@ kind: SpinnakerService
 metadata:
   name: spinnaker
 spec:
-  halConfig:
+  spinnakerConfig:
     configMap:
       name: spinconfig-v001

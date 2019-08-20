@@ -15,7 +15,7 @@ import (
 
 // GetConfigObject retrieves the configObject (configMap or secret) and its version
 func (d *Deployer) GetConfigObject(svc *spinnakerv1alpha1.SpinnakerService) (runtime.Object, error) {
-	h := svc.Spec.HalConfig
+	h := svc.Spec.SpinnakerConfig
 	if h.ConfigMap != nil {
 		cm := corev1.ConfigMap{}
 		ns := h.ConfigMap.Namespace

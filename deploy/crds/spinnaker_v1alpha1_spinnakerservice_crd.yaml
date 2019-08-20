@@ -36,7 +36,7 @@ spec:
           type: object
         spec:
           properties:
-            halConfig:
+            spinnakerConfig:
               properties:
                 configMap:
                   description: Config map reference if Spinnaker config stored in
@@ -68,7 +68,7 @@ spec:
                   type: object
               type: object
           required:
-          - halConfig
+          - spinnakerConfig
           type: object
         status:
           properties:
