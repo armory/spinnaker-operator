@@ -123,10 +123,10 @@ type SpinnakerServiceStatus struct {
 	Ready bool `json:"ready,omitempty"`
 	// Exposed Deck URL
 	// +optional
-	DeckUrl string `json:"deckUrl"`
+	UIUrl string `json:"uiUrl"`
 	// Exposed Gate URL
 	// +optional
-	GateUrl string `json:"gateUrl"`
+	APIUrl string `json:"apiUrl"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

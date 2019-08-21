@@ -58,9 +58,9 @@ func (t *exposeTransformer) setStatusAndOverrideBaseUrl(serviceName string, over
 		return err
 	}
 	if serviceName == "spin-gate" {
-		t.svc.Status.GateUrl = statusUrl
+		t.svc.Status.APIUrl = statusUrl
 	} else if serviceName == "spin-deck" {
-		t.svc.Status.DeckUrl = statusUrl
+		t.svc.Status.UIUrl = statusUrl
 	}
 	if !isFromOverrideBaseUrl {
 		t.log.Info(fmt.Sprintf("Setting %s overrideBaseUrl to: %s", serviceName, statusUrl))

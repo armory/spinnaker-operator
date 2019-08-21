@@ -97,10 +97,7 @@ spec:
           type: object
         status:
           properties:
-            deckUrl:
-              description: Exposed Deck URL
-              type: string
-            gateUrl:
+            apiUrl:
               description: Exposed Gate URL
               type: string
             halConfig:
@@ -198,12 +195,15 @@ spec:
                 - name
                 type: object
               type: array
+            uiUrl:
+              description: Exposed Deck URL
+              type: string
             version:
               description: Current deployed version of Spinnaker
               type: string
           required:
-          - deckUrl
-          - gateUrl
+          - uiUrl
+          - apiUrl
           type: object
   version: v1alpha1
   versions:

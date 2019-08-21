@@ -17,6 +17,9 @@ import (
 	// "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const gateServiceName = "spin-gate"
+const deckServiceName = "spin-deck"
+
 // GetSpinnakerConfigObject retrieves the configObject (configMap or secret) and its version
 func (d *Deployer) GetSpinnakerConfigObject(svc *spinnakerv1alpha1.SpinnakerService) (runtime.Object, error) {
 	h := svc.Spec.SpinnakerConfig
@@ -52,7 +55,7 @@ func (d *Deployer) GetSpinnakerConfigObject(svc *spinnakerv1alpha1.SpinnakerServ
 func (d *Deployer) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) (bool, error) {
 	rLogger := d.log.WithValues("Service", svc.Name)
 	if !d.isHalconfigUpToDate(svc, config) {
-		rLogger.Info("Detected change in halyard configs")
+		rLogger.Info("Detected change in Spinnaker configs")
 		return false, nil
 	}
 
@@ -72,27 +75,19 @@ func (d *Deployer) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, 
 // config in the service spec
 func (d *Deployer) isHalconfigUpToDate(instance *spinnakerv1alpha1.SpinnakerService, config runtime.Object) bool {
 	hcStat := instance.Status.HalConfig
-	//rLogger := d.log.WithValues("Service", instance.Name)
-
 	cm, ok := config.(*corev1.ConfigMap)
 	if ok {
 		cmStatus := hcStat.ConfigMap
-		versionUpToDate := cmStatus != nil && cmStatus.Name == cm.ObjectMeta.Name && cmStatus.Namespace == cm.ObjectMeta.Namespace &&
+		return cmStatus != nil && cmStatus.Name == cm.ObjectMeta.Name && cmStatus.Namespace == cm.ObjectMeta.Namespace &&
 			cmStatus.ResourceVersion == cm.ObjectMeta.ResourceVersion
-		if !versionUpToDate {
-			return false
-		}
 	}
 	sec, ok := config.(*corev1.Secret)
 	if ok {
 		secStatus := hcStat.Secret
-		versionUpToDate := secStatus != nil && secStatus.Name == sec.ObjectMeta.Name && secStatus.Namespace == sec.ObjectMeta.Namespace &&
+		return secStatus != nil && secStatus.Name == sec.ObjectMeta.Name && secStatus.Namespace == sec.ObjectMeta.Namespace &&
 			secStatus.ResourceVersion == sec.ObjectMeta.ResourceVersion
-		if !versionUpToDate {
-			return false
-		}
 	}
-	return true
+	return false
 }
 
 func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService) (bool, error) {
@@ -101,15 +96,15 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 		exposed, err := d.isExposed(svc)
 		return !exposed, err
 	case "service":
-		upToDateDeck, err := d.isExposeServiceUpToDate(svc, "spin-deck")
-		if err != nil {
+		upToDateDeck, err := d.isExposeServiceUpToDate(svc, deckServiceName)
+		if !upToDateDeck || err != nil {
 			return false, err
 		}
-		upToDateGate, err := d.isExposeServiceUpToDate(svc, "spin-gate")
-		if err != nil {
+		upToDateGate, err := d.isExposeServiceUpToDate(svc, gateServiceName)
+		if !upToDateGate || err != nil {
 			return false, err
 		}
-		return upToDateDeck && upToDateGate, nil
+		return true, nil
 	default:
 		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", svc.Spec.Expose.Type)
 	}
@@ -117,11 +112,11 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 
 func (d *Deployer) isExposed(spinSvc *spinnakerv1alpha1.SpinnakerService) (bool, error) {
 	ns := spinSvc.ObjectMeta.Namespace
-	deckSvc, err := d.getService("spin-deck", ns)
+	deckSvc, err := d.getService(deckServiceName, ns)
 	if err != nil {
 		return false, err
 	}
-	gateSvc, err := d.getService("spin-gate", ns)
+	gateSvc, err := d.getService(gateServiceName, ns)
 	if err != nil {
 		return false, err
 	}
@@ -129,7 +124,7 @@ func (d *Deployer) isExposed(spinSvc *spinnakerv1alpha1.SpinnakerService) (bool,
 	deckExposed := deckSvc != nil && deckSvc.Spec.Type == corev1.ServiceType("LoadBalancer")
 	gateExposed := gateSvc != nil && gateSvc.Spec.Type == corev1.ServiceType("LoadBalancer")
 
-	return deckExposed && gateExposed, nil
+	return deckExposed || gateExposed, nil
 }
 
 func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerService, serviceName string) (bool, error) {
@@ -137,7 +132,7 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 	ns := spinSvc.ObjectMeta.Namespace
 	svc, err := d.getService(serviceName, ns)
 	if err != nil {
-		return true, err
+		return false, err
 	}
 	// we need a service to exist, therefore it's not "up to date"
 	if svc == nil {
@@ -158,9 +153,9 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 	}
 
 	// status url is available but not set yet, redeploy
-	statusUrl := spinSvc.Status.GateUrl
+	statusUrl := spinSvc.Status.APIUrl
 	if serviceName == "spin-deck" {
-		statusUrl = spinSvc.Status.DeckUrl
+		statusUrl = spinSvc.Status.UIUrl
 	}
 	if statusUrl == "" {
 		lbUrl, err := d.findLoadBalancerUrl(serviceName, ns)
@@ -257,14 +252,8 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alp
 
 func (d *Deployer) findLoadBalancerUrl(svcName string, namespace string) (string, error) {
 	svc, err := d.getService(svcName, namespace)
-	if err != nil {
+	if err != nil || svc == nil || svc.Spec.Type != corev1.ServiceType("LoadBalancer") {
 		return "", err
-	}
-	if svc == nil {
-		return "", nil
-	}
-	if svc.Spec.Type != corev1.ServiceType("LoadBalancer") {
-		return "", nil
 	}
 	ingresses := svc.Status.LoadBalancer.Ingress
 	if len(ingresses) == 0 {
