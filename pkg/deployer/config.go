@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"net/url"
 	"reflect"
 	"strings"
@@ -13,15 +14,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const gateServiceName = "spin-gate"
-const deckServiceName = "spin-deck"
+const (
+	gateServiceName = "spin-gate"
+	deckServiceName = "spin-deck"
+)
 
-// IsSpinnakerUpToDate returns true if the config in status represents the latest
+// IsConfigUpToDate returns true if the config in status represents the latest
 // config in the service spec
-func (d *Deployer) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) (bool, error) {
+func (d *Deployer) IsConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) (bool, error) {
 	rLogger := d.log.WithValues("Service", svc.Name)
 	if !d.isHalconfigUpToDate(svc, config) {
 		rLogger.Info("Detected change in Spinnaker configs")

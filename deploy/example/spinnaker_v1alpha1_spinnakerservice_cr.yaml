@@ -5,18 +5,10 @@ metadata:
 spec:
   spinnakerConfig:
     configMap:
-      name: spinconfig-v001
+      name: spinconfig-v002
   expose:
     type: service
     service:
       type: LoadBalancer
       annotations:
         "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"
-      overrides:
-        gate:
-          type: ClusterIP
-          annotations:
-            "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol": "*"
-        deck:
-          annotations:
-            "service.beta.kubernetes.io/aws-load-balancer-internal": "false"

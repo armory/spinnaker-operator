@@ -18,7 +18,7 @@ func TestHalconfigChanged(t *testing.T) {
 	spinSvc, cm := buildSpinSvc("123456")
 	cm.ResourceVersion = "999"
 
-	upToDate, err := d.IsSpinnakerUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
@@ -34,7 +34,7 @@ func TestHalconfigUpToDate(t *testing.T) {
 	}
 	spinSvc, cm := buildSpinSvc("123456")
 
-	upToDate, err := d.IsSpinnakerUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
 
 	assert.True(t, upToDate)
 	assert.Nil(t, err)
@@ -52,7 +52,7 @@ func TestExposeConfigChangedNoServicesYet(t *testing.T) {
 	spinSvc.Spec.Expose.Type = "Service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
 
-	upToDate, err := d.IsSpinnakerUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
@@ -70,7 +70,7 @@ func TestExposeConfigUpToDateDontExpose(t *testing.T) {
 	}
 	spinSvc, cm := buildSpinSvc("123456")
 
-	upToDate, err := d.IsSpinnakerUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
 
 	assert.True(t, upToDate)
 	assert.Nil(t, err)
@@ -90,7 +90,7 @@ func TestExposeConfigChangedLoadBalancer(t *testing.T) {
 	spinSvc.Spec.Expose.Type = "Service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
 
-	upToDate, err := d.IsSpinnakerUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
