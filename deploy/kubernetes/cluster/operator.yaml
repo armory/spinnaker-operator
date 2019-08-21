@@ -15,9 +15,9 @@ spec:
       serviceAccountName: spinnaker-operator
       containers:
         - name: spinnaker-operator
-          image: armory/spinnaker-operator:test19
+          image: armory/spinnaker-operator:8e74d09-dirty4
           command:
-          - spinnaker-operator
+            - spinnaker-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -33,5 +33,5 @@ spec:
         - name: halyard
           image: armory/halyard-armory:op10
           ports:
-          - containerPort: 8064
-            protocol: TCP
+            - containerPort: 8064
+              protocol: TCP

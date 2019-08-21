@@ -48,8 +48,9 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	rLogger := d.log.WithValues("Service", svc.Name)
 	ctx := context.TODO()
 	rLogger.Info("Retrieving complete Spinnaker configuration")
-	c, err := d.completeConfig(svc, config)
-	if err != nil {
+
+	c := &halconfig.SpinnakerConfig{}
+	if err := c.FromConfigObject(config); err != nil {
 		return err
 	}
 
@@ -60,7 +61,7 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 
 	d.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "Config", "New configuration detected, version: %s", v)
 
-	transformers := []Transformer{}
+	var transformers []Transformer
 
 	rLogger.Info("Applying options to Spinnaker config")
 	for _, t := range d.generators {
@@ -99,20 +100,4 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	status.Version = v
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
 	return d.commitConfigToStatus(ctx, svc, status, config)
-}
-
-// completeConfig retrieves the complete config referenced by SpinnakerService
-func (d *Deployer) completeConfig(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) (*halconfig.SpinnakerConfig, error) {
-	hc := halconfig.NewSpinnakerConfig()
-	cm, ok := config.(*corev1.ConfigMap)
-	if ok {
-		err := hc.FromConfigMap(*cm)
-		return hc, err
-	}
-	sec, ok := config.(*corev1.Secret)
-	if ok {
-		err := hc.FromSecret(*sec)
-		return hc, err
-	}
-	return hc, fmt.Errorf("SpinnakerService does not reference configMap or secret. No configuration found")
 }
