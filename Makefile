@@ -53,12 +53,6 @@ build-dirs:
 	@echo "Creating build directories ${BUILD_DIR}"
 	@mkdir -p $(BUILD_DIR)
 
-# Regenerates CRD yamls out of any changes in spinnakerservice_types.go
-.PHONY: generate
-generate: build-dirs
-	operator-sdk generate k8s
-	operator-sdk generate openapi
-
 .PHONY: build
 build: build-dirs Makefile
 	@echo "Building: $(BINARIES)"
@@ -100,7 +94,7 @@ run-dev:
 .PHONE: debug
 debug:
 	OPERATOR_NAME=local-operator \
-    WATCH_NAMESPACE=test \
+    WATCH_NAMESPACE=operator \
 	dlv debug --headless  --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
-	--kubeconfig ~/.kube/config
+	--kubeconfig ~/.kube/config --disable-admission-controller
 

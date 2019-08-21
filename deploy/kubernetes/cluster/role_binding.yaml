@@ -5,7 +5,8 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: spinnaker-operator
+  namespace: operator
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: spinnaker-operator-role
   apiGroup: rbac.authorization.k8s.io

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: spinconfig-v001
+  name: spinconfig-v002
 data:
   config: |
     name: default
-    version: 1.15.0
+    version: 1.15.1
     providers:
       appengine:
         enabled: false
@@ -152,9 +152,11 @@ data:
       apiSecurity:
         ssl:
           enabled: false
+        overrideBaseUrl: http://my-api.spinnaker.armory.io
       uiSecurity:
         ssl:
           enabled: false
+        overrideBaseUrl: http://my.spinnaker.armory.io
       authn:
         oauth2:
           enabled: false

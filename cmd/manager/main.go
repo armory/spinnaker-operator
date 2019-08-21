@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/armory-io/spinnaker-operator/pkg/controller/spinnakervalidating"
 	"os"
 	"runtime"
 
@@ -47,6 +48,11 @@ func main() {
 	// Add flags registered by imported packages (e.g. glog and
 	// controller-runtime)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
+	fs := flag.FlagSet{}
+	var disableAdmission bool
+	fs.BoolVar(&disableAdmission, "disable-admission-controller", false, "Set to disable admission controller")
+	pflag.CommandLine.AddGoFlagSet(&fs)
 
 	pflag.Parse()
 
@@ -101,6 +107,11 @@ func main() {
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
+	}
+
+	// Add admission controller
+	if !disableAdmission {
+		controller.Register(spinnakervalidating.Add)
 	}
 
 	// Setup all Controllers

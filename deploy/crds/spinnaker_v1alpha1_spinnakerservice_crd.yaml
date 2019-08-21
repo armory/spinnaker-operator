@@ -36,20 +36,6 @@ spec:
           type: object
         spec:
           properties:
-            expose:
-              properties:
-                service:
-                  properties:
-                    annotations:
-                      additionalProperties:
-                        type: string
-                      type: object
-                    type:
-                      type: string
-                  type: object
-                type:
-                  type: string
-              type: object
             spinnakerConfig:
               properties:
                 configMap:

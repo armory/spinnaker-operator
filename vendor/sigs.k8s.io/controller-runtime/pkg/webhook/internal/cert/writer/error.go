@@ -14,14 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-/*
-Package fake provides a fake client for testing.
+package writer
 
-An fake client is backed by its simple object store indexed by GroupVersionResource.
-You can create a fake client with optional objects.
+type notFoundError struct {
+	err error
+}
 
-	client := NewFakeClient(initObjs...) // initObjs is a slice of runtime.Object
+func (e notFoundError) Error() string {
+	return e.err.Error()
+}
 
-You can invoke the methods defined in the Client interface.
-*/
-package fake
+func isNotFound(err error) bool {
+	_, ok := err.(notFoundError)
+	return ok
+}
+
+type alreadyExistError struct {
+	err error
+}
+
+func (e alreadyExistError) Error() string {
+	return e.err.Error()
+}
+
+func isAlreadyExists(err error) bool {
+	_, ok := err.(alreadyExistError)
+	return ok
+}

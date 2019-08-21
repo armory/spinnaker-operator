@@ -12,4 +12,3 @@ spec:
       type: LoadBalancer
       annotations:
         "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"
-        "service.beta.kubernetes.io/aws-load-balancer-ssl-ports": "80,443"
