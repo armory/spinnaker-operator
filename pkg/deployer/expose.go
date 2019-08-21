@@ -92,7 +92,7 @@ func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halco
 	gateSvc, ok := gen.Config["gate"]
 	if ok && gateSvc.Service != nil {
 		t.applyPortChanges("gate-tcp", 8084, "security.apiSecurity.overrideBaseUrl", gateSvc.Service, hc)
-		t.applyExposeServiceConfig(gateSvc.Service)
+		t.applyExposeServiceConfig(gateSvc.Service, "gate")
 		if t.gateX509 > 0 {
 			gateSvc.Service.Spec.Ports = append(gateSvc.Service.Spec.Ports, corev1.ServicePort{
 				Name:       "gate-x509",
@@ -105,17 +105,31 @@ func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halco
 	deckSvc, ok := gen.Config["deck"]
 	if ok {
 		t.applyPortChanges("deck-tcp", 9000, "security.uiSecurity.overrideBaseUrl", deckSvc.Service, hc)
-		t.applyExposeServiceConfig(deckSvc.Service)
+		t.applyExposeServiceConfig(deckSvc.Service, "deck")
 	}
 	return nil
 }
 
-func (t *exposeTransformer) applyExposeServiceConfig(svc *corev1.Service) {
+func (t *exposeTransformer) applyExposeServiceConfig(svc *corev1.Service, serviceName string) {
 	if strings.ToLower(t.svc.Spec.Expose.Type) != "service" {
 		return
 	}
-	svc.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
-	svc.Annotations = t.svc.Spec.Expose.Service.Annotations
+	if c, ok := t.svc.Spec.Expose.Service.Overrides[serviceName]; ok && c.Type != "" {
+		svc.Spec.Type = corev1.ServiceType(c.Type)
+	} else {
+		svc.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
+	}
+
+	annotations := map[string]string{}
+	for k, v := range t.svc.Spec.Expose.Service.Annotations {
+		annotations[k] = v
+	}
+	if c, ok := t.svc.Spec.Expose.Service.Overrides[serviceName]; ok {
+		for k, v := range c.Annotations {
+			annotations[k] = v
+		}
+	}
+	svc.Annotations = annotations
 }
 
 func (t *exposeTransformer) applyPortChanges(portName string, portDefault int32, overrideUrlName string, svc *corev1.Service, hc *halconfig.SpinnakerConfig) {

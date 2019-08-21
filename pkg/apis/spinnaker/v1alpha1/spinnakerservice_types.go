@@ -39,6 +39,14 @@ type ExposeConfig struct {
 // ExposeConfigService represents the configuration for exposing Spinnaker using k8s services
 // +k8s:openapi-gen=true
 type ExposeConfigService struct {
+	Type        string                                  `json:"type,omitempty"`
+	Annotations map[string]string                       `json:"annotations,omitempty"`
+	Overrides   map[string]ExposeConfigServiceOverrides `json:"overrides,omitempty"`
+}
+
+// ExposeConfigServiceOverrides represents expose configurations of type service, overriden by specific services
+// +k8s:openapi-gen=true
+type ExposeConfigServiceOverrides struct {
 	Type        string            `json:"type,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 }

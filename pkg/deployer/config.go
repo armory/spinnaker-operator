@@ -145,16 +145,15 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 	}
 
 	// service type is different, redeploy
-	if string(svc.Spec.Type) != spinSvc.Spec.Expose.Service.Type {
-		rLogger.Info(fmt.Sprintf("Service type for %s: expected: %s, actual: %s", serviceName,
-			spinSvc.Spec.Expose.Service.Type, string(svc.Spec.Type)))
-		return false, nil
+	if upToDate, err := d.exposeServiceTypeUpToDate(serviceName, spinSvc, svc); !upToDate || err != nil {
+		return false, err
 	}
 
 	// annotations are different, redeploy
-	if !reflect.DeepEqual(svc.Annotations, spinSvc.Spec.Expose.Service.Annotations) {
+	expectedAnnotations := d.getAggregatedAnnotations(serviceName, spinSvc)
+	if !reflect.DeepEqual(svc.Annotations, expectedAnnotations) {
 		rLogger.Info(fmt.Sprintf("Service annotations for %s: expected: %s, actual: %s", serviceName,
-			spinSvc.Spec.Expose.Service.Annotations, svc.Annotations))
+			expectedAnnotations, svc.Annotations))
 		return false, nil
 	}
 
@@ -175,6 +174,39 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 	}
 
 	return true, nil
+}
+
+func (d *Deployer) exposeServiceTypeUpToDate(serviceName string, spinSvc *spinnakerv1alpha1.SpinnakerService, svc *corev1.Service) (bool, error) {
+	rLogger := d.log.WithValues("Service", spinSvc.Name)
+	formattedServiceName := serviceName[len("spin-"):]
+	if c, ok := spinSvc.Spec.Expose.Service.Overrides[formattedServiceName]; ok && c.Type != "" {
+		if string(svc.Spec.Type) != c.Type {
+			rLogger.Info(fmt.Sprintf("Service type for %s: expected: %s, actual: %s", serviceName,
+				c.Type, string(svc.Spec.Type)))
+			return false, nil
+		}
+	} else {
+		if string(svc.Spec.Type) != spinSvc.Spec.Expose.Service.Type {
+			rLogger.Info(fmt.Sprintf("Service type for %s: expected: %s, actual: %s", serviceName,
+				spinSvc.Spec.Expose.Service.Type, string(svc.Spec.Type)))
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (d *Deployer) getAggregatedAnnotations(serviceName string, spinSvc *spinnakerv1alpha1.SpinnakerService) map[string]string {
+	formattedServiceName := serviceName[len("spin-"):]
+	annotations := map[string]string{}
+	for k, v := range spinSvc.Spec.Expose.Service.Annotations {
+		annotations[k] = v
+	}
+	if c, ok := spinSvc.Spec.Expose.Service.Overrides[formattedServiceName]; ok {
+		for k, v := range c.Annotations {
+			annotations[k] = v
+		}
+	}
+	return annotations
 }
 
 func (d *Deployer) getService(name string, namespace string) (*corev1.Service, error) {

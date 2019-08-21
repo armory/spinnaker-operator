@@ -11,13 +11,14 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfig":              schema_pkg_apis_spinnaker_v1alpha1_ExposeConfig(ref),
-		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigService":       schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref),
-		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource":       schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSource(ref),
-		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus": schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSourceStatus(ref),
-		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerService":          schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref),
-		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec":      schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref),
-		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus":    schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha1_ExposeConfig(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource":          schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSource(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus":    schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSourceStatus(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerService":             schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec":         schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref),
+		"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus":       schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref),
 	}
 }
 
@@ -51,6 +52,51 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref common.Reference
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ExposeConfigService represents the configuration for exposing Spinnaker using k8s services",
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"overrides": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides"},
+	}
+}
+
+func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExposeConfigServiceOverrides represents expose configurations of type service, overriden by specific services",
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{

@@ -44,6 +44,17 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    overrides:
+                      additionalProperties:
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          type:
+                            type: string
+                        type: object
+                      type: object
                     type:
                       type: string
                   type: object

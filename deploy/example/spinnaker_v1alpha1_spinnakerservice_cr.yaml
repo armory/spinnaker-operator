@@ -12,3 +12,11 @@ spec:
       type: LoadBalancer
       annotations:
         "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"
+      overrides:
+        gate:
+          type: ClusterIP
+          annotations:
+            "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol": "*"
+        deck:
+          annotations:
+            "service.beta.kubernetes.io/aws-load-balancer-internal": "false"
