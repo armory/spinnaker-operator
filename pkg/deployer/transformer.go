@@ -26,5 +26,5 @@ type Transformer interface {
 
 // TransformerGenerator generates transformers for the given SpinnakerService
 type TransformerGenerator interface {
-	NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error)
+	NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error)
 }

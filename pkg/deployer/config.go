@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -71,19 +72,27 @@ func (d *Deployer) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, 
 // config in the service spec
 func (d *Deployer) isHalconfigUpToDate(instance *spinnakerv1alpha1.SpinnakerService, config runtime.Object) bool {
 	hcStat := instance.Status.HalConfig
+	//rLogger := d.log.WithValues("Service", instance.Name)
+
 	cm, ok := config.(*corev1.ConfigMap)
 	if ok {
 		cmStatus := hcStat.ConfigMap
-		return cmStatus != nil && cmStatus.Name == cm.ObjectMeta.Name && cmStatus.Namespace == cm.ObjectMeta.Namespace &&
+		versionUpToDate := cmStatus != nil && cmStatus.Name == cm.ObjectMeta.Name && cmStatus.Namespace == cm.ObjectMeta.Namespace &&
 			cmStatus.ResourceVersion == cm.ObjectMeta.ResourceVersion
+		if !versionUpToDate {
+			return false
+		}
 	}
 	sec, ok := config.(*corev1.Secret)
 	if ok {
 		secStatus := hcStat.Secret
-		return secStatus != nil && secStatus.Name == sec.ObjectMeta.Name && secStatus.Namespace == sec.ObjectMeta.Namespace &&
+		versionUpToDate := secStatus != nil && secStatus.Name == sec.ObjectMeta.Name && secStatus.Namespace == sec.ObjectMeta.Namespace &&
 			secStatus.ResourceVersion == sec.ObjectMeta.ResourceVersion
+		if !versionUpToDate {
+			return false
+		}
 	}
-	return false
+	return true
 }
 
 func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService) (bool, error) {
@@ -130,21 +139,39 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 	if err != nil {
 		return true, err
 	}
+	// we need a service to exist, therefore it's not "up to date"
 	if svc == nil {
-		// we need a service to exist, therefore it's not "up to date"
 		return false, nil
 	}
 
+	// service type is different, redeploy
 	if string(svc.Spec.Type) != spinSvc.Spec.Expose.Service.Type {
 		rLogger.Info(fmt.Sprintf("Service type for %s: expected: %s, actual: %s", serviceName,
 			spinSvc.Spec.Expose.Service.Type, string(svc.Spec.Type)))
 		return false, nil
 	}
 
+	// annotations are different, redeploy
 	if !reflect.DeepEqual(svc.Annotations, spinSvc.Spec.Expose.Service.Annotations) {
 		rLogger.Info(fmt.Sprintf("Service annotations for %s: expected: %s, actual: %s", serviceName,
 			spinSvc.Spec.Expose.Service.Annotations, svc.Annotations))
 		return false, nil
+	}
+
+	// status url is available but not set yet, redeploy
+	statusUrl := spinSvc.Status.GateUrl
+	if serviceName == "spin-deck" {
+		statusUrl = spinSvc.Status.DeckUrl
+	}
+	if statusUrl == "" {
+		lbUrl, err := d.findLoadBalancerUrl(serviceName, ns)
+		if err != nil {
+			return false, err
+		}
+		if lbUrl != "" {
+			rLogger.Info(fmt.Sprintf("Status url of %s is not set and load balancer url is ready", serviceName))
+			return false, nil
+		}
 	}
 
 	return true, nil
@@ -187,8 +214,7 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alp
 		}
 	}
 	status.LastConfigurationTime = metav1.NewTime(time.Now())
-	status.DeckUrl = d.findExposedUrl("spin-deck", svc, config)
-	status.GateUrl = d.findExposedUrl("spin-gate", svc, config)
+	// gate and deck status url's are populated in transformers
 
 	s := svc.DeepCopy()
 	s.Status = *status
@@ -197,38 +223,20 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alp
 	return d.client.Status().Update(ctx, s)
 }
 
-func (d *Deployer) findExposedUrl(svcName string, svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) string {
-	// first look if there is a url configured in hal config
-	overrideUrl := d.findOverrideUrl(svcName, svc, config)
-	if overrideUrl != "" {
-		return overrideUrl
-	} else {
-		// if no override url, take url from exposed load balancer, if any
-		return d.findLoadBalancerUrl(svcName, svc.Namespace)
-	}
-}
-
-func (d *Deployer) findOverrideUrl(svcName string, svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) string {
-	hc, err := d.completeConfig(svc, config)
-	if err != nil {
-		return ""
-	}
-	hcPropName := "security.uiSecurity.overrideBaseUrl"
-	if svcName == "spin-gate" {
-		hcPropName = "security.apiSecurity.overrideBaseUrl"
-	}
-	url, _ := hc.GetHalConfigPropString(hcPropName)
-	return url
-}
-
-func (d *Deployer) findLoadBalancerUrl(svcName string, namespace string) string {
+func (d *Deployer) findLoadBalancerUrl(svcName string, namespace string) (string, error) {
 	svc, err := d.getService(svcName, namespace)
-	if err != nil || svc == nil {
-		return ""
+	if err != nil {
+		return "", err
+	}
+	if svc == nil {
+		return "", nil
+	}
+	if svc.Spec.Type != corev1.ServiceType("LoadBalancer") {
+		return "", nil
 	}
 	ingresses := svc.Status.LoadBalancer.Ingress
 	if len(ingresses) == 0 {
-		return ""
+		return "", nil
 	}
 	port := int32(0)
 	for _, p := range svc.Spec.Ports {
@@ -237,10 +245,21 @@ func (d *Deployer) findLoadBalancerUrl(svcName string, namespace string) string 
 			break
 		}
 	}
-	protocol := "http://"
+	scheme := "http://"
 	if port == 443 {
-		protocol = "https://"
+		scheme = "https://"
 	}
-	url := fmt.Sprintf("%s%s:%d", protocol, ingresses[0].Hostname, port)
-	return url
+	host := ingresses[0].Hostname
+	if host == "" {
+		host = ingresses[0].IP
+		if host == "" {
+			return "", nil
+		}
+	}
+
+	lbUrl := url.URL{
+		Scheme: scheme,
+		Host:   fmt.Sprintf("%s:%d", host, port),
+	}
+	return lbUrl.String(), nil
 }

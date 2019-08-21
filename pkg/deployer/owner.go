@@ -11,13 +11,13 @@ import (
 )
 
 type ownerTransformer struct {
-	svc spinnakerv1alpha1.SpinnakerService
+	svc *spinnakerv1alpha1.SpinnakerService
 	log logr.Logger
 }
 
 type ownerTransformerGenerator struct{}
 
-func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
+func (g *ownerTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
 	return &ownerTransformer{svc: svc, log: log}, nil
 }
 
@@ -32,12 +32,12 @@ func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halcon
 	for k := range gen.Config {
 		s := gen.Config[k]
 		if s.Deployment != nil {
-			if err := controllerutil.SetControllerReference(&t.svc, s.Deployment, scheme); err != nil {
+			if err := controllerutil.SetControllerReference(t.svc, s.Deployment, scheme); err != nil {
 				return err
 			}
 		}
 		if s.Service != nil {
-			if err := controllerutil.SetControllerReference(&t.svc, s.Service, scheme); err != nil {
+			if err := controllerutil.SetControllerReference(t.svc, s.Service, scheme); err != nil {
 				return err
 			}
 		}

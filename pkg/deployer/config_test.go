@@ -126,6 +126,14 @@ func buildSvc(name string, svcType string, annotations map[string]string) *corev
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceType(svcType),
+			Ports: []corev1.ServicePort{
+				{Name: name + "-tcp", Port: 80},
+			},
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{Ingress: []corev1.LoadBalancerIngress{
+				{Hostname: "acme.com"},
+			}},
 		},
 	}
 }

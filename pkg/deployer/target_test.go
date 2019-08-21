@@ -21,7 +21,7 @@ func TestSetTarget(t *testing.T) {
 	svc := spinnakerv1alpha1.SpinnakerService{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "ns2"},
 	}
-	tg := &targetTransformer{svc: svc}
+	tg := &targetTransformer{svc: &svc}
 	err := tg.TransformConfig(hc)
 	if assert.Nil(t, err) {
 		s, err := hc.GetHalConfigPropString("deploymentEnvironment.location")

@@ -20,7 +20,7 @@ import (
 )
 
 type exposeTransformer struct {
-	svc      spinnakerv1alpha1.SpinnakerService
+	svc      *spinnakerv1alpha1.SpinnakerService
 	gateX509 int32
 	log      logr.Logger
 	client   client.Client
@@ -28,34 +28,20 @@ type exposeTransformer struct {
 
 type exposeTransformerGenerator struct{}
 
-func (g *exposeTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
+func (g *exposeTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
 	return &exposeTransformer{svc: svc, log: log, client: client}, nil
 }
 
 // TransformConfig is a nop
 func (t *exposeTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	// Set exposed urls to hal config if overrideBaseUrl is not set
-	if gateUrl, err := hc.GetHalConfigPropString("security.apiSecurity.overrideBaseUrl"); err != nil {
-		if gateUrl == "" {
-			lbUrl := t.findLoadBalancerUrl("spin-gate")
-			t.log.Info(fmt.Sprintf("Gate overrideBaseUrl not found, setting to %s", lbUrl))
-			err := hc.SetHalConfigProp("security.apiSecurity.overrideBaseUrl", lbUrl)
-			if err != nil {
-				return err
-			}
-		}
+	if err := t.setStatusAndOverrideBaseUrl("spin-gate", "security.apiSecurity.overrideBaseUrl", hc); err != nil {
+		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
+		return err
 	}
-	if deckUrl, err := hc.GetHalConfigPropString("security.uiSecurity.overrideBaseUrl"); err != nil {
-		if deckUrl == "" {
-			lbUrl := t.findLoadBalancerUrl("spin-deck")
-			t.log.Info(fmt.Sprintf("Deck overrideBaseUrl not found, setting to %s", lbUrl))
-			err := hc.SetHalConfigProp("security.uiSecurity.overrideBaseUrl", lbUrl)
-			if err != nil {
-				return err
-			}
-		}
+	if err := t.setStatusAndOverrideBaseUrl("spin-deck", "security.uiSecurity.overrideBaseUrl", hc); err != nil {
+		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
+		return err
 	}
-
 	s, err := hc.GetServiceConfigPropString("gate", "default.apiPort")
 	if err == nil {
 		p, err := strconv.ParseInt(s, 10, 32)
@@ -66,17 +52,47 @@ func (t *exposeTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error
 	return nil
 }
 
+func (t *exposeTransformer) setStatusAndOverrideBaseUrl(serviceName string, overrideUrlName string, hc *halconfig.SpinnakerConfig) error {
+	statusUrl, isFromOverrideBaseUrl, err := t.findStatusUrl(serviceName, overrideUrlName, hc)
+	if err != nil {
+		return err
+	}
+	if serviceName == "spin-gate" {
+		t.svc.Status.GateUrl = statusUrl
+	} else if serviceName == "spin-deck" {
+		t.svc.Status.DeckUrl = statusUrl
+	}
+	if !isFromOverrideBaseUrl {
+		t.log.Info(fmt.Sprintf("Setting %s overrideBaseUrl to: %s", serviceName, statusUrl))
+		if err = hc.SetHalConfigProp(overrideUrlName, statusUrl); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// findStatusUrl returns the overrideBaseUrl or load balancer url, indicating if it came from overrideBaseUrl
+func (t *exposeTransformer) findStatusUrl(serviceName string, overrideUrlName string, hc *halconfig.SpinnakerConfig) (string, bool, error) {
+	// ignore error, overrideBaseUrl may not be set in hal config
+	url, _ := hc.GetHalConfigPropString(overrideUrlName)
+	if url != "" {
+		return url, true, nil
+	}
+	if t.svc.Spec.Expose.Type != "" {
+		lbUrl, err := t.findLoadBalancerUrl(serviceName)
+		return lbUrl, false, err
+	}
+	return "", false, nil
+}
+
 // transform adjusts settings to the configuration
 func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig,
 	gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
 
 	gateSvc, ok := gen.Config["gate"]
 	if ok && gateSvc.Service != nil {
-		t.applyExposeServiceConfig("gate-tcp", gateSvc.Service)
-		if len(gateSvc.Service.Spec.Ports) > 0 {
-			gateSvc.Service.Spec.Ports[0].Port = getPort(t.gateURL, 8084)
-			gateSvc.Service.Spec.Ports[0].Name = "gate-tcp"
-		}
+		t.applyPortChanges("gate-tcp", 8084, "security.apiSecurity.overrideBaseUrl", gateSvc.Service, hc)
+		t.applyExposeServiceConfig(gateSvc.Service)
 		if t.gateX509 > 0 {
 			gateSvc.Service.Spec.Ports = append(gateSvc.Service.Spec.Ports, corev1.ServicePort{
 				Name:       "gate-x509",
@@ -88,34 +104,39 @@ func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halco
 	}
 	deckSvc, ok := gen.Config["deck"]
 	if ok {
-		t.applyExposeServiceConfig("deck-tcp", deckSvc.Service)
-		if len(deckSvc.Service.Spec.Ports) > 0 {
-			deckSvc.Service.Spec.Ports[0].Port = getPort(t.deckURL, 9000)
-			deckSvc.Service.Spec.Ports[0].Name = "deck-tcp"
-		}
+		t.applyPortChanges("deck-tcp", 9000, "security.uiSecurity.overrideBaseUrl", deckSvc.Service, hc)
+		t.applyExposeServiceConfig(deckSvc.Service)
 	}
 	return nil
 }
 
-func (t *exposeTransformer) applyExposeServiceConfig(portName string, svc *corev1.Service) {
+func (t *exposeTransformer) applyExposeServiceConfig(svc *corev1.Service) {
 	if strings.ToLower(t.svc.Spec.Expose.Type) != "service" {
 		return
-	}
-	if len(svc.Spec.Ports) > 0 {
-		svc.Spec.Ports[0].Name = portName
 	}
 	svc.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
 	svc.Annotations = t.svc.Spec.Expose.Service.Annotations
 }
 
-func (t *exposeTransformer) findLoadBalancerUrl(svcName string) string {
+func (t *exposeTransformer) applyPortChanges(portName string, portDefault int32, overrideUrlName string, svc *corev1.Service, hc *halconfig.SpinnakerConfig) {
+	if len(svc.Spec.Ports) > 0 {
+		overrideUrl, _ := hc.GetHalConfigPropString(overrideUrlName)
+		svc.Spec.Ports[0].Port = getPort(overrideUrl, portDefault)
+		svc.Spec.Ports[0].Name = portName
+	}
+}
+
+func (t *exposeTransformer) findLoadBalancerUrl(svcName string) (string, error) {
 	svc, err := t.getService(svcName, t.svc.Namespace)
-	if err != nil || svc == nil {
-		return ""
+	if err != nil {
+		return "", err
+	}
+	if svc == nil {
+		return "", nil
 	}
 	ingresses := svc.Status.LoadBalancer.Ingress
 	if len(ingresses) == 0 {
-		return ""
+		return "", nil
 	}
 	port := int32(0)
 	for _, p := range svc.Spec.Ports {
@@ -129,7 +150,7 @@ func (t *exposeTransformer) findLoadBalancerUrl(svcName string) string {
 		protocol = "https://"
 	}
 	url := fmt.Sprintf("%s%s:%d", protocol, ingresses[0].Hostname, port)
-	return url
+	return url, nil
 }
 
 func (t *exposeTransformer) getService(name string, namespace string) (*corev1.Service, error) {

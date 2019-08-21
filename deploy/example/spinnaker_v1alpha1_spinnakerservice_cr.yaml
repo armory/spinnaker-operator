@@ -10,3 +10,5 @@ spec:
     type: service
     service:
       type: LoadBalancer
+      annotations:
+        "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"

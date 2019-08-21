@@ -3,7 +3,6 @@ package deployer
 import (
 	"context"
 	"fmt"
-
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
@@ -37,7 +36,8 @@ func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, 
 		generators:  Transformers,
 		rawClient:   r,
 		evtRecorder: evtRecorder,
-		log:         log}
+		log:         log,
+	}
 }
 
 // Deploy takes a SpinnakerService definition and transforms it into manifests to create.
@@ -64,7 +64,7 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 
 	rLogger.Info("Applying options to Spinnaker config")
 	for _, t := range d.generators {
-		tr, err := t.NewTransformer(*svc, d.client, d.log)
+		tr, err := t.NewTransformer(svc, d.client, d.log)
 		if err != nil {
 			return err
 		}

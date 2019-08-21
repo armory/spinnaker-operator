@@ -11,14 +11,14 @@ import (
 )
 
 type targetTransformer struct {
-	svc spinnakerv1alpha1.SpinnakerService
+	svc *spinnakerv1alpha1.SpinnakerService
 	log logr.Logger
 }
 
 type targetTransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *targetTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
+func (g *targetTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
 	return &targetTransformer{svc: svc, log: log}, nil
 }
 

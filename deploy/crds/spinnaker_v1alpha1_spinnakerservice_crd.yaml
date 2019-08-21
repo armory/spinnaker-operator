@@ -190,6 +190,9 @@ spec:
             version:
               description: Current deployed version of Spinnaker
               type: string
+          required:
+          - deckUrl
+          - gateUrl
           type: object
   version: v1alpha1
   versions:
