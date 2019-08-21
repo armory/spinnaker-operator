@@ -70,7 +70,7 @@ func (s *SpinnakerConfig) fromBytes(k string, data []byte) error {
 		err := yaml.Unmarshal(data, &p)
 		if err == nil {
 			s.Profiles[a[1]] = p
-			return err
+			return nil
 		}
 	}
 	s.Files[k] = string(data)
