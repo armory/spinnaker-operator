@@ -6,3 +6,9 @@ spec:
   spinnakerConfig:
     configMap:
       name: spinconfig-v001
+  expose:
+    type: service
+    service:
+      type: LoadBalancer
+      annotations:
+        "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"

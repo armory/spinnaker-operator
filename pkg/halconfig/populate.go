@@ -5,10 +5,23 @@ import (
 	"fmt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"regexp"
 )
 
 var profileRegex = regexp.MustCompile(`^profiles__([[:alpha:]]+)-local.yml$`)
+
+func (s *SpinnakerConfig) FromConfigObject(obj runtime.Object) error {
+	cm, ok := obj.(*corev1.ConfigMap)
+	if ok {
+		return s.FromConfigMap(*cm)
+	}
+	sec, ok := obj.(*corev1.Secret)
+	if ok {
+		return s.FromSecret(*sec)
+	}
+	return fmt.Errorf("SpinnakerService does not reference configMap or secret. No configuration found")
+}
 
 // FromConfigMap iterates through the keys and populate string data into the complete config
 // while keeping unknown keys as binary

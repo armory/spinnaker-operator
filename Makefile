@@ -94,7 +94,7 @@ run-dev:
 .PHONE: debug
 debug:
 	OPERATOR_NAME=local-operator \
-    WATCH_NAMESPACE=test \
+    WATCH_NAMESPACE=operator \
 	dlv debug --headless  --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
-	--kubeconfig ~/.kube/config
+	--kubeconfig ~/.kube/config --disable-admission-controller
 

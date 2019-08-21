@@ -15,9 +15,9 @@ spec:
       serviceAccountName: spinnaker-operator
       containers:
         - name: spinnaker-operator
-          image: armory/spinnaker-operator:test19
+          image: armory/spinnaker-operator:8e74d09-dirty2
           command:
-          - spinnaker-operator
+          - spinnaker-operator --without-admission-controller
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
