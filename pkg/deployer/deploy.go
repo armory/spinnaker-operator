@@ -49,7 +49,7 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	ctx := context.TODO()
 	rLogger.Info("Retrieving complete Spinnaker configuration")
 
-	c := &halconfig.SpinnakerConfig{}
+	c := halconfig.NewSpinnakerConfig()
 	if err := c.FromConfigObject(config); err != nil {
 		return err
 	}

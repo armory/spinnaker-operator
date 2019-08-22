@@ -31,7 +31,7 @@ func Validate(svc *v1alpha1.SpinnakerService, options Options) error {
 		return err
 	}
 
-	hc := &halconfig.SpinnakerConfig{}
+	hc := halconfig.NewSpinnakerConfig()
 	if err := hc.FromConfigObject(c); err != nil {
 		return err
 	}
