@@ -61,8 +61,7 @@ func (d *Deployer) isHalconfigUpToDate(instance *spinnakerv1alpha1.SpinnakerServ
 func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService) (bool, error) {
 	switch strings.ToLower(svc.Spec.Expose.Type) {
 	case "":
-		exposed, err := d.isExposed(svc)
-		return !exposed, err
+		return true, nil
 	case "service":
 		upToDateDeck, err := d.isExposeServiceUpToDate(svc, deckServiceName)
 		if !upToDateDeck || err != nil {
@@ -76,23 +75,6 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 	default:
 		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", svc.Spec.Expose.Type)
 	}
-}
-
-func (d *Deployer) isExposed(spinSvc *spinnakerv1alpha1.SpinnakerService) (bool, error) {
-	ns := spinSvc.ObjectMeta.Namespace
-	deckSvc, err := GetService(deckServiceName, ns, d.client)
-	if err != nil {
-		return false, err
-	}
-	gateSvc, err := GetService(gateServiceName, ns, d.client)
-	if err != nil {
-		return false, err
-	}
-
-	deckExposed := deckSvc != nil && deckSvc.Spec.Type == corev1.ServiceType("LoadBalancer")
-	gateExposed := gateSvc != nil && gateSvc.Spec.Type == corev1.ServiceType("LoadBalancer")
-
-	return deckExposed || gateExposed, nil
 }
 
 func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerService, serviceName string) (bool, error) {

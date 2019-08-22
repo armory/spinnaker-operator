@@ -1,6 +1,7 @@
 package halyard
 
 import (
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -81,7 +82,7 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*htt
 		if err != nil {
 			return nil, err
 		}
-		if err = s.addPart(writer, k, b); err != nil {
+		if err = s.addPart(writer, fmt.Sprintf("profiles__%s-local.yml", k), b); err != nil {
 			return nil, err
 		}
 	}

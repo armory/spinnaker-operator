@@ -10,6 +10,7 @@ import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	appsv1 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -31,11 +32,11 @@ func (g *exposeTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.Spinn
 
 // TransformConfig is a nop
 func (t *exposeTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	if err := t.setStatusAndOverrideBaseUrl("spin-gate", "security.apiSecurity.overrideBaseUrl", hc); err != nil {
+	if err := t.setStatusAndOverrideBaseUrl(gateServiceName, "security.apiSecurity.overrideBaseUrl", hc); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
 	}
-	if err := t.setStatusAndOverrideBaseUrl("spin-deck", "security.uiSecurity.overrideBaseUrl", hc); err != nil {
+	if err := t.setStatusAndOverrideBaseUrl(deckServiceName, "security.uiSecurity.overrideBaseUrl", hc); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
 	}
@@ -54,9 +55,9 @@ func (t *exposeTransformer) setStatusAndOverrideBaseUrl(serviceName string, over
 	if err != nil {
 		return err
 	}
-	if serviceName == "spin-gate" {
+	if serviceName == gateServiceName {
 		t.svc.Status.APIUrl = statusUrl
-	} else if serviceName == "spin-deck" {
+	} else if serviceName == deckServiceName {
 		t.svc.Status.UIUrl = statusUrl
 	}
 	if !isFromOverrideBaseUrl {
@@ -75,34 +76,87 @@ func (t *exposeTransformer) findStatusUrl(serviceName string, overrideUrlName st
 	if url != "" {
 		return url, true, nil
 	}
-	if t.svc.Spec.Expose.Type != "" {
+	switch strings.ToLower(t.svc.Spec.Expose.Type) {
+	case "":
+		return "", false, nil
+	case "service":
 		lbUrl, err := FindLoadBalancerUrl(serviceName, t.svc.Namespace, t.client)
 		return lbUrl, false, err
+	default:
+		return "", false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", t.svc.Spec.Expose.Type)
 	}
-	return "", false, nil
 }
 
 // transform adjusts settings to the configuration
 func (t *exposeTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig,
 	gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
 
-	gateSvc, ok := gen.Config["gate"]
-	if ok && gateSvc.Service != nil {
-		t.applyPortChanges("gate-tcp", 8084, "security.apiSecurity.overrideBaseUrl", gateSvc.Service, hc)
-		t.applyExposeServiceConfig(gateSvc.Service, "gate")
-		if t.gateX509 > 0 {
-			gateSvc.Service.Spec.Ports = append(gateSvc.Service.Spec.Ports, corev1.ServicePort{
-				Name:       "gate-x509",
-				Port:       t.gateX509,
-				TargetPort: intstr.FromInt(int(t.gateX509)),
-				Protocol:   "TCP",
-			})
+	gateConfig, ok := gen.Config["gate"]
+	if ok {
+		if gateConfig.Service != nil {
+			if err := t.transformServiceManifest("gate", 8084, gateConfig.Service, hc); err != nil {
+				return err
+			}
+		}
+		if gateConfig.Deployment != nil {
+			if err := t.transformDeploymentManifest("gate", 8084, gateConfig.Deployment, hc); err != nil {
+				return err
+			}
 		}
 	}
-	deckSvc, ok := gen.Config["deck"]
-	if ok {
-		t.applyPortChanges("deck-tcp", 9000, "security.uiSecurity.overrideBaseUrl", deckSvc.Service, hc)
-		t.applyExposeServiceConfig(deckSvc.Service, "deck")
+	deckConfig, ok := gen.Config["deck"]
+	if ok && deckConfig.Service != nil {
+		if err := t.transformServiceManifest("deck", 9000, deckConfig.Service, hc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *exposeTransformer) transformServiceManifest(serviceName string, defaultPort int32, svc *corev1.Service, hc *halconfig.SpinnakerConfig) error {
+	overrideUrlKeyName := ""
+	if serviceName == "gate" {
+		overrideUrlKeyName = "security.apiSecurity.overrideBaseUrl"
+	} else if serviceName == "deck" {
+		overrideUrlKeyName = "security.uiSecurity.overrideBaseUrl"
+	}
+	if err := t.applyPortChanges(fmt.Sprintf("%s-tcp", serviceName), defaultPort, overrideUrlKeyName, svc, hc); err != nil {
+		return err
+	}
+	t.applyExposeServiceConfig(svc, serviceName)
+
+	// TODO: Move somewhere else
+	if serviceName == "gate" && t.gateX509 > 0 {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name:       "gate-x509",
+			Port:       t.gateX509,
+			TargetPort: intstr.FromInt(int(t.gateX509)),
+			Protocol:   "TCP",
+		})
+	}
+	return nil
+}
+
+func (t *exposeTransformer) transformDeploymentManifest(deploymentName string, defaultPort int32, deployment *appsv1.Deployment, hc *halconfig.SpinnakerConfig) error {
+	if targetPort, _ := hc.GetServiceConfigPropString("gate", "server.port"); targetPort != "" {
+		intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
+		if err != nil {
+			return err
+		}
+		for _, c := range deployment.Spec.Template.Spec.Containers {
+			if c.Name != deploymentName {
+				continue
+			}
+			if len(c.Ports) > 0 {
+				c.Ports[0].ContainerPort = int32(intTargetPort)
+			}
+			for i, cmd := range c.ReadinessProbe.Exec.Command {
+				if !strings.Contains(cmd, "http://localhost") {
+					continue
+				}
+				c.ReadinessProbe.Exec.Command[i] = fmt.Sprintf("http://localhost:%d/health", intTargetPort)
+			}
+		}
 	}
 	return nil
 }
@@ -129,12 +183,23 @@ func (t *exposeTransformer) applyExposeServiceConfig(svc *corev1.Service, servic
 	svc.Annotations = annotations
 }
 
-func (t *exposeTransformer) applyPortChanges(portName string, portDefault int32, overrideUrlName string, svc *corev1.Service, hc *halconfig.SpinnakerConfig) {
+func (t *exposeTransformer) applyPortChanges(portName string, portDefault int32, overrideUrlName string, svc *corev1.Service, hc *halconfig.SpinnakerConfig) error {
 	if len(svc.Spec.Ports) > 0 {
 		overrideUrl, _ := hc.GetHalConfigPropString(overrideUrlName)
 		svc.Spec.Ports[0].Port = getPort(overrideUrl, portDefault)
 		svc.Spec.Ports[0].Name = portName
+		if strings.Contains(portName, "gate") {
+			// ignore error, property may be missing
+			if targetPort, _ := hc.GetServiceConfigPropString("gate", "server.port"); targetPort != "" {
+				intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
+				if err != nil {
+					return err
+				}
+				svc.Spec.Ports[0].TargetPort = intstr.IntOrString{IntVal: int32(intTargetPort)}
+			}
+		}
 	}
+	return nil
 }
 
 func getPort(url string, defaultPort int32) int32 {
