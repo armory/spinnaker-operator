@@ -1,11 +1,8 @@
 package deployer
 
 import (
-	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	url2 "net/url"
 	"strconv"
 	"strings"
@@ -79,7 +76,7 @@ func (t *exposeTransformer) findStatusUrl(serviceName string, overrideUrlName st
 		return url, true, nil
 	}
 	if t.svc.Spec.Expose.Type != "" {
-		lbUrl, err := t.findLoadBalancerUrl(serviceName)
+		lbUrl, err := FindLoadBalancerUrl(serviceName, t.svc.Namespace, t.client)
 		return lbUrl, false, err
 	}
 	return "", false, nil
@@ -138,48 +135,6 @@ func (t *exposeTransformer) applyPortChanges(portName string, portDefault int32,
 		svc.Spec.Ports[0].Port = getPort(overrideUrl, portDefault)
 		svc.Spec.Ports[0].Name = portName
 	}
-}
-
-func (t *exposeTransformer) findLoadBalancerUrl(svcName string) (string, error) {
-	svc, err := t.getService(svcName, t.svc.Namespace)
-	if err != nil {
-		return "", err
-	}
-	if svc == nil {
-		return "", nil
-	}
-	ingresses := svc.Status.LoadBalancer.Ingress
-	if len(ingresses) == 0 {
-		return "", nil
-	}
-	port := int32(0)
-	for _, p := range svc.Spec.Ports {
-		if strings.Contains(p.Name, "tcp") {
-			port = p.Port
-			break
-		}
-	}
-	protocol := "http://"
-	if port == 443 {
-		protocol = "https://"
-	}
-	url := fmt.Sprintf("%s%s:%d", protocol, ingresses[0].Hostname, port)
-	return url, nil
-}
-
-func (t *exposeTransformer) getService(name string, namespace string) (*corev1.Service, error) {
-	svc := &corev1.Service{}
-	err := t.client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, svc)
-	if err != nil {
-		if statusError, ok := err.(*errors.StatusError); ok {
-			if statusError.ErrStatus.Code == 404 {
-				// if the service doesn't exist that's a normal scenario, not an error
-				return nil, nil
-			}
-		}
-		return nil, err
-	}
-	return svc, nil
 }
 
 func getPort(url string, defaultPort int32) int32 {

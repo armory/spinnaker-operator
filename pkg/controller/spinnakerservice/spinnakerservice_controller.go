@@ -132,6 +132,9 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	}
 	// Check if config has changed
 	upToDate, err := r.deployer.IsConfigUpToDate(instance, c)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	if !upToDate {
 		reqLogger.Info("Deploying Spinnaker")
 		err := r.deployer.Deploy(instance, r.scheme, c)
