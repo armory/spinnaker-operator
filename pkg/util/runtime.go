@@ -1,4 +1,4 @@
-package deployer
+package util
 
 import (
 	"context"
@@ -27,10 +27,6 @@ func FindLoadBalancerUrl(svcName string, namespace string, client client.Client)
 			break
 		}
 	}
-	scheme := "http"
-	if port == 443 {
-		scheme = "https"
-	}
 	host := ingresses[0].Hostname
 	if host == "" {
 		host = ingresses[0].IP
@@ -38,8 +34,12 @@ func FindLoadBalancerUrl(svcName string, namespace string, client client.Client)
 			return "", nil
 		}
 	}
+	scheme := "http"
+	if isSSLEnabled(svc, port) {
+		scheme = "https"
+	}
 
-	if port != 80 && port != 443 {
+	if port != 80 && port != 443 && port != 0 {
 		host = fmt.Sprintf("%s:%d", host, port)
 	}
 
@@ -48,6 +48,22 @@ func FindLoadBalancerUrl(svcName string, namespace string, client client.Client)
 		Host:   host,
 	}
 	return lbUrl.String(), nil
+}
+
+func isSSLEnabled(svc *corev1.Service, port int32) bool {
+	protocol := string(svc.Spec.Ports[0].Protocol)
+	if strings.ToLower(protocol) == "http" {
+		return false
+	} else if strings.ToLower(protocol) == "https" {
+		return true
+	}
+
+	// TODO: find a better way
+	if port == 443 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func GetService(name string, namespace string, client client.Client) (*corev1.Service, error) {

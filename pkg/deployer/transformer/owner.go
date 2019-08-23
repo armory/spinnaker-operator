@@ -1,4 +1,4 @@
-package deployer
+package transformer
 
 import (
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
@@ -7,10 +7,11 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 type ownerTransformer struct {
+	*defaultTransformer
 	svc *spinnakerv1alpha1.SpinnakerService
 	log logr.Logger
 }
@@ -18,12 +19,10 @@ type ownerTransformer struct {
 type ownerTransformerGenerator struct{}
 
 func (g *ownerTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
-	return &ownerTransformer{svc: svc, log: log}, nil
-}
-
-// TransformConfig is a nop
-func (t *ownerTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	return nil
+	base := &defaultTransformer{}
+	tr := ownerTransformer{svc: svc, log: log, defaultTransformer: base}
+	base.childTransformer = &tr
+	return &tr, nil
 }
 
 // transform adjusts settings to the configuration

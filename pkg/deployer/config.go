@@ -3,6 +3,7 @@ package deployer
 import (
 	"context"
 	"fmt"
+	"github.com/armory-io/spinnaker-operator/pkg/util"
 	"reflect"
 	"strings"
 	"time"
@@ -11,11 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-)
-
-const (
-	gateServiceName = "spin-gate"
-	deckServiceName = "spin-deck"
 )
 
 // IsConfigUpToDate returns true if the config in status represents the latest
@@ -63,11 +59,11 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 	case "":
 		return true, nil
 	case "service":
-		upToDateDeck, err := d.isExposeServiceUpToDate(svc, deckServiceName)
+		upToDateDeck, err := d.isExposeServiceUpToDate(svc, DeckServiceName)
 		if !upToDateDeck || err != nil {
 			return false, err
 		}
-		upToDateGate, err := d.isExposeServiceUpToDate(svc, gateServiceName)
+		upToDateGate, err := d.isExposeServiceUpToDate(svc, GateServiceName)
 		if !upToDateGate || err != nil {
 			return false, err
 		}
@@ -80,7 +76,7 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerService, serviceName string) (bool, error) {
 	rLogger := d.log.WithValues("Service", spinSvc.Name)
 	ns := spinSvc.ObjectMeta.Namespace
-	svc, err := GetService(serviceName, ns, d.client)
+	svc, err := util.GetService(serviceName, ns, d.client)
 	if err != nil {
 		return false, err
 	}
@@ -108,7 +104,7 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 		statusUrl = spinSvc.Status.UIUrl
 	}
 	if statusUrl == "" {
-		lbUrl, err := FindLoadBalancerUrl(serviceName, ns, d.client)
+		lbUrl, err := util.FindLoadBalancerUrl(serviceName, ns, d.client)
 		if err != nil {
 			return false, err
 		}
