@@ -5,7 +5,7 @@ metadata:
 spec:
   spinnakerConfig:
     configMap:
-      name: spinconfig-v001
+      name: spinconfig-v002
   expose:
     type: service
     service:

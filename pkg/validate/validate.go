@@ -26,13 +26,8 @@ type Options struct {
 }
 
 func Validate(svc *v1alpha1.SpinnakerService, options Options) error {
-	c, err := svc.GetConfigObject(options.Client)
+	_, hc, err := svc.GetConfig(options.Client)
 	if err != nil {
-		return err
-	}
-
-	hc := halconfig.NewSpinnakerConfig()
-	if err := hc.FromConfigObject(c); err != nil {
 		return err
 	}
 

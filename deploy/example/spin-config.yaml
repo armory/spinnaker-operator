@@ -253,3 +253,5 @@ data:
   profiles__gate-local.yml: |
     default:
       apiPort: 8085
+    server:
+      port: 6666

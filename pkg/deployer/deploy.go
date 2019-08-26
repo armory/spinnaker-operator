@@ -3,8 +3,8 @@ package deployer
 import (
 	"context"
 	"fmt"
-
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory-io/spinnaker-operator/pkg/deployer/transformer"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
@@ -23,7 +23,7 @@ type manifestGenerator interface {
 type Deployer struct {
 	m           manifestGenerator
 	client      client.Client
-	generators  []TransformerGenerator
+	generators  []transformer.Generator
 	log         logr.Logger
 	rawClient   *kubernetes.Clientset
 	evtRecorder record.EventRecorder
@@ -34,25 +34,21 @@ func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, 
 	return &Deployer{
 		m:           m,
 		client:      c,
-		generators:  Transformers,
+		generators:  transformer.Transformers,
 		rawClient:   r,
 		evtRecorder: evtRecorder,
-		log:         log}
+		log:         log,
+	}
 }
 
 // Deploy takes a SpinnakerService definition and transforms it into manifests to create.
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object) error {
+func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object, c *halconfig.SpinnakerConfig) error {
 	rLogger := d.log.WithValues("Service", svc.Name)
 	ctx := context.TODO()
 	rLogger.Info("Retrieving complete Spinnaker configuration")
-
-	c := halconfig.NewSpinnakerConfig()
-	if err := c.FromConfigObject(config); err != nil {
-		return err
-	}
 
 	v, err := c.GetHalConfigPropString("version")
 	if err != nil {
@@ -61,11 +57,11 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 
 	d.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "Config", "New configuration detected, version: %s", v)
 
-	var transformers []Transformer
+	var transformers []transformer.Transformer
 
 	rLogger.Info("Applying options to Spinnaker config")
 	for _, t := range d.generators {
-		tr, err := t.NewTransformer(*svc, d.client)
+		tr, err := t.NewTransformer(svc, d.client, d.log)
 		if err != nil {
 			return err
 		}

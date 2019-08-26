@@ -36,6 +36,8 @@ github.com/dgrijalva/jwt-go
 # github.com/emicklei/go-restful v2.8.1+incompatible
 github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
+# github.com/evanphx/json-patch v4.0.0+incompatible
+github.com/evanphx/json-patch
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
 # github.com/go-logr/logr v0.1.0
@@ -212,9 +214,9 @@ golang.org/x/sys/windows
 # golang.org/x/text v0.3.0
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+golang.org/x/text/width
 golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
-golang.org/x/text/width
 # golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2
 golang.org/x/time/rate
 # golang.org/x/tools v0.0.0-20190312170243-e65039ee4138
@@ -434,6 +436,7 @@ k8s.io/client-go/pkg/apis/clientauthentication
 k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1
 k8s.io/client-go/pkg/apis/clientauthentication/v1beta1
 k8s.io/client-go/util/connrotation
+k8s.io/client-go/testing
 k8s.io/client-go/third_party/forked/golang/template
 k8s.io/client-go/tools/clientcmd/api/v1
 # k8s.io/code-generator v0.0.0-20180823001027-3dcf91f64f63 => k8s.io/code-generator v0.0.0-20181117043124-c2090bec4d9b
@@ -469,9 +472,9 @@ k8s.io/gengo/examples/set-gen/sets
 k8s.io/klog
 # k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d => k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
 k8s.io/kube-openapi/cmd/openapi-gen
+k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/cmd/openapi-gen/args
 k8s.io/kube-openapi/pkg/generators
-k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/pkg/generators/rules
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
@@ -507,6 +510,7 @@ sigs.k8s.io/controller-runtime/pkg/webhook/internal/cert/writer
 sigs.k8s.io/controller-runtime/pkg/webhook/types
 sigs.k8s.io/controller-runtime/pkg/patch
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/metrics
+sigs.k8s.io/controller-runtime/pkg/client/fake
 sigs.k8s.io/controller-runtime/pkg/cache/internal
 sigs.k8s.io/controller-runtime/pkg/internal/controller/metrics
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/cert/generator
