@@ -14,7 +14,7 @@ func TestFindLoadBalancerUrlStandardPort(t *testing.T) {
 		{Hostname: "abc.com"},
 	}
 	fakeClient := fake.NewFakeClient(svc)
-	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient)
+	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient, false)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://abc.com", lbUrl)
 }
@@ -26,7 +26,7 @@ func TestFindLoadBalancerUrlCustomPort(t *testing.T) {
 		{Hostname: "abc.com"},
 	}
 	fakeClient := fake.NewFakeClient(svc)
-	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient)
+	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient, false)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://abc.com:8084", lbUrl)
 }
@@ -38,7 +38,7 @@ func TestFindLoadBalancerUrlHttps(t *testing.T) {
 		{Hostname: "abc.com"},
 	}
 	fakeClient := fake.NewFakeClient(svc)
-	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient)
+	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient, true)
 	assert.Nil(t, err)
 	assert.Equal(t, "https://abc.com", lbUrl)
 }
@@ -49,7 +49,7 @@ func TestFindLoadBalancerUrlIP(t *testing.T) {
 		{Hostname: "", IP: "10.0.0.14"},
 	}
 	fakeClient := fake.NewFakeClient(svc)
-	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient)
+	lbUrl, err := FindLoadBalancerUrl("spin-deck", "ns1", fakeClient, false)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://10.0.0.14", lbUrl)
 }

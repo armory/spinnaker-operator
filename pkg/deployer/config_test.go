@@ -1,6 +1,7 @@
 package deployer
 
 import (
+	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	"testing"
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
@@ -15,10 +16,10 @@ func TestHalconfigChanged(t *testing.T) {
 	d := Deployer{
 		log: logf.Log.WithName("spinnakerservice"),
 	}
-	spinSvc, cm := buildSpinSvc("123456")
+	spinSvc, cm, hc := buildSpinSvc("123456")
 	cm.ResourceVersion = "999"
 
-	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm, hc)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
@@ -32,9 +33,9 @@ func TestHalconfigUpToDate(t *testing.T) {
 		log:    logf.Log.WithName("spinnakerservice"),
 		client: fakeClient,
 	}
-	spinSvc, cm := buildSpinSvc("123456")
+	spinSvc, cm, hc := buildSpinSvc("123456")
 
-	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm, hc)
 
 	assert.True(t, upToDate)
 	assert.Nil(t, err)
@@ -48,11 +49,11 @@ func TestExposeConfigChangedNoServicesYet(t *testing.T) {
 		log:    logf.Log.WithName("spinnakerservice"),
 		client: fakeClient,
 	}
-	spinSvc, cm := buildSpinSvc("123456")
+	spinSvc, cm, hc := buildSpinSvc("123456")
 	spinSvc.Spec.Expose.Type = "Service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
 
-	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm, hc)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
@@ -68,9 +69,9 @@ func TestExposeConfigUpToDateDontExpose(t *testing.T) {
 		log:    logf.Log.WithName("spinnakerservice"),
 		client: fakeClient,
 	}
-	spinSvc, cm := buildSpinSvc("123456")
+	spinSvc, cm, hc := buildSpinSvc("123456")
 
-	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm, hc)
 
 	assert.True(t, upToDate)
 	assert.Nil(t, err)
@@ -86,17 +87,17 @@ func TestExposeConfigChangedLoadBalancer(t *testing.T) {
 		log:    logf.Log.WithName("spinnakerservice"),
 		client: fakeClient,
 	}
-	spinSvc, cm := buildSpinSvc("123456")
+	spinSvc, cm, hc := buildSpinSvc("123456")
 	spinSvc.Spec.Expose.Type = "Service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
 
-	upToDate, err := d.IsConfigUpToDate(spinSvc, cm)
+	upToDate, err := d.IsConfigUpToDate(spinSvc, cm, hc)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
 }
 
-func buildSpinSvc(halconfigVersion string) (*spinnakerv1alpha1.SpinnakerService, *corev1.ConfigMap) {
+func buildSpinSvc(halconfigVersion string) (*spinnakerv1alpha1.SpinnakerService, *corev1.ConfigMap, *halconfig.SpinnakerConfig) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "myconfig",
@@ -114,7 +115,27 @@ func buildSpinSvc(halconfigVersion string) (*spinnakerv1alpha1.SpinnakerService,
 	spinSvc := &spinnakerv1alpha1.SpinnakerService{
 		Status: spinnakerv1alpha1.SpinnakerServiceStatus{HalConfig: h},
 	}
-	return spinSvc, cm
+	//hc := map[string]string{}
+	var hc interface{}
+	hc = map[string]map[string]map[string]map[string]bool{
+		"security": {
+			"apiSecurity": {
+				"ssl": {
+					"enabled": false,
+				},
+			},
+			"uiSecurity": {
+				"ssl": {
+					"enabled": false,
+				},
+			},
+		},
+	}
+	config := halconfig.SpinnakerConfig{
+		HalConfig: hc,
+		Profiles:  map[string]interface{}{},
+	}
+	return spinSvc, cm, &config
 }
 
 func buildSvc(name string, svcType string, annotations map[string]string) *corev1.Service {

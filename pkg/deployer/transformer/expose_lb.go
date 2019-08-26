@@ -75,7 +75,10 @@ func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(serviceName string, ov
 // findStatusUrl returns the overrideBaseUrl or load balancer url, indicating if it came from overrideBaseUrl
 func (t *exposeLbTransformer) findStatusUrl(serviceName string, overrideUrlName string, hc *halconfig.SpinnakerConfig) (string, bool, error) {
 	// ignore error, overrideBaseUrl may not be set in hal config
-	statusUrl, _ := hc.GetHalConfigPropString(overrideUrlName)
+	statusUrl, err := hc.GetHalConfigPropString(overrideUrlName)
+	if err != nil {
+		return "", true, err
+	}
 	if statusUrl != "" {
 		return statusUrl, true, nil
 	}
@@ -83,7 +86,19 @@ func (t *exposeLbTransformer) findStatusUrl(serviceName string, overrideUrlName 
 	case "":
 		return "", false, nil
 	case "service":
-		lbUrl, err := util.FindLoadBalancerUrl(serviceName, t.svc.Namespace, t.client)
+		isSSLEnabled := false
+		if serviceName == util.GateServiceName {
+			isSSLEnabled, err = hc.GetHalConfigPropBool(util.GateSSLEnabledProp, false)
+			if err != nil {
+				return "", false, err
+			}
+		} else if serviceName == util.DeckServiceName {
+			isSSLEnabled, err = hc.GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
+			if err != nil {
+				return "", false, err
+			}
+		}
+		lbUrl, err := util.FindLoadBalancerUrl(serviceName, t.svc.Namespace, t.client, isSSLEnabled)
 		return lbUrl, false, err
 	default:
 		return "", false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", t.svc.Spec.Expose.Type)

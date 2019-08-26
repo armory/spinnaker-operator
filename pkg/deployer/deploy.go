@@ -45,15 +45,10 @@ func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, 
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object) error {
+func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object, c *halconfig.SpinnakerConfig) error {
 	rLogger := d.log.WithValues("Service", svc.Name)
 	ctx := context.TODO()
 	rLogger.Info("Retrieving complete Spinnaker configuration")
-
-	c := halconfig.NewSpinnakerConfig()
-	if err := c.FromConfigObject(config); err != nil {
-		return err
-	}
 
 	v, err := c.GetHalConfigPropString("version")
 	if err != nil {

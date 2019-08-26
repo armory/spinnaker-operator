@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func FindLoadBalancerUrl(svcName string, namespace string, client client.Client) (string, error) {
+func FindLoadBalancerUrl(svcName string, namespace string, client client.Client, hcSSLEnabled bool) (string, error) {
 	svc, err := GetService(svcName, namespace, client)
 	if err != nil || svc == nil || svc.Spec.Type != corev1.ServiceType("LoadBalancer") {
 		return "", err
@@ -35,7 +35,7 @@ func FindLoadBalancerUrl(svcName string, namespace string, client client.Client)
 		}
 	}
 	scheme := "http"
-	if isSSLEnabled(svc, port) {
+	if isSSLEnabled(svc, port, hcSSLEnabled) {
 		scheme = "https"
 	}
 
@@ -50,15 +50,19 @@ func FindLoadBalancerUrl(svcName string, namespace string, client client.Client)
 	return lbUrl.String(), nil
 }
 
-func isSSLEnabled(svc *corev1.Service, port int32) bool {
+func isSSLEnabled(svc *corev1.Service, port int32, hcSSLEnabled bool) bool {
+	// first check if SSL is enabled in halconfig
+	if hcSSLEnabled {
+		return true
+	}
+	// then check service port protocol
 	protocol := string(svc.Spec.Ports[0].Protocol)
 	if strings.ToLower(protocol) == "http" {
 		return false
 	} else if strings.ToLower(protocol) == "https" {
 		return true
 	}
-
-	// TODO: find a better way
+	// finally check if HTTPS port
 	if port == 443 {
 		return true
 	} else {

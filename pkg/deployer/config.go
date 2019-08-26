@@ -3,6 +3,7 @@ package deployer
 import (
 	"context"
 	"fmt"
+	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	"github.com/armory-io/spinnaker-operator/pkg/util"
 	"reflect"
 	"strings"
@@ -16,14 +17,14 @@ import (
 
 // IsConfigUpToDate returns true if the config in status represents the latest
 // config in the service spec
-func (d *Deployer) IsConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) (bool, error) {
+func (d *Deployer) IsConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
 	rLogger := d.log.WithValues("Service", svc.Name)
 	if !d.isHalconfigUpToDate(svc, config) {
 		rLogger.Info("Detected change in Spinnaker configs")
 		return false, nil
 	}
 
-	upToDate, err := d.isExposeConfigUpToDate(svc)
+	upToDate, err := d.isExposeConfigUpToDate(svc, hc)
 	if err != nil {
 		return false, err
 	}
@@ -54,16 +55,24 @@ func (d *Deployer) isHalconfigUpToDate(instance *spinnakerv1alpha1.SpinnakerServ
 	return false
 }
 
-func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService) (bool, error) {
+func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, hc *halconfig.SpinnakerConfig) (bool, error) {
 	switch strings.ToLower(svc.Spec.Expose.Type) {
 	case "":
 		return true, nil
 	case "service":
-		upToDateDeck, err := d.isExposeServiceUpToDate(svc, DeckServiceName)
+		isDeckSSLEnabled, err := hc.GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
+		if err != nil {
+			return false, err
+		}
+		upToDateDeck, err := d.isExposeServiceUpToDate(svc, util.DeckServiceName, isDeckSSLEnabled)
 		if !upToDateDeck || err != nil {
 			return false, err
 		}
-		upToDateGate, err := d.isExposeServiceUpToDate(svc, GateServiceName)
+		isGateSSLEnabled, err := hc.GetHalConfigPropBool(util.GateSSLEnabledProp, false)
+		if err != nil {
+			return false, err
+		}
+		upToDateGate, err := d.isExposeServiceUpToDate(svc, util.GateServiceName, isGateSSLEnabled)
 		if !upToDateGate || err != nil {
 			return false, err
 		}
@@ -73,7 +82,7 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 	}
 }
 
-func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerService, serviceName string) (bool, error) {
+func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerService, serviceName string, hcSSLEnabled bool) (bool, error) {
 	rLogger := d.log.WithValues("Service", spinSvc.Name)
 	ns := spinSvc.ObjectMeta.Namespace
 	svc, err := util.GetService(serviceName, ns, d.client)
@@ -104,7 +113,7 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 		statusUrl = spinSvc.Status.UIUrl
 	}
 	if statusUrl == "" {
-		lbUrl, err := util.FindLoadBalancerUrl(serviceName, ns, d.client)
+		lbUrl, err := util.FindLoadBalancerUrl(serviceName, ns, d.client, hcSSLEnabled)
 		if err != nil {
 			return false, err
 		}

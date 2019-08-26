@@ -2,6 +2,7 @@ package spinnakerservice
 
 import (
 	"context"
+	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	deploy "github.com/armory-io/spinnaker-operator/pkg/deployer"
@@ -31,8 +32,8 @@ func Add(mgr manager.Manager) error {
 }
 
 type deployer interface {
-	IsConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object) (bool, error)
-	Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object) error
+	IsConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
+	Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object, hc *halconfig.SpinnakerConfig) error
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -126,18 +127,18 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 
 	// Check if we need to redeploy
 	reqLogger.Info("Checking current deployment status")
-	c, err := instance.GetConfigObject(r.client)
+	configObject, spinConfig, err := instance.GetConfig(r.client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	// Check if config has changed
-	upToDate, err := r.deployer.IsConfigUpToDate(instance, c)
+	upToDate, err := r.deployer.IsConfigUpToDate(instance, configObject, spinConfig)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if !upToDate {
 		reqLogger.Info("Deploying Spinnaker")
-		err := r.deployer.Deploy(instance, r.scheme, c)
+		err := r.deployer.Deploy(instance, r.scheme, configObject, spinConfig)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
