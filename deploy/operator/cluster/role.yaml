@@ -10,9 +10,9 @@ rules:
   - ingresses/status
   - endpoints
   verbs:
-  - 'get'
-  - 'list'
-  - 'watch'
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:
