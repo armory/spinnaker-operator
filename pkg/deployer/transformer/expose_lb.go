@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/armory-io/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
-	url2 "net/url"
 	"strconv"
 	"strings"
 
@@ -35,11 +34,11 @@ func (g *exposeLbTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.Spi
 
 // TransformConfig is a nop
 func (t *exposeLbTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	if err := t.setStatusAndOverrideBaseUrl("spin-gate", "security.apiSecurity.overrideBaseUrl", hc); err != nil {
+	if err := t.setStatusAndOverrideBaseUrl(util.GateServiceName, "security.apiSecurity.overrideBaseUrl", hc); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
 	}
-	if err := t.setStatusAndOverrideBaseUrl("spin-deck", "security.uiSecurity.overrideBaseUrl", hc); err != nil {
+	if err := t.setStatusAndOverrideBaseUrl(util.DeckServiceName, "security.uiSecurity.overrideBaseUrl", hc); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
 	}
@@ -58,9 +57,9 @@ func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(serviceName string, ov
 	if err != nil {
 		return err
 	}
-	if serviceName == "spin-gate" {
+	if serviceName == util.GateServiceName {
 		t.svc.Status.APIUrl = statusUrl
-	} else if serviceName == "spin-deck" {
+	} else if serviceName == util.DeckServiceName {
 		t.svc.Status.UIUrl = statusUrl
 	}
 	if !isFromOverrideBaseUrl {
@@ -75,10 +74,7 @@ func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(serviceName string, ov
 // findStatusUrl returns the overrideBaseUrl or load balancer url, indicating if it came from overrideBaseUrl
 func (t *exposeLbTransformer) findStatusUrl(serviceName string, overrideUrlName string, hc *halconfig.SpinnakerConfig) (string, bool, error) {
 	// ignore error, overrideBaseUrl may not be set in hal config
-	statusUrl, err := hc.GetHalConfigPropString(overrideUrlName)
-	if err != nil {
-		return "", true, err
-	}
+	statusUrl, _ := hc.GetHalConfigPropString(overrideUrlName)
 	if statusUrl != "" {
 		return statusUrl, true, nil
 	}
@@ -87,15 +83,14 @@ func (t *exposeLbTransformer) findStatusUrl(serviceName string, overrideUrlName 
 		return "", false, nil
 	case "service":
 		isSSLEnabled := false
+		var err error
 		if serviceName == util.GateServiceName {
-			isSSLEnabled, err = hc.GetHalConfigPropBool(util.GateSSLEnabledProp, false)
-			if err != nil {
-				return "", false, err
+			if isSSLEnabled, err = hc.GetHalConfigPropBool(util.GateSSLEnabledProp, false); err != nil {
+				isSSLEnabled = false
 			}
 		} else if serviceName == util.DeckServiceName {
-			isSSLEnabled, err = hc.GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
-			if err != nil {
-				return "", false, err
+			if isSSLEnabled, err = hc.GetHalConfigPropBool(util.DeckSSLEnabledProp, false); err != nil {
+				isSSLEnabled = false
 			}
 		}
 		lbUrl, err := util.FindLoadBalancerUrl(serviceName, t.svc.Namespace, t.client, isSSLEnabled)
@@ -145,15 +140,7 @@ func (t *exposeLbTransformer) applyExposeServiceConfig(svc *corev1.Service, serv
 		svc.Spec.Type = corev1.ServiceType(t.svc.Spec.Expose.Service.Type)
 	}
 
-	annotations := map[string]string{}
-	for k, v := range t.svc.Spec.Expose.Service.Annotations {
-		annotations[k] = v
-	}
-	if c, ok := t.svc.Spec.Expose.Service.Overrides[serviceName]; ok {
-		for k, v := range c.Annotations {
-			annotations[k] = v
-		}
-	}
+	annotations := t.svc.GetAggregatedAnnotations(serviceName)
 	if len(annotations) > 0 {
 		svc.Annotations = annotations
 	}
@@ -162,7 +149,7 @@ func (t *exposeLbTransformer) applyExposeServiceConfig(svc *corev1.Service, serv
 func (t *exposeLbTransformer) applyPortChanges(portName string, portDefault int32, overrideUrlName string, svc *corev1.Service, hc *halconfig.SpinnakerConfig) error {
 	if len(svc.Spec.Ports) > 0 {
 		overrideUrl, _ := hc.GetHalConfigPropString(overrideUrlName)
-		svc.Spec.Ports[0].Port = getPort(overrideUrl, portDefault)
+		svc.Spec.Ports[0].Port = util.GetPort(overrideUrl, portDefault)
 		svc.Spec.Ports[0].Name = portName
 		if strings.Contains(portName, "gate") {
 			// ignore error, property may be missing
@@ -176,29 +163,4 @@ func (t *exposeLbTransformer) applyPortChanges(portName string, portDefault int3
 		}
 	}
 	return nil
-}
-
-func getPort(url string, defaultPort int32) int32 {
-	if url == "" {
-		return defaultPort
-	}
-	u, err := url2.Parse(url)
-	if err != nil {
-		return defaultPort
-	}
-	s := u.Port()
-	if s != "" {
-		p, err := strconv.ParseInt(s, 10, 32)
-		if err != nil {
-			return defaultPort
-		}
-		return int32(p)
-	}
-	switch u.Scheme {
-	case "http":
-		return 80
-	case "https":
-		return 443
-	}
-	return defaultPort
 }

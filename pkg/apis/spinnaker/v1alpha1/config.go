@@ -49,3 +49,16 @@ func (s *SpinnakerService) GetConfig(client client.Client) (runtime.Object, *hal
 	}
 	return nil, nil, fmt.Errorf("SpinnakerService does not reference configMap or secret. No configuration found")
 }
+
+func (s *SpinnakerService) GetAggregatedAnnotations(serviceName string) map[string]string {
+	annotations := map[string]string{}
+	for k, v := range s.Spec.Expose.Service.Annotations {
+		annotations[k] = v
+	}
+	if c, ok := s.Spec.Expose.Service.Overrides[serviceName]; ok {
+		for k, v := range c.Annotations {
+			annotations[k] = v
+		}
+	}
+	return annotations
+}

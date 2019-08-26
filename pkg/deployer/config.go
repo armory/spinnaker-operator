@@ -62,7 +62,7 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 	case "service":
 		isDeckSSLEnabled, err := hc.GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
 		if err != nil {
-			return false, err
+			isDeckSSLEnabled = false
 		}
 		upToDateDeck, err := d.isExposeServiceUpToDate(svc, util.DeckServiceName, isDeckSSLEnabled)
 		if !upToDateDeck || err != nil {
@@ -70,7 +70,7 @@ func (d *Deployer) isExposeConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerServic
 		}
 		isGateSSLEnabled, err := hc.GetHalConfigPropBool(util.GateSSLEnabledProp, false)
 		if err != nil {
-			return false, err
+			isGateSSLEnabled = false
 		}
 		upToDateGate, err := d.isExposeServiceUpToDate(svc, util.GateServiceName, isGateSSLEnabled)
 		if !upToDateGate || err != nil {
@@ -100,7 +100,8 @@ func (d *Deployer) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerS
 	}
 
 	// annotations are different, redeploy
-	expectedAnnotations := d.getAggregatedAnnotations(serviceName, spinSvc)
+	simpleServiceName := serviceName[len("spin-"):]
+	expectedAnnotations := spinSvc.GetAggregatedAnnotations(simpleServiceName)
 	if !reflect.DeepEqual(svc.Annotations, expectedAnnotations) {
 		rLogger.Info(fmt.Sprintf("Service annotations for %s: expected: %s, actual: %s", serviceName,
 			expectedAnnotations, svc.Annotations))
@@ -143,20 +144,6 @@ func (d *Deployer) exposeServiceTypeUpToDate(serviceName string, spinSvc *spinna
 		}
 	}
 	return true, nil
-}
-
-func (d *Deployer) getAggregatedAnnotations(serviceName string, spinSvc *spinnakerv1alpha1.SpinnakerService) map[string]string {
-	formattedServiceName := serviceName[len("spin-"):]
-	annotations := map[string]string{}
-	for k, v := range spinSvc.Spec.Expose.Service.Annotations {
-		annotations[k] = v
-	}
-	if c, ok := spinSvc.Spec.Expose.Service.Overrides[formattedServiceName]; ok {
-		for k, v := range c.Annotations {
-			annotations[k] = v
-		}
-	}
-	return annotations
 }
 
 func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus, config runtime.Object) error {

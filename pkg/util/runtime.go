@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strconv"
 	"strings"
 )
 
@@ -83,4 +84,29 @@ func GetService(name string, namespace string, client client.Client) (*corev1.Se
 		return nil, err
 	}
 	return svc, nil
+}
+
+func GetPort(aUrl string, defaultPort int32) int32 {
+	if aUrl == "" {
+		return defaultPort
+	}
+	u, err := url.Parse(aUrl)
+	if err != nil {
+		return defaultPort
+	}
+	s := u.Port()
+	if s != "" {
+		p, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return defaultPort
+		}
+		return int32(p)
+	}
+	switch u.Scheme {
+	case "http":
+		return 80
+	case "https":
+		return 443
+	}
+	return defaultPort
 }
