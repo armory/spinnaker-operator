@@ -68,10 +68,11 @@ func main() {
 
 	printVersion()
 
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		log.Error(err, "Failed to get watch namespace")
-		os.Exit(1)
+	namespace, _ := k8sutil.GetWatchNamespace()
+	if namespace != "" {
+		log.Info(fmt.Sprintf("Watching Spinnaker configuration in %s", namespace))
+	} else {
+		log.Info("Watching Spinnaker configuration in cluster")
 	}
 
 	// Get a config to talk to the apiserver
