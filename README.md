@@ -39,8 +39,8 @@ $ kubectl apply -f deploy/crds/spinnaker_v1alpha1_spinnakerservice_crd.yaml
 ```
 
 There are two modes for the operator:
-- a basic mode that can install Spinnaker in a single namespace. In this mode, there's no validating admission webhook.
-- a cluster mode that requires a `ClusterRole` to perform validation.
+- basic mode to install Spinnaker in a single namespace without validating admission webhook
+- cluster mode works across namespaces and requires a `ClusterRole` to perform validation
 
 The main difference between the two modes is that basic only requires a `Role` (vs a `ClusterRole`) and has no validating webhook.
 
@@ -89,7 +89,7 @@ $ kustomize build deploy/spinnaker/kustomize | kubectl -n <namespace> apply -f -
 
 Or if using `kubectl` version 1.14+:
 ```bash
-$ kubectl -n <namespace> apply -f deploy/spinnaker/examples/basic
+$ kubectl -n <namespace> apply -f deploy/spinnaker/kustomize
 ```
 
 
@@ -111,7 +111,7 @@ The short name `spinsvc` is also available.
 $ kubectl -n mynamespace describe spinnakerservice spinnaker
 ```
 
-#### Describing Spinnaker instances
+#### Deleting Spinnaker instances
 Delete:
 ```bash
 $ kubectl -n mynamespace deleted spinnakerservice spinnaker
@@ -119,12 +119,12 @@ spinnakerservice.spinnaker.io "spinnaker" deleted
 ```
 
 
-## Spinnaker Configuration (TODO)
+## Configuring Spinnaker (TODO)
 
 ### `SpinnakerService`
 
 The `SpinnakerService` points to the `configMap` with the configuration (see below).
 
-### Spinnaker Configuration
+### `configMap`
 
 ## Architecture (TODO)
