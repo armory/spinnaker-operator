@@ -15,7 +15,7 @@ spec:
       serviceAccountName: spinnaker-operator
       containers:
         - name: spinnaker-operator
-          image: armory/spinnaker-operator:8e74d09-dirty4
+          image: armory/spinnaker-operator:a945ecb-dirty
           command:
             - spinnaker-operator
           imagePullPolicy: Always

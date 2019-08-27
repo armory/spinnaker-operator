@@ -8,6 +8,14 @@ spec:
     description: Version
     name: version
     type: string
+  - JSONPath: .status.uiUrl
+    description: UI URL
+    name: uiUrl
+    type: string
+  - JSONPath: .status.apiUrl
+    description: API URL
+    name: apiUrl
+    type: string
   group: spinnaker.io
   names:
     kind: SpinnakerService

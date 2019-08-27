@@ -122,7 +122,7 @@ func (d *Deployer) patch(original runtime.Object) error {
 		}
 		return err
 	}
-	return i.Patch(types.StrategicMergePatchType).
+	return i.Patch(types.MergePatchType).
 		Namespace(o.GetNamespace()).
 		Resource(rsc).
 		// SubResource("spec").
