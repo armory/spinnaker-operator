@@ -32,7 +32,7 @@ func Add(mgr manager.Manager) error {
 }
 
 type deployer interface {
-	IsConfigUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
+	IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
 	Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object, hc *halconfig.SpinnakerConfig) error
 }
 
@@ -132,7 +132,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 	// Check if config has changed
-	upToDate, err := r.deployer.IsConfigUpToDate(instance, configObject, spinConfig)
+	upToDate, err := r.deployer.IsSpinnakerUpToDate(instance, configObject, spinConfig)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

@@ -11,12 +11,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Transformers tracks the list of transformers
-var Transformers []Generator
+// Generators tracks the list of transformers
+var Generators []Generator
 
 func init() {
-	Transformers = append(Transformers, &ownerTransformerGenerator{}, &targetTransformerGenerator{},
-		&exposeLbTransformerGenerator{}, &serverPortTransformerGenerator{})
+	Generators = append(Generators, &ownerTransformerGenerator{}, &targetTransformerGenerator{},
+		&exposeLbTransformerGenerator{}, &serverPortTransformerGenerator{}, &x509TransformerGenerator{})
 }
 
 // Transformer affects how Spinnaker is deployed.
