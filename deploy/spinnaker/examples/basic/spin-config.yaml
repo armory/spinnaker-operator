@@ -87,7 +87,6 @@ data:
         enabled: false
       vault:
         enabled: false
-      location: andrew1
       customSizing: {}
       sidecars: {}
       initContainers: {}
@@ -109,7 +108,7 @@ data:
         rootFolder: front50
       redis: {}
       s3:
-        bucket: andrew-spin-dev-1
+        bucket: mybucket
         rootFolder: front50
         region: us-west-2
       oracle: {}
@@ -152,11 +151,9 @@ data:
       apiSecurity:
         ssl:
           enabled: false
-        overrideBaseUrl: http://my-api.spinnaker.armory.io
       uiSecurity:
         ssl:
           enabled: false
-        overrideBaseUrl: http://my.spinnaker.armory.io
       authn:
         oauth2:
           enabled: false
@@ -250,8 +247,3 @@ data:
     webhook:
       trust:
         enabled: false
-  profiles__gate-local.yml: |
-    default:
-      apiPort: 8085
-    server:
-      port: 6666
