@@ -1,4 +1,2 @@
 default:
   apiPort: 8085
-server:
-  port: 8084

@@ -20,6 +20,7 @@ type ServiceConfig struct {
 	Deployment *appsv1.Deployment `json:"deployment,omitempty"`
 	Service    *corev1.Service    `json:"service,omitempty"`
 	Resources  []runtime.Object   `json:"resources,omitempty"`
+	ToDelete   []runtime.Object   `json:"todelete,omitempty"`
 }
 
 func (r *ServiceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {

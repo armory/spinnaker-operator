@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"path/filepath"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"testing"
@@ -23,6 +24,10 @@ var th = testHelpers{}
 
 func (h *testHelpers) setupTransformer(generator Generator, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService, *halconfig.SpinnakerConfig) {
 	fakeClient := fake.NewFakeClient()
+	return h.setupTransformerWithFakeClient(generator, fakeClient, t)
+}
+
+func (h *testHelpers) setupTransformerWithFakeClient(generator Generator, fakeClient client.Client, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService, *halconfig.SpinnakerConfig) {
 	spinSvc := h.setupSpinSvc()
 	tr, _ := generator.NewTransformer(spinSvc, fakeClient, log.Log.WithName("spinnakerservice"))
 	hc := h.setupSpinnakerConfig(t)

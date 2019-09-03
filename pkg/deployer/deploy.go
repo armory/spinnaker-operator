@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory-io/spinnaker-operator/pkg/deployer/changedetector"
 	"github.com/armory-io/spinnaker-operator/pkg/deployer/transformer"
 	"github.com/armory-io/spinnaker-operator/pkg/generated"
 	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 type manifestGenerator interface {
@@ -21,24 +24,34 @@ type manifestGenerator interface {
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
 type Deployer struct {
-	m           manifestGenerator
-	client      client.Client
-	generators  []transformer.Generator
-	log         logr.Logger
-	rawClient   *kubernetes.Clientset
-	evtRecorder record.EventRecorder
+	m                       manifestGenerator
+	client                  client.Client
+	transformerGenerators   []transformer.Generator
+	changeDetectorGenerator changedetector.Generator
+	log                     logr.Logger
+	rawClient               *kubernetes.Clientset
+	evtRecorder             record.EventRecorder
 }
 
 // NewDeployer makes a new deployer
 func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, log logr.Logger, evtRecorder record.EventRecorder) *Deployer {
 	return &Deployer{
-		m:           m,
-		client:      c,
-		generators:  transformer.Transformers,
-		rawClient:   r,
-		evtRecorder: evtRecorder,
-		log:         log,
+		m:                       m,
+		client:                  c,
+		transformerGenerators:   transformer.Generators,
+		changeDetectorGenerator: &changedetector.CompositeChangeDetectorGenerator{},
+		rawClient:               r,
+		evtRecorder:             evtRecorder,
+		log:                     log,
 	}
+}
+
+func (d *Deployer) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
+	if err != nil {
+		return false, err
+	}
+	return ch.IsSpinnakerUpToDate(svc, config, hc)
 }
 
 // Deploy takes a SpinnakerService definition and transforms it into manifests to create.
@@ -60,7 +73,7 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	var transformers []transformer.Transformer
 
 	rLogger.Info("Applying options to Spinnaker config")
-	for _, t := range d.generators {
+	for _, t := range d.transformerGenerators {
 		tr, err := t.NewTransformer(svc, d.client, d.log)
 		if err != nil {
 			return err
@@ -96,4 +109,35 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	status.Version = v
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
 	return d.commitConfigToStatus(ctx, svc, status, config)
+}
+
+func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus, config runtime.Object) error {
+	cm, ok := config.(*corev1.ConfigMap)
+	if ok {
+		status.HalConfig = spinnakerv1alpha1.SpinnakerFileSourceStatus{
+			ConfigMap: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
+				Name:            cm.ObjectMeta.Name,
+				Namespace:       cm.ObjectMeta.Namespace,
+				ResourceVersion: cm.ObjectMeta.ResourceVersion,
+			},
+		}
+	}
+	sec, ok := config.(*corev1.Secret)
+	if ok {
+		status.HalConfig = spinnakerv1alpha1.SpinnakerFileSourceStatus{
+			Secret: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
+				Name:            sec.ObjectMeta.Name,
+				Namespace:       sec.ObjectMeta.Namespace,
+				ResourceVersion: sec.ObjectMeta.ResourceVersion,
+			},
+		}
+	}
+	status.LastConfigurationTime = metav1.NewTime(time.Now())
+	// gate and deck status url's are populated in transformers
+
+	s := svc.DeepCopy()
+	s.Status = *status
+	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
+	// TODO Investigate issue on earlier Kubernetes version, works fine in 1.13
+	return d.client.Status().Update(ctx, s)
 }

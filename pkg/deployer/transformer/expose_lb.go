@@ -14,13 +14,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// exposeLbTransformer changes hal configurations and manifest files to expose spinnaker using service load balancers
+// exposeLbTr changes hal configurations and manifest files to expose spinnaker using service load balancers
 type exposeLbTransformer struct {
 	*defaultTransformer
-	svc      *spinnakerv1alpha1.SpinnakerService
-	gateX509 int32
-	log      logr.Logger
-	client   client.Client
+	svc    *spinnakerv1alpha1.SpinnakerService
+	log    logr.Logger
+	client client.Client
 }
 
 type exposeLbTransformerGenerator struct{}
@@ -34,20 +33,13 @@ func (g *exposeLbTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.Spi
 
 // TransformConfig is a nop
 func (t *exposeLbTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	if err := t.setStatusAndOverrideBaseUrl(util.GateServiceName, "security.apiSecurity.overrideBaseUrl", hc); err != nil {
+	if err := t.setStatusAndOverrideBaseUrl(util.GateServiceName, util.GateOverrideBaseUrlProp, hc); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
 	}
-	if err := t.setStatusAndOverrideBaseUrl(util.DeckServiceName, "security.uiSecurity.overrideBaseUrl", hc); err != nil {
+	if err := t.setStatusAndOverrideBaseUrl(util.DeckServiceName, util.DeckOverrideBaseUrlProp, hc); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
-	}
-	s, err := hc.GetServiceConfigPropString("gate", "default.apiPort")
-	if err == nil {
-		p, err := strconv.ParseInt(s, 10, 32)
-		if err == nil {
-			t.gateX509 = int32(p)
-		}
 	}
 	return nil
 }
@@ -107,26 +99,16 @@ func (t *exposeLbTransformer) transformServiceManifest(svcName string, svc *core
 	overrideUrlKeyName := ""
 	defaultPort := int32(0)
 	if svcName == "gate" {
-		overrideUrlKeyName = "security.apiSecurity.overrideBaseUrl"
+		overrideUrlKeyName = util.GateOverrideBaseUrlProp
 		defaultPort = int32(8084)
 	} else if svcName == "deck" {
-		overrideUrlKeyName = "security.uiSecurity.overrideBaseUrl"
+		overrideUrlKeyName = util.DeckOverrideBaseUrlProp
 		defaultPort = int32(9000)
 	}
 	if err := t.applyPortChanges(fmt.Sprintf("%s-tcp", svcName), defaultPort, overrideUrlKeyName, svc, hc); err != nil {
 		return err
 	}
 	t.applyExposeServiceConfig(svc, svcName)
-
-	// TODO: Move somewhere else
-	if svcName == "gate" && t.gateX509 > 0 {
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:       "gate-x509",
-			Port:       t.gateX509,
-			TargetPort: intstr.FromInt(int(t.gateX509)),
-			Protocol:   "TCP",
-		})
-	}
 	return nil
 }
 
