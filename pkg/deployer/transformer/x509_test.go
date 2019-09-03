@@ -52,5 +52,5 @@ func TestTransformManifests_RemoveX509Service(t *testing.T) {
 	assert.Nil(t, err)
 	x509Config, ok := gen.Config["gate-x509"]
 	assert.True(t, ok)
-	assert.Equal(t, x509Svc, x509Config.GarbageCollect[0])
+	assert.Equal(t, x509Svc, x509Config.ToDelete[0])
 }

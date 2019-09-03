@@ -51,7 +51,7 @@ func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen
 				return err
 			}
 		}
-		for _, o := range s.GarbageCollect {
+		for _, o := range s.ToDelete {
 			logger.Info(fmt.Sprintf("Deleting resource manifest for %s", k))
 			if err := d.deleteObject(ctx, o); err != nil {
 				return err
