@@ -21,7 +21,7 @@ node {
 
         if (branch == 'master') {
             stage("Push image") {
-                sh 'make push'
+                sh 'make push publish'
             }
         }
         def props = [ version: version ]

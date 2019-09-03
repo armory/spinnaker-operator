@@ -77,6 +77,11 @@ build-docker:
 push:
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)
 
+.PHONY: publish
+publish:
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:latest
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:latest
+
 .PHONY: version
 version:
 	@echo $(VERSION)
