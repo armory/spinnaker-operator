@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: spinconfig-v002
+  name: spinconfig-v001
 data:
   config: |
     name: default
