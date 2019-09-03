@@ -24,13 +24,19 @@ func (g *x509ChangeDetectorGenerator) NewChangeDetector(client client.Client, lo
 
 // IsSpinnakerUpToDate returns true if there is a x509 configuration with a matching service
 func (ch *x509ChangeDetector) IsSpinnakerUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
-	// ignore error as default.apiPort may not exist
-	apiPort, _ := hc.GetServiceConfigPropString("gate", "default.apiPort")
-	if apiPort == "" {
+	if spinSvc.Spec.Expose.Type == "" {
 		return true, nil
 	}
+	// ignore error as default.apiPort may not exist
+	apiPort, _ := hc.GetServiceConfigPropString("gate", "default.apiPort")
 	svc, err := util.GetService(util.GateX509ServiceName, spinSvc.Namespace, ch.client)
-	if svc == nil || err != nil {
+	if err != nil {
+		return false, err
+	}
+	if apiPort == "" {
+		return svc == nil, nil
+	}
+	if svc == nil {
 		return false, err
 	}
 	apiPortInt, err := strconv.ParseInt(apiPort, 10, 32)

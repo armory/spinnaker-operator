@@ -51,6 +51,12 @@ func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen
 				return err
 			}
 		}
+		for _, o := range s.GarbageCollect {
+			logger.Info(fmt.Sprintf("Deleting resource manifest for %s", k))
+			if err := d.deleteObject(ctx, o); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -66,6 +72,10 @@ func (d *Deployer) saveObject(ctx context.Context, obj runtime.Object, skipCheck
 	}
 	logger.Info(fmt.Sprintf("Creating %v", obj))
 	return d.client.Create(ctx, obj)
+}
+
+func (d *Deployer) deleteObject(ctx context.Context, obj runtime.Object) error {
+	return d.client.Delete(ctx, obj)
 }
 
 func (d *Deployer) patch(original runtime.Object) error {

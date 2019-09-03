@@ -17,6 +17,7 @@ type x509Transformer struct {
 	*defaultTransformer
 	exposeLbTr *exposeLbTransformer
 	svc        *spinnakerv1alpha1.SpinnakerService
+	client     client.Client
 	log        logr.Logger
 }
 
@@ -31,13 +32,17 @@ func (g *x509TransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.Spinnak
 		return nil, err
 	}
 	exLbTr := exTr.(*exposeLbTransformer)
-	tr := x509Transformer{svc: svc, log: log, defaultTransformer: base, exposeLbTr: exLbTr}
+	tr := x509Transformer{svc: svc, log: log, defaultTransformer: base, exposeLbTr: exLbTr, client: client}
 	base.childTransformer = &tr
 	return &tr, nil
 }
 
 func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig,
 	gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+
+	if t.svc.Spec.Expose.Type == "" {
+		return nil
+	}
 
 	gateConfig, ok := gen.Config["gate"]
 	if !ok || gateConfig.Service == nil {
@@ -46,7 +51,7 @@ func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, hc *halconf
 	// ignore error as api port property may not exist
 	apiPort, err := hc.GetServiceConfigPropString("gate", "default.apiPort")
 	if err != nil || apiPort == "" {
-		return nil
+		return t.scheduleForRemovalIfNeeded(gateConfig, gen)
 	}
 	apiPortInt, err := strconv.ParseInt(apiPort, 10, 32)
 	if err != nil {
@@ -75,4 +80,18 @@ func (t *x509Transformer) createX509Service(apiPort int32, gateSvc *corev1.Servi
 		}
 	}
 	return x509Svc, nil
+}
+
+func (t *x509Transformer) scheduleForRemovalIfNeeded(gateConfig generated.ServiceConfig, gen *generated.SpinnakerGeneratedConfig) error {
+	x509Svc, err := util.GetService(util.GateX509ServiceName, gateConfig.Service.Namespace, t.client)
+	if err != nil {
+		return err
+	}
+	if x509Svc == nil {
+		return nil
+	}
+	gen.Config["gate-x509"] = generated.ServiceConfig{
+		GarbageCollect: []runtime.Object{x509Svc},
+	}
+	return nil
 }

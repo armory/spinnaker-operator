@@ -17,9 +17,10 @@ type SpinnakerGeneratedConfig struct {
 
 // ServiceConfig is the generated service config
 type ServiceConfig struct {
-	Deployment *appsv1.Deployment `json:"deployment,omitempty"`
-	Service    *corev1.Service    `json:"service,omitempty"`
-	Resources  []runtime.Object   `json:"resources,omitempty"`
+	Deployment     *appsv1.Deployment `json:"deployment,omitempty"`
+	Service        *corev1.Service    `json:"service,omitempty"`
+	Resources      []runtime.Object   `json:"resources,omitempty"`
+	GarbageCollect []runtime.Object   `json:"garbagecollect,omitempty"`
 }
 
 func (r *ServiceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
