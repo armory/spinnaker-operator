@@ -3,13 +3,9 @@ package halconfig
 import (
 	"encoding/base64"
 	"fmt"
-	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"regexp"
 )
-
-var profileRegex = regexp.MustCompile(`^profiles__([[:alpha:]]+)-local.yml$`)
 
 func (s *SpinnakerConfig) FromConfigObject(obj runtime.Object) error {
 	cm, ok := obj.(*corev1.ConfigMap)
@@ -33,7 +29,7 @@ func (s *SpinnakerConfig) FromConfigMap(cm corev1.ConfigMap) error {
 	}
 
 	if s.HalConfig == nil {
-		return fmt.Errorf("Config key could not be found in config map %s", cm.ObjectMeta.Name)
+		return fmt.Errorf("config key could not be found in config map %s", cm.ObjectMeta.Name)
 	}
 
 	s.BinaryFiles = cm.BinaryData
@@ -53,7 +49,7 @@ func (s *SpinnakerConfig) FromSecret(sec corev1.Secret) error {
 	}
 
 	if s.HalConfig == nil {
-		return fmt.Errorf("Config key could not be found in config map %s", sec.ObjectMeta.Name)
+		return fmt.Errorf("config key could not be found in config map %s", sec.ObjectMeta.Name)
 	}
 	return nil
 }
@@ -70,22 +66,13 @@ func (s *SpinnakerConfig) parse(key string, data []byte) error {
 		if err != nil {
 			return err
 		}
-	} else {
-		return s.fromBytes(key, data)
-	}
-	return nil
-}
-
-func (s *SpinnakerConfig) fromBytes(k string, data []byte) error {
-	a := profileRegex.FindStringSubmatch(k)
-	if len(a) > 1 {
-		var p interface{}
-		err := yaml.Unmarshal(data, &p)
-		if err == nil {
-			s.Profiles[a[1]] = p
-			return nil
+	} else if key == "profiles" {
+		err := s.ParseProfiles(data)
+		if err != nil {
+			return err
 		}
+	} else {
+		s.Files[key] = string(data)
 	}
-	s.Files[k] = string(data)
 	return nil
 }

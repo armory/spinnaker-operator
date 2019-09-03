@@ -14,7 +14,7 @@ func TestParseConfigMapMissingConfig(t *testing.T) {
 	}
 	err := hc.FromConfigMap(cm)
 	if assert.NotNil(t, err) {
-		assert.EqualError(t, err, "Config key could not be found in config map ")
+		assert.EqualError(t, err, "config key could not be found in config map ")
 	}
 }
 
@@ -26,9 +26,8 @@ func TestParseConfigMap(t *testing.T) {
 name: default
 version: 1.14.2
 `,
-			"profiles__gate-local.yml": "test:\n  deep: abc",
-			"profiles__orca-local.yml": "test.other: def",
-			"files__somefile":          "test3",
+			"profiles":        "gate:\n  test:\n    deep: abc\norca:\n  test.other: def",
+			"files__somefile": "test3",
 		},
 	}
 	err := hc.FromConfigMap(cm)
@@ -45,12 +44,5 @@ version: 1.14.2
 		s, err = hc.GetServiceConfigPropString("orca", "test.other")
 		assert.Nil(t, err)
 		assert.Equal(t, "def", s)
-	}
-}
-
-func TestExpectedProfiles(t *testing.T) {
-	a := profileRegex.FindStringSubmatch("profiles__gate-local.yml")
-	if assert.Equal(t, 2, len(a)) {
-		assert.Equal(t, "gate", a[1])
 	}
 }

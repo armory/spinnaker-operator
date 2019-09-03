@@ -19,3 +19,23 @@ func (s *SpinnakerConfig) ParseServiceSettings(data []byte) error {
 	s.ServiceSettings = ss
 	return err
 }
+
+// ParseServiceSettings parses service settings
+func (s *SpinnakerConfig) ParseProfiles(data []byte) error {
+	var ps map[string]interface{}
+	err := yaml.Unmarshal(data, &ps)
+	s.Profiles = ps
+	for k, p := range ps {
+		if str, ok := p.(string); ok {
+			var pk map[string]interface{}
+			err := yaml.Unmarshal([]byte(str), &pk)
+			if err != nil {
+				return err
+			}
+			s.Profiles[k] = pk
+		} else {
+			s.Profiles[k] = p
+		}
+	}
+	return err
+}
