@@ -3,13 +3,12 @@ package halconfig
 import (
 	"encoding/base64"
 	"fmt"
-	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"regexp"
 )
 
-var profileRegex = regexp.MustCompile(`^profiles__([[:alpha:]]+)-local.yml$`)
+var fileRegex = regexp.MustCompile(`^files__(.+)$`)
 
 func (s *SpinnakerConfig) FromConfigObject(obj runtime.Object) error {
 	cm, ok := obj.(*corev1.ConfigMap)
@@ -33,7 +32,7 @@ func (s *SpinnakerConfig) FromConfigMap(cm corev1.ConfigMap) error {
 	}
 
 	if s.HalConfig == nil {
-		return fmt.Errorf("Config key could not be found in config map %s", cm.ObjectMeta.Name)
+		return fmt.Errorf("config key could not be found in config map %s", cm.ObjectMeta.Name)
 	}
 
 	s.BinaryFiles = cm.BinaryData
@@ -53,39 +52,25 @@ func (s *SpinnakerConfig) FromSecret(sec corev1.Secret) error {
 	}
 
 	if s.HalConfig == nil {
-		return fmt.Errorf("Config key could not be found in config map %s", sec.ObjectMeta.Name)
+		return fmt.Errorf("config key could not be found in config map: %s", sec.ObjectMeta.Name)
 	}
 	return nil
 }
 
 func (s *SpinnakerConfig) parse(key string, data []byte) error {
-	if key == "config" {
-		// Read Halconfig
-		err := s.ParseHalConfig(data)
-		if err != nil {
-			return err
-		}
-	} else if key == "serviceSettings" {
-		err := s.ParseServiceSettings(data)
-		if err != nil {
-			return err
-		}
-	} else {
-		return s.fromBytes(key, data)
-	}
-	return nil
-}
-
-func (s *SpinnakerConfig) fromBytes(k string, data []byte) error {
-	a := profileRegex.FindStringSubmatch(k)
-	if len(a) > 1 {
-		var p interface{}
-		err := yaml.Unmarshal(data, &p)
-		if err == nil {
-			s.Profiles[a[1]] = p
+	switch key {
+	case "config":
+		return s.ParseHalConfig(data)
+	case "serviceSettings":
+		return s.ParseServiceSettings(data)
+	case "profiles":
+		return s.ParseProfiles(data)
+	default:
+		a := fileRegex.FindStringSubmatch(key)
+		if len(a) > 1 {
+			s.Files[a[1]] = string(data)
 			return nil
 		}
+		return fmt.Errorf("configuration found with an invalid key: %s, use one of [config|profiles|serviceSettings|files__*]", key)
 	}
-	s.Files[k] = string(data)
-	return nil
 }

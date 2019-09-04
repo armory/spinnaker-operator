@@ -1,14 +1,21 @@
 package halconfig
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // SpinnakerConfig represents the entire configuration loaded with profiles and required files
 type SpinnakerConfig struct {
-	Files           map[string]string      `json:"files,omitempty"`
+	// Supporting files for the Spinnaker config
+	Files map[string]string `json:"files,omitempty"`
+	// Parsed service settings - comments are stripped
 	ServiceSettings map[string]interface{} `json:"serviceSettings,omitempty"`
-	BinaryFiles     map[string][]byte      `json:"binary,omitempty"`
-	Profiles        map[string]interface{} `json:"profiles,omitempty"`
-	HalConfig       interface{}            `json:"halConfig,omitempty"`
+	// Potential binary files when coming from a ConfigMap
+	BinaryFiles map[string][]byte `json:"binary,omitempty"`
+	// Service profiles will be parsed as YAML
+	Profiles map[string]interface{}
+	// Main deployment configuration to be passed to Halyard
+	HalConfig interface{} `json:"halConfig,omitempty"`
 }
 
 // NewSpinnakerConfig returns a new initialized complete config
