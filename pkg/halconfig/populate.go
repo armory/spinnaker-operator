@@ -5,7 +5,10 @@ import (
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"regexp"
 )
+
+var fileRegex = regexp.MustCompile(`^files__(.+)$`)
 
 func (s *SpinnakerConfig) FromConfigObject(obj runtime.Object) error {
 	cm, ok := obj.(*corev1.ConfigMap)
@@ -49,30 +52,25 @@ func (s *SpinnakerConfig) FromSecret(sec corev1.Secret) error {
 	}
 
 	if s.HalConfig == nil {
-		return fmt.Errorf("config key could not be found in config map %s", sec.ObjectMeta.Name)
+		return fmt.Errorf("config key could not be found in config map: %s", sec.ObjectMeta.Name)
 	}
 	return nil
 }
 
 func (s *SpinnakerConfig) parse(key string, data []byte) error {
-	if key == "config" {
-		// Read Halconfig
-		err := s.ParseHalConfig(data)
-		if err != nil {
-			return err
+	switch key {
+	case "config":
+		return s.ParseHalConfig(data)
+	case "serviceSettings":
+		return s.ParseServiceSettings(data)
+	case "profiles":
+		return s.ParseProfiles(data)
+	default:
+		a := fileRegex.FindStringSubmatch(key)
+		if len(a) > 1 {
+			s.Files[a[1]] = string(data)
+			return nil
 		}
-	} else if key == "serviceSettings" {
-		err := s.ParseServiceSettings(data)
-		if err != nil {
-			return err
-		}
-	} else if key == "profiles" {
-		err := s.ParseProfiles(data)
-		if err != nil {
-			return err
-		}
-	} else {
-		s.Files[key] = string(data)
+		return fmt.Errorf("configuration found with an invalid key: %s, use one of [config|profiles|serviceSettings|files__*]", key)
 	}
-	return nil
 }

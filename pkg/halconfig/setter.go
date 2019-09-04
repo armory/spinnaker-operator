@@ -22,22 +22,22 @@ func setObjectProp(obj interface{}, prop string, value interface{}) error {
 	}
 
 	if c.Kind() != reflect.Ptr {
-		return errors.New("Object must be a pointer to a struct")
+		return errors.New("object must be a pointer to a struct")
 	}
 
 	sVal := c.FieldByName(name)
 
 	if !sVal.IsValid() {
-		return fmt.Errorf("No such field: %s in obj", name)
+		return fmt.Errorf("no such field: %s in obj", name)
 	}
 
 	if !sVal.CanSet() {
-		return fmt.Errorf("Cannot set %s field value", name)
+		return fmt.Errorf("cannot set %s field value", name)
 	}
 
 	sType := sVal.Type()
 	if sType != v.Type() {
-		invalidTypeError := errors.New("Provided value type didn't match obj field type")
+		invalidTypeError := errors.New("provided value type didn't match obj field type")
 		return invalidTypeError
 	}
 
