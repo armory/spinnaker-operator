@@ -2,8 +2,8 @@ package transformer
 
 import (
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
 	"k8s.io/api/apps/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"

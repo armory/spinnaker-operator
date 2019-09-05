@@ -1,7 +1,7 @@
 package transformer
 
 import (
-	"github.com/armory-io/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/apps/v1beta2"
 	"testing"

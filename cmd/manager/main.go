@@ -4,15 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/armory-io/spinnaker-operator/pkg/controller/spinnakervalidating"
+	"github.com/armory/spinnaker-operator/pkg/controller/spinnakervalidating"
 	"os"
 	"runtime"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/armory-io/spinnaker-operator/pkg/apis"
-	"github.com/armory-io/spinnaker-operator/pkg/controller"
+	"github.com/armory/spinnaker-operator/pkg/apis"
+	"github.com/armory/spinnaker-operator/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"

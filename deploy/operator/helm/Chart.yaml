@@ -4,11 +4,11 @@ description: Provides easy installation of Spinnaker
 name: spinnaker-operator
 version: 0.1.0
 sources:
-  - https://github.com/armory-io/spinnaker-operator
+  - https://github.com/armory/spinnaker-operator
 maintainers:
   - name: Armory
     email: engineering@armory.io
-home: https://github.com/armory-io/spinnaker-operator
+home: https://github.com/armory/spinnaker-operator
 keywords:
   - operator
   - spinnaker

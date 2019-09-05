@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/armory-io/spinnaker-operator/pkg/controller/spinnakerservice"
+	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 )
 
 func init() {
