@@ -6,7 +6,7 @@ import (
 
 	"io/ioutil"
 
-	halconfig "github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	halconfig "github.com/armory/spinnaker-operator/pkg/halconfig"
 
 	"github.com/stretchr/testify/assert"
 )

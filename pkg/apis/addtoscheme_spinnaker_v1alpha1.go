@@ -1,7 +1,7 @@
 package apis
 
 import (
-	"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 )
 
 func init() {

@@ -2,11 +2,11 @@ package spinnakerservice
 
 import (
 	"context"
-	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
 
-	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	deploy "github.com/armory-io/spinnaker-operator/pkg/deployer"
-	"github.com/armory-io/spinnaker-operator/pkg/halyard"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	deploy "github.com/armory/spinnaker-operator/pkg/deployer"
+	"github.com/armory/spinnaker-operator/pkg/halyard"
 	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"

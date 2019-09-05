@@ -1,4 +1,4 @@
-module github.com/armory-io/spinnaker-operator
+module github.com/armory/spinnaker-operator
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.9 // indirect
@@ -9,7 +9,7 @@ require (
 	github.com/emicklei/go-restful v2.8.1+incompatible // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.0 // indirect
-	github.com/go-openapi/spec v0.18.0
+	github.com/go-openapi/spec v0.18.0 // indirect
 	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4 // indirect
 	github.com/golang/mock v1.2.0 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
@@ -39,7 +39,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
 	sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/controller-tools v0.1.10
-	sigs.k8s.io/testing_frameworks v0.1.0 // indirect
+	sigs.k8s.io/testing_frameworks v0.1.1 // indirect
 )
 
 // Pinned to kubernetes-1.13.1
