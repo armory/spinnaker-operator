@@ -1,8 +1,8 @@
 package transformer
 
 import (
-	"github.com/armory-io/spinnaker-operator/pkg/generated"
-	"github.com/armory-io/spinnaker-operator/pkg/util"
+	"github.com/armory/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"

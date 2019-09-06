@@ -2,8 +2,8 @@ package spinnakervalidating
 
 import (
 	"context"
-	"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory-io/spinnaker-operator/pkg/validate"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/validate"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"net/http"

@@ -22,7 +22,7 @@ UNAME_S := $(shell uname -s)
 NAMESPACE ?= "default"
 PWD = $(shell pwd)
 
-PKG             := github.com/armory-io/spinnaker-operator
+PKG             := github.com/armory/spinnaker-operator
 REGISTRY        := docker.io
 SRC_DIRS        := cmd pkg
 COMMAND         := cmd/manager/main

@@ -3,7 +3,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"

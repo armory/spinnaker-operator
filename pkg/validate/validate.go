@@ -2,8 +2,8 @@ package validate
 
 import (
 	"context"
-	"github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )

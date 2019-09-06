@@ -1,8 +1,8 @@
 package changedetector
 
 import (
-	spinnakerv1alpha1 "github.com/armory-io/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"

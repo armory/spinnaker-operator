@@ -6,11 +6,11 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	halconfig "github.com/armory-io/spinnaker-operator/pkg/halconfig"
+	halconfig "github.com/armory/spinnaker-operator/pkg/halconfig"
 	yaml "gopkg.in/yaml.v2"
 
 	"bytes"
-	"github.com/armory-io/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/generated"
 	"io/ioutil"
 )
 

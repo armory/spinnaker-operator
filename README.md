@@ -56,13 +56,13 @@ $ kubectl apply -n <namespace> -f deploy/operator/basic
 `namespace` is the namespace where you want the operator to live and deploy to.
 
 ### Cluster install
-To install the operator, modify the namespace in `deploy/operator/cluster/role_binding.yml` and run: 
+To install the operator:
+1. Edit the namespace in `deploy/operator/cluster/role_binding.yml` to be the namespace where you want the operator to live.
+2. Run: 
 
 ```bash
 $ kubectl apply -n <namespace> -f deploy/operator/cluster
 ```
-
-`namespace` is the namespace where you want the operator to live. 
 
 
 ## Spinnaker Installation
@@ -119,12 +119,75 @@ spinnakerservice.spinnaker.io "spinnaker" deleted
 ```
 
 
-## Configuring Spinnaker (TODO)
+## Configuring Spinnaker
 
-### `SpinnakerService`
+### `SpinnakerService` (TODO)
 
 The `SpinnakerService` points to the `configMap` with the configuration (see below).
 
 ### `configMap`
 
+The `configMap` holding Spinnaker configuration can contain the following keys:
+- `config`: the deployment configuration in the same format as in Halyard. For instance, given the following `~/.hal/config`:
+```yaml
+currentDeployment: default
+deploymentConfigurations:
+- name: default
+  version: 1.15.2
+  providers:
+...
+```
+
+The `config` key would contain:
+```yaml
+name: default
+version: 1.15.2
+providers:
+...
+```
+
+- `profiles`: the content of the local profile files (`~/.hal/<deployment>/profiles/`) by service name, e.g.:
+```yaml
+profiles: |
+  gate:
+    default.apiPort: 8085
+```
+
+- `serviceSettings`: the content of the service settings file (`~/.hal/<deployment>/profiles/`) by service name, e.g.:
+```yaml
+serviceSettings: |
+  gate:
+    artifactId: xxxxx
+```
+
+- `files__<relative path to other file>`: Other supporting files with a path relative to the main deployment. The file 
+path is encoded with `__` as a path separator. This includes other profile files such as a custom packer template in
+`files__profiles__rosco__packer__aws-custom.json`.   
+
+#### Putting it all together:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spinconfig-v001
+data:
+  config: |
+    name: default
+    version: 1.15.1
+    ...
+  profiles: |
+    gate:
+      default.apiPort: 8085
+  serviceSettings: |
+    gate:
+      artifactId: xxxxx
+  files__profiles__rosco__packer__aws-custom.json: |
+    {
+      "variables": {
+        "docker_source_image": "null",
+        "docker_target_image": null,
+      },
+      ...
+    }
+```
 ## Architecture (TODO)
