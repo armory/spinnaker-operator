@@ -40,6 +40,9 @@ func (s *Service) Generate(spinConfig *halconfig.SpinnakerConfig) (*generated.Sp
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("got halyard response status %d, response: %s", resp.StatusCode, string(b))
+	}
 	return s.parse(b)
 }
 
@@ -71,7 +74,7 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*htt
 
 	// Add required files
 	for k := range spinConfig.Files {
-		if err := s.addPart(writer, k, []byte(spinConfig.Files[k])); err != nil {
+		if err := s.addPart(writer, fmt.Sprintf("files__%s", k), []byte(spinConfig.Files[k])); err != nil {
 			return nil, err
 		}
 	}
