@@ -19,7 +19,7 @@ type SpinnakerServiceListInterface interface {
 	GetItems() []SpinnakerServiceInterface
 }
 
-type SpinnakerServiceKindInterface interface {
+type SpinnakerServiceBuilderInterface interface {
 	New() SpinnakerServiceInterface
 	NewList() SpinnakerServiceListInterface
 }
@@ -48,12 +48,12 @@ func (s *SpinnakerServiceList) GetItems() []SpinnakerServiceInterface {
 	return r
 }
 
-type SpinnakerServiceKind struct{}
+type SpinnakerServiceBuilder struct{}
 
-func (s *SpinnakerServiceKind) New() SpinnakerServiceInterface {
+func (s *SpinnakerServiceBuilder) New() SpinnakerServiceInterface {
 	return &SpinnakerService{}
 }
 
-func (s *SpinnakerServiceKind) NewList() SpinnakerServiceListInterface {
+func (s *SpinnakerServiceBuilder) NewList() SpinnakerServiceListInterface {
 	return &SpinnakerServiceList{}
 }

@@ -25,7 +25,7 @@ import (
 
 var log = logf.Log.WithName("spinnakerservice")
 
-var SpinnakerServiceKind spinnakerv1alpha1.SpinnakerServiceKindInterface
+var SpinnakerServiceBuilder spinnakerv1alpha1.SpinnakerServiceBuilderInterface
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -59,7 +59,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SpinnakerService
-	err = c.Watch(&source.Kind{Type: SpinnakerServiceKind.New()}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: SpinnakerServiceBuilder.New()}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for potential object owned by SpinnakerService
 	err = c.Watch(&source.Kind{Type: &extv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    SpinnakerServiceKind.New(),
+		OwnerType:    SpinnakerServiceBuilder.New(),
 	})
 
 	if err != nil {
@@ -114,7 +114,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling SpinnakerService")
 
 	// Fetch the SpinnakerService instance
-	instance := SpinnakerServiceKind.New()
+	instance := SpinnakerServiceBuilder.New()
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {

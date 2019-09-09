@@ -27,7 +27,7 @@ type spinnakerValidatingController struct {
 }
 
 // NewSpinnakerService instantiates the type we're going to validate
-var SpinnakerKind v1alpha1.SpinnakerServiceKindInterface
+var SpinnakerServiceBuilder v1alpha1.SpinnakerServiceBuilderInterface
 
 // Implement admission.Handler so the controller can handle admission request.
 var _ admission.Handler = &spinnakerValidatingController{}
@@ -45,7 +45,7 @@ func Add(m manager.Manager) error {
 		Validating().
 		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
 		WithManager(m).
-		ForType(SpinnakerKind.New()).
+		ForType(SpinnakerServiceBuilder.New()).
 		Handlers(&spinnakerValidatingController{}).
 		Build()
 

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	spinnakervalidating.SpinnakerKind = &v1alpha1.SpinnakerServiceKind{}
-	spinnakerservice.SpinnakerServiceKind = &v1alpha1.SpinnakerServiceKind{}
+	spinnakervalidating.SpinnakerServiceBuilder = &v1alpha1.SpinnakerServiceBuilder{}
+	spinnakerservice.SpinnakerServiceBuilder = &v1alpha1.SpinnakerServiceBuilder{}
 	operator.Start(apis.AddToScheme)
 }

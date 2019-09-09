@@ -36,7 +36,7 @@ func (c *configWatcher) MatchesConfig(meta metav1.Object) bool {
 }
 
 func (c *configWatcher) getSpinnakerServices() ([]v1alpha1.SpinnakerServiceInterface, error) {
-	list := SpinnakerServiceKind.NewList()
+	list := SpinnakerServiceBuilder.NewList()
 	var opts *client.ListOptions
 	if c.namespace == "" {
 		opts = &client.ListOptions{}

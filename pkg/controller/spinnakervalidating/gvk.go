@@ -25,7 +25,7 @@ func isConfigMapRequest(req types.Request) bool {
 
 func (v *spinnakerValidatingController) getSpinnakerService(req types.Request) (v1alpha1.SpinnakerServiceInterface, error) {
 	if isSpinnakerRequest(req) {
-		svc := SpinnakerKind.New()
+		svc := SpinnakerServiceBuilder.New()
 		if err := v.decoder.Decode(req, svc); err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func (v *spinnakerValidatingController) getSpinnakerService(req types.Request) (
 }
 
 func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha1.SpinnakerServiceInterface, error) {
-	list := SpinnakerKind.NewList()
+	list := SpinnakerServiceBuilder.NewList()
 	var opts *client.ListOptions
 	ns, _ := k8sutil.GetWatchNamespace()
 	if ns == "" {
