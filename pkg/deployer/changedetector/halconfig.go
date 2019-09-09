@@ -23,17 +23,17 @@ func (g *halconfigChangeDetectorGenerator) NewChangeDetector(client client.Clien
 
 // IsSpinnakerUpToDate returns true if the hal config in status represents the latest
 // config in the service spec
-func (ch *halconfigChangeDetector) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
-	hcStat := svc.Status.HalConfig
+func (ch *halconfigChangeDetector) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+	s := svc.GetStatus()
 	cm, ok := config.(*corev1.ConfigMap)
 	if ok {
-		cmStatus := hcStat.ConfigMap
+		cmStatus := s.HalConfig.ConfigMap
 		return cmStatus != nil && cmStatus.Name == cm.ObjectMeta.Name && cmStatus.Namespace == cm.ObjectMeta.Namespace &&
 			cmStatus.ResourceVersion == cm.ObjectMeta.ResourceVersion, nil
 	}
 	sec, ok := config.(*corev1.Secret)
 	if ok {
-		secStatus := hcStat.Secret
+		secStatus := s.HalConfig.Secret
 		return secStatus != nil && secStatus.Name == sec.ObjectMeta.Name && secStatus.Namespace == sec.ObjectMeta.Namespace &&
 			secStatus.ResourceVersion == sec.ObjectMeta.ResourceVersion, nil
 	}

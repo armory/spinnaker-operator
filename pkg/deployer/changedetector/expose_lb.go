@@ -26,8 +26,9 @@ func (g *exposeLbChangeDetectorGenerator) NewChangeDetector(client client.Client
 }
 
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services
-func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
-	switch strings.ToLower(svc.Spec.Expose.Type) {
+func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+	exp := svc.GetExpose()
+	switch strings.ToLower(exp.Type) {
 	case "":
 		return true, nil
 	case "service":
@@ -49,13 +50,13 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.Spi
 		}
 		return true, nil
 	default:
-		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", svc.Spec.Expose.Type)
+		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", exp.Type)
 	}
 }
 
-func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(spinSvc *spinnakerv1alpha1.SpinnakerService, serviceName string, hcSSLEnabled bool) (bool, error) {
-	rLogger := ch.log.WithValues("Service", spinSvc.Name)
-	ns := spinSvc.ObjectMeta.Namespace
+func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, serviceName string, hcSSLEnabled bool) (bool, error) {
+	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
+	ns := spinSvc.GetNamespace()
 	svc, err := util.GetService(serviceName, ns, ch.client)
 	if err != nil {
 		return false, err
@@ -72,7 +73,8 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(spinSvc *spinnakerv1al
 
 	// annotations are different, redeploy
 	simpleServiceName := serviceName[len("spin-"):]
-	expectedAnnotations := spinSvc.GetAggregatedAnnotations(simpleServiceName)
+	exp := spinSvc.GetExpose()
+	expectedAnnotations := exp.GetAggregatedAnnotations(simpleServiceName)
 	if !reflect.DeepEqual(svc.Annotations, expectedAnnotations) {
 		rLogger.Info(fmt.Sprintf("Service annotations for %s: expected: %s, actual: %s", serviceName,
 			expectedAnnotations, svc.Annotations))
@@ -80,9 +82,10 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(spinSvc *spinnakerv1al
 	}
 
 	// status url is available but not set yet, redeploy
-	statusUrl := spinSvc.Status.APIUrl
+	st := spinSvc.GetStatus()
+	statusUrl := st.APIUrl
 	if serviceName == "spin-deck" {
-		statusUrl = spinSvc.Status.UIUrl
+		statusUrl = st.UIUrl
 	}
 	if statusUrl == "" {
 		lbUrl, err := util.FindLoadBalancerUrl(serviceName, ns, ch.client, hcSSLEnabled)
@@ -98,19 +101,20 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(spinSvc *spinnakerv1al
 	return true, nil
 }
 
-func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, spinSvc *spinnakerv1alpha1.SpinnakerService, svc *corev1.Service) (bool, error) {
-	rLogger := ch.log.WithValues("Service", spinSvc.Name)
+func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, svc *corev1.Service) (bool, error) {
+	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	formattedServiceName := serviceName[len("spin-"):]
-	if c, ok := spinSvc.Spec.Expose.Service.Overrides[formattedServiceName]; ok && c.Type != "" {
+	exp := spinSvc.GetExpose()
+	if c, ok := exp.Service.Overrides[formattedServiceName]; ok && c.Type != "" {
 		if string(svc.Spec.Type) != c.Type {
 			rLogger.Info(fmt.Sprintf("Service type for %s: expected: %s, actual: %s", serviceName,
 				c.Type, string(svc.Spec.Type)))
 			return false, nil
 		}
 	} else {
-		if string(svc.Spec.Type) != spinSvc.Spec.Expose.Service.Type {
+		if string(svc.Spec.Type) != exp.Service.Type {
 			rLogger.Info(fmt.Sprintf("Service type for %s: expected: %s, actual: %s", serviceName,
-				spinSvc.Spec.Expose.Service.Type, string(svc.Spec.Type)))
+				exp.Service.Type, string(svc.Spec.Type)))
 			return false, nil
 		}
 	}

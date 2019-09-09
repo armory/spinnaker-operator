@@ -14,9 +14,10 @@ import (
 )
 
 type x509Transformer struct {
-	*defaultTransformer
+	*DefaultTransformer
 	exposeLbTr *exposeLbTransformer
-	svc        *spinnakerv1alpha1.SpinnakerService
+	svc        spinnakerv1alpha1.SpinnakerServiceInterface
+	hc         *halconfig.SpinnakerConfig
 	client     client.Client
 	log        logr.Logger
 }
@@ -24,23 +25,27 @@ type x509Transformer struct {
 type x509TransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *x509TransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
-	base := &defaultTransformer{}
+func (g *x509TransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+	base := &DefaultTransformer{}
 	exGen := exposeLbTransformerGenerator{}
-	exTr, err := exGen.NewTransformer(svc, client, log)
+	exTr, err := exGen.NewTransformer(svc, hc, client, log)
 	if err != nil {
 		return nil, err
 	}
 	exLbTr := exTr.(*exposeLbTransformer)
-	tr := x509Transformer{svc: svc, log: log, defaultTransformer: base, exposeLbTr: exLbTr, client: client}
-	base.childTransformer = &tr
+	tr := x509Transformer{svc: svc, hc: hc, log: log, DefaultTransformer: base, exposeLbTr: exLbTr, client: client}
+	base.ChildTransformer = &tr
 	return &tr, nil
 }
 
-func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig,
-	gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+func (g *x509TransformerGenerator) GetName() string {
+	return "X509"
+}
 
-	if t.svc.Spec.Expose.Type == "" {
+func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+	exp := t.svc.GetExpose()
+	if exp.Type == "" {
 		return nil
 	}
 
@@ -49,7 +54,7 @@ func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, hc *halconf
 		return nil
 	}
 	// ignore error as api port property may not exist
-	apiPort, err := hc.GetServiceConfigPropString("gate", "default.apiPort")
+	apiPort, err := t.hc.GetServiceConfigPropString("gate", "default.apiPort")
 	if err != nil || apiPort == "" {
 		return t.scheduleForRemovalIfNeeded(gateConfig, gen)
 	}
@@ -57,7 +62,7 @@ func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, hc *halconf
 	if err != nil {
 		return err
 	}
-	x509Svc, err := t.createX509Service(int32(apiPortInt), gateConfig.Service, hc)
+	x509Svc, err := t.createX509Service(int32(apiPortInt), gateConfig.Service)
 	if err != nil {
 		return err
 	}
@@ -68,7 +73,7 @@ func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, hc *halconf
 	return nil
 }
 
-func (t *x509Transformer) createX509Service(apiPort int32, gateSvc *corev1.Service, hc *halconfig.SpinnakerConfig) (*corev1.Service, error) {
+func (t *x509Transformer) createX509Service(apiPort int32, gateSvc *corev1.Service) (*corev1.Service, error) {
 	x509Svc := gateSvc.DeepCopy()
 	x509Svc.Name = util.GateX509ServiceName
 	if len(x509Svc.Spec.Ports) > 0 {

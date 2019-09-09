@@ -13,22 +13,28 @@ import (
 
 // transformer used to support changing listening port of a service with "server.port" configuration
 type serverPortTransformer struct {
-	*defaultTransformer
-	svc *spinnakerv1alpha1.SpinnakerService
+	*DefaultTransformer
+	svc spinnakerv1alpha1.SpinnakerServiceInterface
 	log logr.Logger
+	hc  *halconfig.SpinnakerConfig
 }
 
 type serverPortTransformerGenerator struct{}
 
-func (g *serverPortTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
-	base := &defaultTransformer{}
-	tr := serverPortTransformer{svc: svc, log: log, defaultTransformer: base}
-	base.childTransformer = &tr
+func (g *serverPortTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+	base := &DefaultTransformer{}
+	tr := serverPortTransformer{svc: svc, hc: hc, log: log, DefaultTransformer: base}
+	base.ChildTransformer = &tr
 	return &tr, nil
 }
 
-func (t *serverPortTransformer) transformDeploymentManifest(deploymentName string, deployment *v1beta2.Deployment, hc *halconfig.SpinnakerConfig) error {
-	if targetPort, _ := hc.GetServiceConfigPropString(deploymentName, "server.port"); targetPort != "" {
+func (g *serverPortTransformerGenerator) GetName() string {
+	return "ServerPort"
+}
+
+func (t *serverPortTransformer) transformDeploymentManifest(deploymentName string, deployment *v1beta2.Deployment) error {
+	if targetPort, _ := t.hc.GetServiceConfigPropString(deploymentName, "server.port"); targetPort != "" {
 		intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
 		if err != nil {
 			return err

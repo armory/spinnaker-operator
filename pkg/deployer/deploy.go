@@ -46,7 +46,7 @@ func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, 
 	}
 }
 
-func (d *Deployer) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+func (d *Deployer) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
 	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
 	if err != nil {
 		return false, err
@@ -58,8 +58,8 @@ func (d *Deployer) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, 
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object, c *halconfig.SpinnakerConfig) error {
-	rLogger := d.log.WithValues("Service", svc.Name)
+func (d *Deployer) Deploy(svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, c *halconfig.SpinnakerConfig) error {
+	rLogger := d.log.WithValues("Service", svc.GetName())
 	ctx := context.TODO()
 	rLogger.Info("Retrieving complete Spinnaker configuration")
 
@@ -73,13 +73,14 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	var transformers []transformer.Transformer
 
 	rLogger.Info("Applying options to Spinnaker config")
+	nSvc := svc.DeepCopyInterface()
 	for _, t := range d.transformerGenerators {
-		tr, err := t.NewTransformer(svc, d.client, d.log)
+		tr, err := t.NewTransformer(nSvc, c, d.client, d.log)
 		if err != nil {
 			return err
 		}
 		transformers = append(transformers, tr)
-		if err = tr.TransformConfig(c); err != nil {
+		if err = tr.TransformConfig(); err != nil {
 			return err
 		}
 	}
@@ -91,28 +92,29 @@ func (d *Deployer) Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runti
 	}
 
 	rLogger.Info("Applying options to generated manifests")
-	status := svc.Status.DeepCopy()
 	// Traverse transformers in reverse order
 	for i := range transformers {
-		if err = transformers[len(transformers)-i-1].TransformManifests(scheme, c, l, status); err != nil {
+		if err = transformers[len(transformers)-i-1].TransformManifests(scheme, l); err != nil {
 			return err
 		}
 	}
 
 	rLogger.Info("Saving manifests")
-	if err = d.deployConfig(ctx, scheme, l, status, rLogger); err != nil {
+	if err = d.deployConfig(ctx, scheme, l, rLogger); err != nil {
 		return err
 	}
 
-	d.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "Config", "Spinnaker version %s deployment set", v)
+	d.evtRecorder.Eventf(nSvc, corev1.EventTypeNormal, "Config", "Spinnaker version %s deployment set", v)
 
-	status.Version = v
+	st := nSvc.GetStatus()
+	st.Version = v
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
-	return d.commitConfigToStatus(ctx, svc, status, config)
+	return d.commitConfigToStatus(ctx, nSvc, config)
 }
 
-func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alpha1.SpinnakerService, status *spinnakerv1alpha1.SpinnakerServiceStatus, config runtime.Object) error {
+func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object) error {
 	cm, ok := config.(*corev1.ConfigMap)
+	status := svc.GetStatus()
 	if ok {
 		status.HalConfig = spinnakerv1alpha1.SpinnakerFileSourceStatus{
 			ConfigMap: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
@@ -135,9 +137,9 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc *spinnakerv1alp
 	status.LastConfigurationTime = metav1.NewTime(time.Now())
 	// gate and deck status url's are populated in transformers
 
-	s := svc.DeepCopy()
-	s.Status = *status
+	//s := svc.DeepCopy()
+	//s.Status = *status
 	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
 	// TODO Investigate issue on earlier Kubernetes version, works fine in 1.13
-	return d.client.Status().Update(ctx, s)
+	return d.client.Status().Update(ctx, svc)
 }

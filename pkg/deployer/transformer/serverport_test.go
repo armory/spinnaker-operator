@@ -8,11 +8,11 @@ import (
 )
 
 func TestTransformManifests_CustomServerPort(t *testing.T) {
-	tr, _, hc := th.setupTransformer(&serverPortTransformerGenerator{}, t)
+	tr, _, _ := th.setupTransformer(&serverPortTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addDeploymentToGenConfig(gen, "gate", "input_deployment.json", t)
 
-	err := tr.TransformManifests(nil, hc, gen, nil)
+	err := tr.TransformManifests(nil, gen)
 	assert.Nil(t, err)
 
 	expected := &v1beta2.Deployment{}

@@ -25,6 +25,8 @@ import (
 
 var log = logf.Log.WithName("spinnakerservice")
 
+var SpinnakerServiceKind spinnakerv1alpha1.SpinnakerServiceKindInterface
+
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -32,8 +34,8 @@ func Add(mgr manager.Manager) error {
 }
 
 type deployer interface {
-	IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
-	Deploy(svc *spinnakerv1alpha1.SpinnakerService, scheme *runtime.Scheme, config runtime.Object, hc *halconfig.SpinnakerConfig) error
+	IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
+	Deploy(svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, hc *halconfig.SpinnakerConfig) error
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -57,7 +59,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SpinnakerService
-	err = c.Watch(&source.Kind{Type: &spinnakerv1alpha1.SpinnakerService{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: SpinnakerServiceKind.New()}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -65,7 +67,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for potential object owned by SpinnakerService
 	err = c.Watch(&source.Kind{Type: &extv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &spinnakerv1alpha1.SpinnakerService{},
+		OwnerType:    SpinnakerServiceKind.New(),
 	})
 
 	if err != nil {
@@ -112,7 +114,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling SpinnakerService")
 
 	// Fetch the SpinnakerService instance
-	instance := &spinnakerv1alpha1.SpinnakerService{}
+	instance := SpinnakerServiceKind.New()
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -127,7 +129,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 
 	// Check if we need to redeploy
 	reqLogger.Info("Checking current deployment status")
-	configObject, spinConfig, err := instance.GetConfig(r.client)
+	configObject, spinConfig, err := spinnakerv1alpha1.GetConfig(instance, r.client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
