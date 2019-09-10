@@ -11,13 +11,13 @@ import (
 )
 
 // GetConfig retrieves the config object (configMap or secret) and the spinnaker configuration object
-func (s *SpinnakerService) GetConfig(client client.Client) (runtime.Object, *halconfig.SpinnakerConfig, error) {
-	h := s.Spec.SpinnakerConfig
+func GetConfig(s SpinnakerServiceInterface, client client.Client) (runtime.Object, *halconfig.SpinnakerConfig, error) {
+	h := s.GetSpinnakerConfig()
 	if h.ConfigMap != nil {
 		cm := corev1.ConfigMap{}
 		ns := h.ConfigMap.Namespace
 		if ns == "" {
-			ns = s.ObjectMeta.Namespace
+			ns = s.GetNamespace()
 		}
 		err := client.Get(context.TODO(), types.NamespacedName{Name: h.ConfigMap.Name, Namespace: ns}, &cm)
 		if err != nil {
@@ -34,7 +34,7 @@ func (s *SpinnakerService) GetConfig(client client.Client) (runtime.Object, *hal
 		secret := corev1.Secret{}
 		ns := h.Secret.Namespace
 		if ns == "" {
-			ns = secret.ObjectMeta.Namespace
+			ns = s.GetNamespace()
 		}
 		err := client.Get(context.TODO(), types.NamespacedName{Name: h.Secret.Name, Namespace: ns}, &secret)
 		if err != nil {
@@ -50,12 +50,12 @@ func (s *SpinnakerService) GetConfig(client client.Client) (runtime.Object, *hal
 	return nil, nil, fmt.Errorf("SpinnakerService does not reference configMap or secret. No configuration found")
 }
 
-func (s *SpinnakerService) GetAggregatedAnnotations(serviceName string) map[string]string {
+func (e *ExposeConfig) GetAggregatedAnnotations(serviceName string) map[string]string {
 	annotations := map[string]string{}
-	for k, v := range s.Spec.Expose.Service.Annotations {
+	for k, v := range e.Service.Annotations {
 		annotations[k] = v
 	}
-	if c, ok := s.Spec.Expose.Service.Overrides[serviceName]; ok {
+	if c, ok := e.Service.Overrides[serviceName]; ok {
 		for k, v := range c.Annotations {
 			annotations[k] = v
 		}

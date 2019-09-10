@@ -10,11 +10,11 @@ import (
 
 type singleNamespaceValidator struct{}
 
-func (s *singleNamespaceValidator) Validate(svc *v1alpha1.SpinnakerService, hc *halconfig.SpinnakerConfig, opts Options) error {
+func (s *singleNamespaceValidator) Validate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, opts Options) error {
 	if opts.Req.AdmissionRequest.Operation == v1beta1.Create {
 		// Make sure that's the only SpinnakerService
 		ss := &v1alpha1.SpinnakerServiceList{}
-		if err := opts.Client.List(opts.Ctx, client.InNamespace(svc.Namespace), ss); err != nil {
+		if err := opts.Client.List(opts.Ctx, client.InNamespace(svc.GetNamespace()), ss); err != nil {
 			return err
 		}
 		if len(ss.Items) > 0 {

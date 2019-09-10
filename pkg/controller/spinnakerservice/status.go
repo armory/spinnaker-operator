@@ -27,7 +27,7 @@ func (l *labelSelector) Matches(labels labels.Labels) bool {
 	return labels.Get("app.kubernetes.io/managed-by") == "halyard"
 }
 
-func (s *statusChecker) checks(instance *spinnakerv1alpha1.SpinnakerService) error {
+func (s *statusChecker) checks(instance spinnakerv1alpha1.SpinnakerServiceInterface) error {
 	r, err := labels.NewRequirement("app.kubernetes.io/managed-by", selection.Equals, []string{"halyard"})
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (s *statusChecker) checks(instance *spinnakerv1alpha1.SpinnakerService) err
 	sel.Add(*r)
 	// Get current deployment owned by the service
 	list := &appsv1.DeploymentList{}
-	err = s.client.List(context.TODO(), &client.ListOptions{LabelSelector: sel, Namespace: instance.ObjectMeta.Namespace}, list)
+	err = s.client.List(context.TODO(), &client.ListOptions{LabelSelector: sel, Namespace: instance.GetNamespace()}, list)
 	if err != nil {
 		return err
 	}
@@ -56,8 +56,9 @@ func (s *statusChecker) checks(instance *spinnakerv1alpha1.SpinnakerService) err
 		}
 		svcs = append(svcs, st)
 	}
-	svc := instance.DeepCopy()
-	svc.Status.Services = svcs
+	svc := instance.DeepCopyInterface()
+	status := svc.GetStatus()
+	status.Services = svcs
 	// Go through the list
 	return s.client.Status().Update(context.Background(), svc)
 }

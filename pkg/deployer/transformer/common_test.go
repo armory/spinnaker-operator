@@ -29,8 +29,8 @@ func (h *testHelpers) setupTransformer(generator Generator, t *testing.T) (Trans
 
 func (h *testHelpers) setupTransformerWithFakeClient(generator Generator, fakeClient client.Client, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService, *halconfig.SpinnakerConfig) {
 	spinSvc := h.setupSpinSvc()
-	tr, _ := generator.NewTransformer(spinSvc, fakeClient, log.Log.WithName("spinnakerservice"))
 	hc := h.setupSpinnakerConfig(t)
+	tr, _ := generator.NewTransformer(spinSvc, hc, fakeClient, log.Log.WithName("spinnakerservice"))
 	return tr, spinSvc, hc
 }
 

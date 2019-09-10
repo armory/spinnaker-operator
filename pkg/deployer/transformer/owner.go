@@ -11,22 +11,27 @@ import (
 )
 
 type ownerTransformer struct {
-	*defaultTransformer
-	svc *spinnakerv1alpha1.SpinnakerService
+	*DefaultTransformer
+	svc spinnakerv1alpha1.SpinnakerServiceInterface
 	log logr.Logger
 }
 
 type ownerTransformerGenerator struct{}
 
-func (g *ownerTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
-	base := &defaultTransformer{}
-	tr := ownerTransformer{svc: svc, log: log, defaultTransformer: base}
-	base.childTransformer = &tr
+func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+	base := &DefaultTransformer{}
+	tr := ownerTransformer{svc: svc, log: log, DefaultTransformer: base}
+	base.ChildTransformer = &tr
 	return &tr, nil
 }
 
+func (g *ownerTransformerGenerator) GetName() string {
+	return "SetOwner"
+}
+
 // transform adjusts settings to the configuration
-func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
+func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	// Set SpinnakerService instance as the owner and controller
 	for k := range gen.Config {
 		s := gen.Config[k]

@@ -23,9 +23,9 @@ func isConfigMapRequest(req types.Request) bool {
 		gv.Version == req.AdmissionRequest.Kind.Version
 }
 
-func (v *spinnakerValidatingController) getSpinnakerService(req types.Request) (*v1alpha1.SpinnakerService, error) {
+func (v *spinnakerValidatingController) getSpinnakerService(req types.Request) (v1alpha1.SpinnakerServiceInterface, error) {
 	if isSpinnakerRequest(req) {
-		svc := &v1alpha1.SpinnakerService{}
+		svc := SpinnakerServiceBuilder.New()
 		if err := v.decoder.Decode(req, svc); err != nil {
 			return nil, err
 		}
@@ -42,8 +42,8 @@ func (v *spinnakerValidatingController) getSpinnakerService(req types.Request) (
 	return nil, nil
 }
 
-func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha1.SpinnakerService, error) {
-	list := &v1alpha1.SpinnakerServiceList{}
+func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha1.SpinnakerServiceInterface, error) {
+	list := SpinnakerServiceBuilder.NewList()
 	var opts *client.ListOptions
 	ns, _ := k8sutil.GetWatchNamespace()
 	if ns == "" {
@@ -55,19 +55,20 @@ func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha1.Spinn
 	if err != nil {
 		return nil, err
 	}
-	return list.Items, nil
+	return list.GetItems(), nil
 }
 
-func (v *spinnakerValidatingController) getMatchedSpinnakerService(cm *corev1.ConfigMap) (*v1alpha1.SpinnakerService, error) {
+func (v *spinnakerValidatingController) getMatchedSpinnakerService(cm *corev1.ConfigMap) (v1alpha1.SpinnakerServiceInterface, error) {
 	ss, err := v.getSpinnakerServices()
 	if err != nil {
 		return nil, err
 	}
 	for _, s := range ss {
-		if s.Spec.SpinnakerConfig.ConfigMap != nil &&
-			s.Spec.SpinnakerConfig.ConfigMap.Name == cm.GetName() &&
-			s.Spec.SpinnakerConfig.ConfigMap.Namespace == cm.GetNamespace() {
-			return &s, nil
+		c := s.GetSpinnakerConfig()
+		if c.ConfigMap != nil &&
+			c.ConfigMap.Name == cm.GetName() &&
+			c.ConfigMap.Namespace == cm.GetNamespace() {
+			return s, nil
 		}
 	}
 	return nil, nil

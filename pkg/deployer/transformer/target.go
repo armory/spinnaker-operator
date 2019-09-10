@@ -9,22 +9,28 @@ import (
 )
 
 type targetTransformer struct {
-	*defaultTransformer
-	svc *spinnakerv1alpha1.SpinnakerService
+	*DefaultTransformer
+	svc spinnakerv1alpha1.SpinnakerServiceInterface
+	hc  *halconfig.SpinnakerConfig
 	log logr.Logger
 }
 
 type targetTransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *targetTransformerGenerator) NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error) {
-	base := &defaultTransformer{}
-	tr := targetTransformer{svc: svc, log: log, defaultTransformer: base}
-	base.childTransformer = &tr
+func (g *targetTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+	base := &DefaultTransformer{}
+	tr := targetTransformer{svc: svc, log: log, DefaultTransformer: base, hc: hc}
+	base.ChildTransformer = &tr
 	return &tr, nil
 }
 
+func (g *targetTransformerGenerator) GetName() string {
+	return "Target"
+}
+
 // TransformConfig is a nop
-func (t *targetTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
-	return hc.SetHalConfigProp("deploymentEnvironment.location", t.svc.ObjectMeta.Namespace)
+func (t *targetTransformer) TransformConfig() error {
+	return t.hc.SetHalConfigProp("deploymentEnvironment.location", t.svc.GetNamespace())
 }

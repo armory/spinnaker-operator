@@ -16,7 +16,7 @@ func init() {
 }
 
 type SpinnakerValidator interface {
-	Validate(svc *v1alpha1.SpinnakerService, hc *halconfig.SpinnakerConfig, options Options) error
+	Validate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) error
 }
 
 type Options struct {
@@ -25,8 +25,8 @@ type Options struct {
 	Req    types.Request
 }
 
-func Validate(svc *v1alpha1.SpinnakerService, options Options) error {
-	_, hc, err := svc.GetConfig(options.Client)
+func Validate(svc v1alpha1.SpinnakerServiceInterface, options Options) error {
+	_, hc, err := v1alpha1.GetConfig(svc, options.Client)
 	if err != nil {
 		return err
 	}

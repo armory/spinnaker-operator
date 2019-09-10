@@ -26,6 +26,9 @@ type spinnakerValidatingController struct {
 	decoder types.Decoder
 }
 
+// NewSpinnakerService instantiates the type we're going to validate
+var SpinnakerServiceBuilder v1alpha1.SpinnakerServiceBuilderInterface
+
 // Implement admission.Handler so the controller can handle admission request.
 var _ admission.Handler = &spinnakerValidatingController{}
 var log = logf.Log.WithName("spinvalidate")
@@ -42,7 +45,7 @@ func Add(m manager.Manager) error {
 		Validating().
 		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
 		WithManager(m).
-		ForType(&v1alpha1.SpinnakerService{}).
+		ForType(SpinnakerServiceBuilder.New()).
 		Handlers(&spinnakerValidatingController{}).
 		Build()
 
@@ -57,10 +60,6 @@ func Add(m manager.Manager) error {
 		CertDir:                       "/tmp/cert",
 		DisableWebhookConfigInstaller: &disableWebhookConfigInstaller,
 		BootstrapOptions: &webhook.BootstrapOptions{
-			//Secret: &apitypes.NamespacedName{
-			//	Namespace: k8sutil.GetWatchNamespace(),
-			//	Name:      "foo-admission-server-secret",
-			//},
 			Service: &webhook.Service{
 				Namespace: ns,
 				Name:      "spinnaker-admission-service",

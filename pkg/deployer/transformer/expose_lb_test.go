@@ -9,7 +9,7 @@ import (
 )
 
 func TestTransformManifests_ExposedNoOverrideUrl(t *testing.T) {
-	tr, spinSvc, hc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -20,7 +20,7 @@ func TestTransformManifests_ExposedNoOverrideUrl(t *testing.T) {
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
 	}
 
-	err := tr.TransformManifests(nil, hc, gen, nil)
+	err := tr.TransformManifests(nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -41,7 +41,7 @@ func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
 	}
 	err := hc.SetHalConfigProp("security.apiSecurity.overrideBaseUrl", "https://my-api.spin.com")
 
-	err = tr.TransformManifests(nil, hc, gen, nil)
+	err = tr.TransformManifests(nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -51,7 +51,7 @@ func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
-	tr, spinSvc, hc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -66,7 +66,7 @@ func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
 		},
 	}
 
-	err := tr.TransformManifests(nil, hc, gen, nil)
+	err := tr.TransformManifests(nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -75,7 +75,7 @@ func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedServiceTypeOverridden(t *testing.T) {
-	tr, spinSvc, hc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -84,7 +84,7 @@ func TestTransformManifests_ExposedServiceTypeOverridden(t *testing.T) {
 		Type: "NodePort",
 	}
 
-	err := tr.TransformManifests(nil, hc, gen, nil)
+	err := tr.TransformManifests(nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -95,12 +95,12 @@ func TestTransformManifests_ExposedServiceTypeOverridden(t *testing.T) {
 }
 
 func TestTransformManifests_NotExposed(t *testing.T) {
-	tr, spinSvc, hc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = ""
 
-	err := tr.TransformManifests(nil, hc, gen, nil)
+	err := tr.TransformManifests(nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}

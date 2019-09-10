@@ -10,11 +10,17 @@ import (
 )
 
 type ChangeDetector interface {
-	IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
+	IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
 }
 
 type Generator interface {
 	NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error)
+}
+
+var Generators = []Generator{
+	&halconfigChangeDetectorGenerator{},
+	&exposeLbChangeDetectorGenerator{},
+	&x509ChangeDetectorGenerator{},
 }
 
 type compositeChangeDetector struct {
@@ -22,17 +28,11 @@ type compositeChangeDetector struct {
 	log             logr.Logger
 }
 
-type CompositeChangeDetectorGenerator struct {
-}
+type CompositeChangeDetectorGenerator struct{}
 
 func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error) {
-	generators := []Generator{
-		&halconfigChangeDetectorGenerator{},
-		&exposeLbChangeDetectorGenerator{},
-		&x509ChangeDetectorGenerator{},
-	}
 	changeDetectors := make([]ChangeDetector, 0)
-	for _, generator := range generators {
+	for _, generator := range Generators {
 		ch, err := generator.NewChangeDetector(client, log)
 		if err != nil {
 			return nil, err
@@ -46,8 +46,8 @@ func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Clien
 }
 
 // IsSpinnakerUpToDate returns true if all children change detectors return true
-func (ch *compositeChangeDetector) IsSpinnakerUpToDate(svc *spinnakerv1alpha1.SpinnakerService, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
-	rLogger := ch.log.WithValues("Service", svc.Name)
+func (ch *compositeChangeDetector) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+	rLogger := ch.log.WithValues("Service", svc.GetName())
 	for _, changeDetector := range ch.changeDetectors {
 		rLogger.Info(fmt.Sprintf("Running %T", changeDetector))
 		isUpToDate, err := changeDetector.IsSpinnakerUpToDate(svc, config, hc)

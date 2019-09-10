@@ -23,41 +23,41 @@ func init() {
 // It can change the Spinnaker configuration itself with TransformConfig.
 // It can also change the manifests before they are updated.
 type Transformer interface {
-	TransformConfig(hc *halconfig.SpinnakerConfig) error
-	TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig, gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error
+	TransformConfig() error
+	TransformManifests(scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error
 }
 
 // baseTransformer extends Transformer adding convenience methods.
 type baseTransformer interface {
-	transformServiceManifest(svcName string, svc *corev1.Service, hc *halconfig.SpinnakerConfig) error
-	transformDeploymentManifest(deploymentName string, deployment *v1beta1.Deployment, hc *halconfig.SpinnakerConfig) error
+	transformServiceManifest(svcName string, svc *corev1.Service) error
+	transformDeploymentManifest(deploymentName string, deployment *v1beta1.Deployment) error
 }
 
 // Generator generates transformers for the given SpinnakerService
 type Generator interface {
-	NewTransformer(svc *spinnakerv1alpha1.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error)
+	NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig,
+		client client.Client, log logr.Logger) (Transformer, error)
+	GetName() string
 }
 
 // default implementation for all transformers
-type defaultTransformer struct {
-	childTransformer baseTransformer
+type DefaultTransformer struct {
+	ChildTransformer baseTransformer
 }
 
-func (t *defaultTransformer) TransformConfig(hc *halconfig.SpinnakerConfig) error {
+func (t *DefaultTransformer) TransformConfig() error {
 	return nil
 }
 
-func (t *defaultTransformer) TransformManifests(scheme *runtime.Scheme, hc *halconfig.SpinnakerConfig,
-	gen *generated.SpinnakerGeneratedConfig, status *spinnakerv1alpha1.SpinnakerServiceStatus) error {
-
+func (t *DefaultTransformer) TransformManifests(scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	for serviceName, serviceConfig := range gen.Config {
 		if serviceConfig.Service != nil {
-			if err := t.childTransformer.transformServiceManifest(serviceName, serviceConfig.Service, hc); err != nil {
+			if err := t.ChildTransformer.transformServiceManifest(serviceName, serviceConfig.Service); err != nil {
 				return err
 			}
 		}
 		if serviceConfig.Deployment != nil {
-			if err := t.childTransformer.transformDeploymentManifest(serviceName, serviceConfig.Deployment, hc); err != nil {
+			if err := t.ChildTransformer.transformDeploymentManifest(serviceName, serviceConfig.Deployment); err != nil {
 				return err
 			}
 		}
@@ -65,10 +65,10 @@ func (t *defaultTransformer) TransformManifests(scheme *runtime.Scheme, hc *halc
 	return nil
 }
 
-func (t *defaultTransformer) transformServiceManifest(svcName string, svc *corev1.Service, hc *halconfig.SpinnakerConfig) error {
+func (t *DefaultTransformer) transformServiceManifest(svcName string, svc *corev1.Service) error {
 	return nil
 }
 
-func (t *defaultTransformer) transformDeploymentManifest(deploymentName string, deployment *v1beta1.Deployment, hc *halconfig.SpinnakerConfig) error {
+func (t *DefaultTransformer) transformDeploymentManifest(deploymentName string, deployment *v1beta1.Deployment) error {
 	return nil
 }
