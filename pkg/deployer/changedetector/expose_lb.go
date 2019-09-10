@@ -1,6 +1,7 @@
 package changedetector
 
 import (
+	"context"
 	"fmt"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
@@ -26,7 +27,7 @@ func (g *exposeLbChangeDetectorGenerator) NewChangeDetector(client client.Client
 }
 
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services
-func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
 	exp := svc.GetExpose()
 	switch strings.ToLower(exp.Type) {
 	case "":

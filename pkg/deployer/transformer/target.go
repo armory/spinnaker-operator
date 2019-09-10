@@ -1,11 +1,11 @@
 package transformer
 
 import (
+	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type targetTransformer struct {
@@ -31,6 +31,6 @@ func (g *targetTransformerGenerator) GetName() string {
 }
 
 // TransformConfig is a nop
-func (t *targetTransformer) TransformConfig() error {
+func (t *targetTransformer) TransformConfig(ctx context.Context) error {
 	return t.hc.SetHalConfigProp("deploymentEnvironment.location", t.svc.GetNamespace())
 }

@@ -3,6 +3,7 @@ package spinnakerservice
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
 
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	deploy "github.com/armory/spinnaker-operator/pkg/deployer"
@@ -34,8 +35,8 @@ func Add(mgr manager.Manager) error {
 }
 
 type deployer interface {
-	IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
-	Deploy(svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, hc *halconfig.SpinnakerConfig) error
+	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
+	Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, hc *halconfig.SpinnakerConfig) error
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -115,7 +116,8 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 
 	// Fetch the SpinnakerService instance
 	instance := SpinnakerServiceBuilder.New()
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	ctx := secrets.NewContext(context.TODO())
+	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -134,13 +136,13 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 	// Check if config has changed
-	upToDate, err := r.deployer.IsSpinnakerUpToDate(instance, configObject, spinConfig)
+	upToDate, err := r.deployer.IsSpinnakerUpToDate(ctx, instance, configObject, spinConfig)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if !upToDate {
 		reqLogger.Info("Deploying Spinnaker")
-		err := r.deployer.Deploy(instance, r.scheme, configObject, spinConfig)
+		err := r.deployer.Deploy(ctx, instance, r.scheme, configObject, spinConfig)
 		if err != nil {
 			return reconcile.Result{}, err
 		}

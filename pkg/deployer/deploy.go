@@ -19,7 +19,7 @@ import (
 )
 
 type manifestGenerator interface {
-	Generate(spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
+	Generate(ctx context.Context, spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
 }
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
@@ -46,24 +46,23 @@ func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, 
 	}
 }
 
-func (d *Deployer) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
 	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
 	if err != nil {
 		return false, err
 	}
-	return ch.IsSpinnakerUpToDate(svc, config, hc)
+	return ch.IsSpinnakerUpToDate(ctx, svc, config, hc)
 }
 
 // Deploy takes a SpinnakerService definition and transforms it into manifests to create.
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, c *halconfig.SpinnakerConfig) error {
+func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, c *halconfig.SpinnakerConfig) error {
 	rLogger := d.log.WithValues("Service", svc.GetName())
-	ctx := context.TODO()
 	rLogger.Info("Retrieving complete Spinnaker configuration")
 
-	v, err := c.GetHalConfigPropString("version")
+	v, err := c.GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
 	}
@@ -80,13 +79,13 @@ func (d *Deployer) Deploy(svc spinnakerv1alpha1.SpinnakerServiceInterface, schem
 			return err
 		}
 		transformers = append(transformers, tr)
-		if err = tr.TransformConfig(); err != nil {
+		if err = tr.TransformConfig(ctx); err != nil {
 			return err
 		}
 	}
 
 	rLogger.Info("Generating manifests with Halyard")
-	l, err := d.m.Generate(c)
+	l, err := d.m.Generate(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -94,7 +93,7 @@ func (d *Deployer) Deploy(svc spinnakerv1alpha1.SpinnakerServiceInterface, schem
 	rLogger.Info("Applying options to generated manifests")
 	// Traverse transformers in reverse order
 	for i := range transformers {
-		if err = transformers[len(transformers)-i-1].TransformManifests(scheme, l); err != nil {
+		if err = transformers[len(transformers)-i-1].TransformManifests(ctx, scheme, l); err != nil {
 			return err
 		}
 	}

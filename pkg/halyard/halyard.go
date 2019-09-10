@@ -1,6 +1,7 @@
 package halyard
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -25,8 +26,8 @@ func NewService() *Service {
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
-func (s *Service) Generate(spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
-	req, err := s.newHalyardRequest(spinConfig)
+func (s *Service) Generate(ctx context.Context, spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
+	req, err := s.newHalyardRequest(ctx, spinConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func (s *Service) parse(d []byte) (*generated.SpinnakerGeneratedConfig, error) {
 	return sgc, err
 }
 
-func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*http.Request, error) {
+func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *halconfig.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	// Add config
@@ -103,8 +104,12 @@ func (s *Service) newHalyardRequest(spinConfig *halconfig.SpinnakerConfig) (*htt
 	}
 
 	req, err := http.NewRequest("POST", s.url, body)
+	if err != nil {
+		return req, err
+	}
+	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	return req, err
+	return req, nil
 }
 
 func (s *Service) addPart(writer *multipart.Writer, param string, content []byte) error {

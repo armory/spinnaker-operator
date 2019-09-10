@@ -1,6 +1,7 @@
 package halconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,17 +44,18 @@ version: 1.14.2
 		},
 	}
 	err := hc.FromConfigMap(cm)
+	ctx := context.TODO()
 	if assert.Nil(t, err) {
-		v, err := hc.GetHalConfigPropString("version")
+		v, err := hc.GetHalConfigPropString(ctx, "version")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "1.14.2", v)
 		}
 		assert.Equal(t, 2, len(hc.Profiles))
 		assert.Equal(t, 2, len(hc.Files))
-		s, err := hc.GetServiceConfigPropString("gate", "test.deep")
+		s, err := hc.GetServiceConfigPropString(ctx, "gate", "test.deep")
 		assert.Nil(t, err)
 		assert.Equal(t, "abc", s)
-		s, err = hc.GetServiceConfigPropString("orca", "test.other")
+		s, err = hc.GetServiceConfigPropString(ctx, "orca", "test.other")
 		assert.Nil(t, err)
 		assert.Equal(t, "def", s)
 		_, ok := hc.Files["profiles__rosco__packer__aws-custom.json"]

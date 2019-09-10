@@ -1,6 +1,7 @@
 package changedetector
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,7 @@ func TestIsSpinnakerUpToDate_HalconfigChanged(t *testing.T) {
 	spinSvc, cm, hc := th.buildSpinSvc(t)
 	cm.ResourceVersion = "999"
 
-	upToDate, err := ch.IsSpinnakerUpToDate(spinSvc, cm, hc)
+	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
@@ -26,7 +27,7 @@ func TestIsSpinnakerUpToDate_HalconfigUpToDate(t *testing.T) {
 	ch := th.setupChangeDetector(&halconfigChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
 
-	upToDate, err := ch.IsSpinnakerUpToDate(spinSvc, cm, hc)
+	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
 	assert.True(t, upToDate)
 	assert.Nil(t, err)

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -38,20 +39,20 @@ func (g *exposeLbTransformerGenerator) GetName() string {
 }
 
 // TransformConfig is a nop
-func (t *exposeLbTransformer) TransformConfig() error {
-	if err := t.setStatusAndOverrideBaseUrl(util.GateServiceName, util.GateOverrideBaseUrlProp); err != nil {
+func (t *exposeLbTransformer) TransformConfig(ctx context.Context) error {
+	if err := t.setStatusAndOverrideBaseUrl(ctx, util.GateServiceName, util.GateOverrideBaseUrlProp); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
 	}
-	if err := t.setStatusAndOverrideBaseUrl(util.DeckServiceName, util.DeckOverrideBaseUrlProp); err != nil {
+	if err := t.setStatusAndOverrideBaseUrl(ctx, util.DeckServiceName, util.DeckOverrideBaseUrlProp); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting overrideBaseUrl: %s, ignoring", err))
 		return err
 	}
 	return nil
 }
 
-func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(serviceName string, overrideUrlName string) error {
-	statusUrl, isFromOverrideBaseUrl, err := t.findStatusUrl(serviceName, overrideUrlName)
+func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(ctx context.Context, serviceName string, overrideUrlName string) error {
+	statusUrl, isFromOverrideBaseUrl, err := t.findStatusUrl(ctx, serviceName, overrideUrlName)
 	if err != nil {
 		return err
 	}
@@ -71,9 +72,9 @@ func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(serviceName string, ov
 }
 
 // findStatusUrl returns the overrideBaseUrl or load balancer url, indicating if it came from overrideBaseUrl
-func (t *exposeLbTransformer) findStatusUrl(serviceName string, overrideUrlName string) (string, bool, error) {
+func (t *exposeLbTransformer) findStatusUrl(ctx context.Context, serviceName string, overrideUrlName string) (string, bool, error) {
 	// ignore error, overrideBaseUrl may not be set in hal config
-	statusUrl, _ := t.hc.GetHalConfigPropString(overrideUrlName)
+	statusUrl, _ := t.hc.GetHalConfigPropString(ctx, overrideUrlName)
 	if statusUrl != "" {
 		return statusUrl, true, nil
 	}
@@ -100,7 +101,7 @@ func (t *exposeLbTransformer) findStatusUrl(serviceName string, overrideUrlName 
 	}
 }
 
-func (t *exposeLbTransformer) transformServiceManifest(svcName string, svc *corev1.Service) error {
+func (t *exposeLbTransformer) transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error {
 	if svcName != "gate" && svcName != "deck" {
 		return nil
 	}
@@ -113,7 +114,7 @@ func (t *exposeLbTransformer) transformServiceManifest(svcName string, svc *core
 		overrideUrlKeyName = util.DeckOverrideBaseUrlProp
 		defaultPort = int32(9000)
 	}
-	if err := t.applyPortChanges(fmt.Sprintf("%s-tcp", svcName), defaultPort, overrideUrlKeyName, svc); err != nil {
+	if err := t.applyPortChanges(ctx, fmt.Sprintf("%s-tcp", svcName), defaultPort, overrideUrlKeyName, svc); err != nil {
 		return err
 	}
 	t.applyExposeServiceConfig(svc, svcName)
@@ -137,14 +138,14 @@ func (t *exposeLbTransformer) applyExposeServiceConfig(svc *corev1.Service, serv
 	}
 }
 
-func (t *exposeLbTransformer) applyPortChanges(portName string, portDefault int32, overrideUrlName string, svc *corev1.Service) error {
+func (t *exposeLbTransformer) applyPortChanges(ctx context.Context, portName string, portDefault int32, overrideUrlName string, svc *corev1.Service) error {
 	if len(svc.Spec.Ports) > 0 {
-		overrideUrl, _ := t.hc.GetHalConfigPropString(overrideUrlName)
+		overrideUrl, _ := t.hc.GetHalConfigPropString(ctx, overrideUrlName)
 		svc.Spec.Ports[0].Port = util.GetPort(overrideUrl, portDefault)
 		svc.Spec.Ports[0].Name = portName
 		if strings.Contains(portName, "gate") {
 			// ignore error, property may be missing
-			if targetPort, _ := t.hc.GetServiceConfigPropString("gate", "server.port"); targetPort != "" {
+			if targetPort, _ := t.hc.GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
 				intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
 				if err != nil {
 					return err

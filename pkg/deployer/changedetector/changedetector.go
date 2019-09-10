@@ -1,6 +1,7 @@
 package changedetector
 
 import (
+	"context"
 	"fmt"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
@@ -10,7 +11,7 @@ import (
 )
 
 type ChangeDetector interface {
-	IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
+	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
 }
 
 type Generator interface {
@@ -46,11 +47,11 @@ func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Clien
 }
 
 // IsSpinnakerUpToDate returns true if all children change detectors return true
-func (ch *compositeChangeDetector) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+func (ch *compositeChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
 	rLogger := ch.log.WithValues("Service", svc.GetName())
 	for _, changeDetector := range ch.changeDetectors {
 		rLogger.Info(fmt.Sprintf("Running %T", changeDetector))
-		isUpToDate, err := changeDetector.IsSpinnakerUpToDate(svc, config, hc)
+		isUpToDate, err := changeDetector.IsSpinnakerUpToDate(ctx, svc, config, hc)
 		if err != nil {
 			return false, err
 		}
