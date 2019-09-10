@@ -27,8 +27,8 @@ type Transformer interface {
 	TransformManifests(scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error
 }
 
-// BaseTransformer extends Transformer adding convenience methods.
-type BaseTransformer interface {
+// baseTransformer extends Transformer adding convenience methods.
+type baseTransformer interface {
 	transformServiceManifest(svcName string, svc *corev1.Service) error
 	transformDeploymentManifest(deploymentName string, deployment *v1beta1.Deployment) error
 }
@@ -42,7 +42,7 @@ type Generator interface {
 
 // default implementation for all transformers
 type DefaultTransformer struct {
-	ChildTransformer BaseTransformer
+	ChildTransformer baseTransformer
 }
 
 func (t *DefaultTransformer) TransformConfig() error {

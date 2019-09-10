@@ -135,10 +135,6 @@ func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alph
 		}
 	}
 	status.LastConfigurationTime = metav1.NewTime(time.Now())
-	// gate and deck status url's are populated in transformers
-
-	//s := svc.DeepCopy()
-	//s.Status = *status
 	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
 	// TODO Investigate issue on earlier Kubernetes version, works fine in 1.13
 	return d.client.Status().Update(ctx, svc)
