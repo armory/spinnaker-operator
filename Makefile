@@ -31,7 +31,7 @@ BINARY 			:= ${BUILD_DIR}/spinnaker-operator
 
 
 .PHONY: all
-all: build
+all: build test
 
 .PHONY: test
 test: build-dirs Makefile
