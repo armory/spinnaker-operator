@@ -8,7 +8,7 @@ import (
 type SpinnakerServiceInterface interface {
 	v1.Object
 	runtime.Object
-	GetStatus() SpinnakerServiceStatus
+	GetStatus() *SpinnakerServiceStatus
 	GetExpose() ExposeConfig
 	GetSpinnakerConfig() SpinnakerFileSource
 	DeepCopyInterface() SpinnakerServiceInterface
@@ -36,8 +36,8 @@ func (s *SpinnakerService) GetExpose() ExposeConfig {
 	return s.Spec.Expose
 }
 
-func (s *SpinnakerService) GetStatus() SpinnakerServiceStatus {
-	return s.Status
+func (s *SpinnakerService) GetStatus() *SpinnakerServiceStatus {
+	return &s.Status
 }
 
 func (s *SpinnakerServiceList) GetItems() []SpinnakerServiceInterface {
