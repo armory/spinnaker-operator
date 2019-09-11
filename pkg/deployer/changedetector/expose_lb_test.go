@@ -1,6 +1,7 @@
 package changedetector
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
@@ -15,7 +16,7 @@ func TestIsSpinnakerUpToDate_NoServicesYet(t *testing.T) {
 	spinSvc.Spec.Expose.Type = "Service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
 
-	upToDate, err := ch.IsSpinnakerUpToDate(spinSvc, cm, hc)
+	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
@@ -30,7 +31,7 @@ func TestIsSpinnakerUpToDate_TestExposeConfigUpToDateDontExpose(t *testing.T) {
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
 
-	upToDate, err := ch.IsSpinnakerUpToDate(spinSvc, cm, hc)
+	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
 	assert.True(t, upToDate)
 	assert.Nil(t, err)
@@ -47,7 +48,7 @@ func TestIsSpinnakerUpToDate_TestExposeConfigChangedLoadBalancer(t *testing.T) {
 	spinSvc.Spec.Expose.Type = "Service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
 
-	upToDate, err := ch.IsSpinnakerUpToDate(spinSvc, cm, hc)
+	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
 	assert.False(t, upToDate)
 	assert.Nil(t, err)

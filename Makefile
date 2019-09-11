@@ -35,7 +35,7 @@ all: build test
 
 .PHONY: test
 test: build-dirs Makefile
-	@go test -cover ./...
+	@go test -cover -mod=vendor ./...
 
 .PHONY: test-docker
 test-docker: build-dirs Makefile
@@ -62,7 +62,7 @@ generate: build-dirs
 .PHONY: build
 build: build-dirs Makefile
 	@echo "Building: $(BINARIES)"
-	@go build -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
+	@go build -mod=vendor -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
 
 .PHONY: build-docker
 build-docker:

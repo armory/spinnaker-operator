@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
@@ -43,7 +44,7 @@ func (g *x509TransformerGenerator) GetName() string {
 	return "X509"
 }
 
-func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	exp := t.svc.GetExpose()
 	if exp.Type == "" {
 		return nil
@@ -54,7 +55,7 @@ func (t *x509Transformer) TransformManifests(scheme *runtime.Scheme, gen *genera
 		return nil
 	}
 	// ignore error as api port property may not exist
-	apiPort, err := t.hc.GetServiceConfigPropString("gate", "default.apiPort")
+	apiPort, err := t.hc.GetServiceConfigPropString(ctx, "gate", "default.apiPort")
 	if err != nil || apiPort == "" {
 		return t.scheduleForRemovalIfNeeded(gateConfig, gen)
 	}

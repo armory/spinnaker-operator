@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/apps/v1beta2"
@@ -12,7 +13,7 @@ func TestTransformManifests_CustomServerPort(t *testing.T) {
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addDeploymentToGenConfig(gen, "gate", "input_deployment.json", t)
 
-	err := tr.TransformManifests(nil, gen)
+	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &v1beta2.Deployment{}

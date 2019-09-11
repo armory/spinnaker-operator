@@ -1,7 +1,9 @@
 package halconfig
 
 import (
+	"context"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"reflect"
 	"strconv"
 	"strings"
@@ -18,14 +20,14 @@ func getObjectPropBool(obj interface{}, prop string, defaultVal bool) (bool, err
 	return false, fmt.Errorf("%s is not a boolean, found %s", prop, c.Kind().String())
 }
 
-func getObjectPropString(obj interface{}, prop string) (string, error) {
+func getObjectPropString(ctx context.Context, obj interface{}, prop string) (string, error) {
 	c, err := getObjectProp(obj, prop)
 	if err != nil {
 		return "", err
 	}
 	switch c.Kind() {
 	case reflect.String:
-		return c.String(), nil
+		return secrets.Decode(ctx, c.String())
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(c.Int(), 10), nil
 	case reflect.Bool:

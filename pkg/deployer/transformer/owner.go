@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
@@ -31,7 +32,7 @@ func (g *ownerTransformerGenerator) GetName() string {
 }
 
 // transform adjusts settings to the configuration
-func (t *ownerTransformer) TransformManifests(scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (t *ownerTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	// Set SpinnakerService instance as the owner and controller
 	for k := range gen.Config {
 		s := gen.Config[k]

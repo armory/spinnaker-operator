@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	"fmt"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
@@ -33,8 +34,8 @@ func (g *serverPortTransformerGenerator) GetName() string {
 	return "ServerPort"
 }
 
-func (t *serverPortTransformer) transformDeploymentManifest(deploymentName string, deployment *v1beta2.Deployment) error {
-	if targetPort, _ := t.hc.GetServiceConfigPropString(deploymentName, "server.port"); targetPort != "" {
+func (t *serverPortTransformer) transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1beta2.Deployment) error {
+	if targetPort, _ := t.hc.GetServiceConfigPropString(ctx, deploymentName, "server.port"); targetPort != "" {
 		intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
 		if err != nil {
 			return err

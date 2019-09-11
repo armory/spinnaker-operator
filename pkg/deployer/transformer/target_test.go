@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	"testing"
 
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
@@ -22,9 +23,10 @@ func TestSetTarget(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "ns2"},
 	}
 	tg := &targetTransformer{svc: &svc, hc: hc}
-	err := tg.TransformConfig()
+	ctx := context.TODO()
+	err := tg.TransformConfig(ctx)
 	if assert.Nil(t, err) {
-		s, err := hc.GetHalConfigPropString("deploymentEnvironment.location")
+		s, err := hc.GetHalConfigPropString(ctx, "deploymentEnvironment.location")
 		assert.Nil(t, err)
 		assert.Equal(t, "ns2", s)
 	}

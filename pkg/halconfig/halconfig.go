@@ -1,6 +1,7 @@
 package halconfig
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -29,15 +30,15 @@ func NewSpinnakerConfig() *SpinnakerConfig {
 }
 
 // GetServiceSettingsPropString returns a service settings prop for a given service
-func (s *SpinnakerConfig) GetServiceSettingsPropString(svc, prop string) (string, error) {
-	return getObjectPropString(s.ServiceSettings, fmt.Sprintf("%s.%s", svc, prop))
+func (s *SpinnakerConfig) GetServiceSettingsPropString(ctx context.Context, svc, prop string) (string, error) {
+	return getObjectPropString(ctx, s.ServiceSettings, fmt.Sprintf("%s.%s", svc, prop))
 }
 
 // GetHalConfigPropString returns a property stored in halconfig
 // We use the dot notation including for arrays
 // e.g. providers.aws.accounts.0.name
-func (s *SpinnakerConfig) GetHalConfigPropString(prop string) (string, error) {
-	return getObjectPropString(s.HalConfig, prop)
+func (s *SpinnakerConfig) GetHalConfigPropString(ctx context.Context, prop string) (string, error) {
+	return getObjectPropString(ctx, s.HalConfig, prop)
 }
 
 // SetHalConfigProp sets a property in the config
@@ -51,10 +52,10 @@ func (s *SpinnakerConfig) GetHalConfigPropBool(prop string, defaultVal bool) (bo
 }
 
 // GetServiceConfigPropString returns the value of the prop in a service profile file
-func (s *SpinnakerConfig) GetServiceConfigPropString(svc, prop string) (string, error) {
+func (s *SpinnakerConfig) GetServiceConfigPropString(ctx context.Context, svc, prop string) (string, error) {
 	p, ok := s.Profiles[svc]
 	if ok {
-		return getObjectPropString(p, prop)
+		return getObjectPropString(ctx, p, prop)
 	}
 	return "", nil
 }

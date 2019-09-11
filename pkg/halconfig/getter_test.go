@@ -1,6 +1,7 @@
 package halconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestGetProp(t *testing.T) {
 		true,
 		inner{StrB: "B", BoolB: true},
 	}
-	v, err := getObjectPropString(m, "StrA")
+	v, err := getObjectPropString(context.TODO(), m, "StrA")
 	if assert.Nil(t, err) {
 		assert.Equal(t, "A", v)
 	}

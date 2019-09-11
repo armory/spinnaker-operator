@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,7 @@ func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
 	}
 
-	err := tr.TransformManifests(nil, gen)
+	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -48,7 +49,7 @@ func TestTransformManifests_RemoveX509Service(t *testing.T) {
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 
-	err := tr.TransformManifests(nil, gen)
+	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 	x509Config, ok := gen.Config["gate-x509"]
 	assert.True(t, ok)

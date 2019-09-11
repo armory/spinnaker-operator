@@ -1,6 +1,7 @@
 package changedetector
 
 import (
+	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
@@ -23,7 +24,7 @@ func (g *halconfigChangeDetectorGenerator) NewChangeDetector(client client.Clien
 
 // IsSpinnakerUpToDate returns true if the hal config in status represents the latest
 // config in the service spec
-func (ch *halconfigChangeDetector) IsSpinnakerUpToDate(svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+func (ch *halconfigChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
 	s := svc.GetStatus()
 	cm, ok := config.(*corev1.ConfigMap)
 	if ok {

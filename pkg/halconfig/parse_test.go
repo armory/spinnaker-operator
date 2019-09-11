@@ -1,12 +1,14 @@
 package halconfig
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestParseProfileAsStringOrYaml(t *testing.T) {
 	s := NewSpinnakerConfig()
+	ctx := context.TODO()
 	str := `
 gate: |
   # Comment added to the serialized YAML 
@@ -18,11 +20,11 @@ clouddriver:
 `
 	err := s.ParseProfiles([]byte(str))
 	if assert.Nil(t, err) {
-		r, err := s.GetServiceConfigPropString("gate", "server.port")
+		r, err := s.GetServiceConfigPropString(ctx, "gate", "server.port")
 		assert.Nil(t, err)
 		assert.Equal(t, "8081", r)
 
-		r, err = s.GetServiceConfigPropString("clouddriver", "server.port")
+		r, err = s.GetServiceConfigPropString(ctx, "clouddriver", "server.port")
 		assert.Nil(t, err)
 		assert.Equal(t, "7003", r)
 	}

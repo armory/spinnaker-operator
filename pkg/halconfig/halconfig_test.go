@@ -1,6 +1,7 @@
 package halconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,6 +9,7 @@ import (
 
 func TestParseHalConfig(t *testing.T) {
 	h := SpinnakerConfig{}
+	ctx := context.TODO()
 	var c = `
 name: default
 version: 1.14.2
@@ -29,11 +31,11 @@ providers:
 `
 	err := h.ParseHalConfig([]byte(c))
 	if assert.Nil(t, err) {
-		v, err := h.GetHalConfigPropString("version")
+		v, err := h.GetHalConfigPropString(ctx, "version")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "1.14.2", v)
 		}
-		v, err = h.GetHalConfigPropString("providers.aws.bakeryDefaults.defaults.iamRole")
+		v, err = h.GetHalConfigPropString(ctx, "providers.aws.bakeryDefaults.defaults.iamRole")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "BaseIAMRole", v)
 		}
@@ -41,7 +43,7 @@ providers:
 		if assert.Nil(t, err) {
 			assert.Equal(t, true, b)
 		}
-		v, err = h.GetHalConfigPropString("providers.aws.bakeryDefaults.baseImages.0")
+		v, err = h.GetHalConfigPropString(ctx, "providers.aws.bakeryDefaults.baseImages.0")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "test", v)
 		}
@@ -50,6 +52,7 @@ providers:
 
 func TestSetHalConfig(t *testing.T) {
 	h := SpinnakerConfig{}
+	ctx := context.TODO()
 	var c = `
 name: default
 version: 1.14.2
@@ -73,14 +76,14 @@ providers:
 	if assert.Nil(t, err) {
 		err = h.SetHalConfigProp("version", "1.2.3")
 		assert.Nil(t, err)
-		v, err := h.GetHalConfigPropString("version")
+		v, err := h.GetHalConfigPropString(ctx, "version")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "1.2.3", v)
 		}
 		err = h.SetHalConfigProp("providers.aws.bakeryDefaults.defaults.iamRole", "other")
 		assert.Nil(t, err)
 
-		v, err = h.GetHalConfigPropString("providers.aws.bakeryDefaults.defaults.iamRole")
+		v, err = h.GetHalConfigPropString(ctx, "providers.aws.bakeryDefaults.defaults.iamRole")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "other", v)
 		}
@@ -88,7 +91,7 @@ providers:
 		if assert.Nil(t, err) {
 			assert.Equal(t, true, b)
 		}
-		v, err = h.GetHalConfigPropString("providers.aws.bakeryDefaults.baseImages.0")
+		v, err = h.GetHalConfigPropString(ctx, "providers.aws.bakeryDefaults.baseImages.0")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "test", v)
 		}

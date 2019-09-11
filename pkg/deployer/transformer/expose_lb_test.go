@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestTransformManifests_ExposedNoOverrideUrl(t *testing.T) {
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
 	}
 
-	err := tr.TransformManifests(nil, gen)
+	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -41,7 +42,7 @@ func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
 	}
 	err := hc.SetHalConfigProp("security.apiSecurity.overrideBaseUrl", "https://my-api.spin.com")
 
-	err = tr.TransformManifests(nil, gen)
+	err = tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -66,7 +67,7 @@ func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
 		},
 	}
 
-	err := tr.TransformManifests(nil, gen)
+	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -84,7 +85,7 @@ func TestTransformManifests_ExposedServiceTypeOverridden(t *testing.T) {
 		Type: "NodePort",
 	}
 
-	err := tr.TransformManifests(nil, gen)
+	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -100,7 +101,7 @@ func TestTransformManifests_NotExposed(t *testing.T) {
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = ""
 
-	err := tr.TransformManifests(nil, gen)
+	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
