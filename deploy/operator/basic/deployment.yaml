@@ -17,7 +17,9 @@ spec:
         - name: spinnaker-operator
           image: armory/spinnaker-operator:latest
           command:
-          - spinnaker-operator --without-admission-controller
+            - spinnaker-operator
+          args:
+            - --disable-admission-controller
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -33,5 +35,5 @@ spec:
         - name: halyard
           image: armory/halyard-armory:op10
           ports:
-          - containerPort: 8064
-            protocol: TCP
+            - containerPort: 8064
+              protocol: TCP
