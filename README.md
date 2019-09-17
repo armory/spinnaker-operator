@@ -58,12 +58,11 @@ $ kubectl apply -n <namespace> -f deploy/operator/basic
 ### Cluster install
 To install the operator:
 1. Edit the namespace in `deploy/operator/cluster/role_binding.yml` to be the namespace where you want the operator to live.
-2. Run: 
+2. Run:
 
 ```bash
 $ kubectl apply -n <namespace> -f deploy/operator/cluster
 ```
-
 
 ## Spinnaker Installation
 
@@ -72,16 +71,19 @@ Once you've installed the operator, you can install Spinnaker by making a config
 
 ### Example 1: Installing version 1.15.1
 
+**Important**: In `deploy/spinnaker/examples/basic/spin-config.yaml`, change the `config.persistentStorage` section to point to an s3 bucket you own or use a different persistent storage.
+
+
 ```bash
 $ kubectl -n <namespace> apply -f deploy/spinnaker/examples/basic
 ```
 
-This configuration does not contain any connected accounts, just a persistent storage. 
+This configuration does not contain any connected accounts, just a persistent storage.
 
 ### Example 2: Using Kustomize (TODO)
 
 Set your own values in `deploy/spinnaker/kustomize/kustomization.yaml`, then:
- 
+
 
 ```bash
 $ kustomize build deploy/spinnaker/kustomize | kubectl -n <namespace> apply -f -
@@ -95,7 +97,7 @@ $ kubectl -n <namespace> apply -f deploy/spinnaker/kustomize
 
 ### Managing Spinnaker
 
-You can manage your Spinnaker installations with `kubectl`. 
+You can manage your Spinnaker installations with `kubectl`.
 
 #### Listing Spinnaker instances
 ```bash
@@ -123,4 +125,3 @@ spinnakerservice.spinnaker.io "spinnaker" deleted
 
 Detailed information about the SpinnakerService CRD fields and how to configure Spinnaker can be found [in the wiki](https://github.com/armory/spinnaker-operator/wiki/SpinnakerService-CRD)
 
-## Architecture (TODO)

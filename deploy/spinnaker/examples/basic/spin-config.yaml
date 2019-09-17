@@ -108,7 +108,7 @@ data:
         rootFolder: front50
       redis: {}
       s3:
-        bucket: mybucket
+        bucket: changeme
         rootFolder: front50
         region: us-west-2
       oracle: {}
