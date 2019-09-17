@@ -97,3 +97,49 @@ providers:
 		}
 	}
 }
+
+func TestDecryptSecrets(t *testing.T) {
+	h := SpinnakerConfig{}
+	ctx := context.TODO()
+	var c = `
+name: default
+version: 1.14.2
+providers:
+  appengine:
+    enabled: false
+    accounts: []
+testSecret: encrypted:s3!f:something.yml
+test:
+  nested: 
+    nonSecret: notASecret
+  nestedArray:
+  - name: myArray
+    arraySecret: encrypted:s3!f:something.yml
+notNested: notASecret
+`
+
+	err := h.ParseHalConfig([]byte(c))
+	if assert.Nil(t, err) {
+		// decrypt secrets
+		v, err := h.GetHalConfigPropString(ctx, "testSecret")
+		if assert.NotNil(t, err) {
+			// make sure it reaches go-yaml-tools -- error is expected
+			assert.Contains(t, err.Error(), "secret format error")
+		}
+		v, err = h.GetHalConfigPropString(ctx, "test.nestedArray.0.arraySecret")
+		if assert.NotNil(t, err) {
+			// make sure it reaches go-yaml-tools -- error is expected
+			assert.Contains(t, err.Error(), "secret format error")
+		}
+
+		// don't decrypt non-secrets
+		v, err = h.GetHalConfigPropString(ctx, "test.nested.nonSecret")
+		if assert.Nil(t, err) {
+			assert.Equal(t, "notASecret", v)
+		}
+		v, err = h.GetHalConfigPropString(ctx, "notNested")
+		if assert.Nil(t, err) {
+			assert.Equal(t, "notASecret", v)
+		}
+	}
+}

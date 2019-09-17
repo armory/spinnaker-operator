@@ -1,19 +1,28 @@
 package secrets
 
-import "context"
+import (
+	"context"
+	"github.com/armory/go-yaml-tools/pkg/secrets"
+	"strings"
+)
 
 // Decode decodes a potential value into a secret
-
 func Decode(ctx context.Context, val string) (string, error) {
+	return decode(decryptFunc, ctx, val)
+}
+
+type decrypter func(val string) (string, error)
+
+func decode(decrypt decrypter, ctx context.Context, val string) (string, error) {
 	if !isSecretEncrypted(val) {
 		return val, nil
 	}
 
 	var v string
-	c, ok := FromContext(ctx)
-	if ok {
+	c, cacheOk := FromContext(ctx)
+	if cacheOk {
 		// Check if in cache
-		if v, ok = (*c)[val]; ok {
+		if v, ok := (*c)[val]; ok {
 			return v, nil
 		}
 	}
@@ -21,7 +30,7 @@ func Decode(ctx context.Context, val string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if ok {
+	if cacheOk {
 		// If we could get the cache, update it
 		(*c)[val] = v
 	}
@@ -29,10 +38,10 @@ func Decode(ctx context.Context, val string) (string, error) {
 }
 
 func isSecretEncrypted(str string) bool {
-	return false
+	return strings.HasPrefix(str, "encrypted:")
 }
 
-func decrypt(val string) (string, error) {
-	// TODO
-	return val, nil
+func decryptFunc(val string) (string, error) {
+	secretDecrypter := secrets.NewDecrypter(val)
+	return secretDecrypter.Decrypt()
 }
