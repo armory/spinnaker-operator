@@ -35,7 +35,7 @@ all: build test
 
 .PHONY: test
 test: build-dirs Makefile
-	@go test -cover ./...
+	@go test -cover -mod=vendor ./...
 
 .PHONY: test-docker
 test-docker: build-dirs Makefile
