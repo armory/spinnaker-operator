@@ -29,5 +29,6 @@ node {
         archiveArtifacts artifacts: 'build.properties'
     } catch (e) {
         slackSend color: 'danger', message: "Build of spinnaker-operator failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+        throw e
     }
 }

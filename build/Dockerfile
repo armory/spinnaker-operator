@@ -6,7 +6,7 @@ FROM golang:1.12.1-alpine3.9 as builder
 RUN apk update && apk add git make bash build-base gcc bc
 RUN go get -u golang.org/x/lint/golint
 
-ENV GO111MODULE=on GOFLAGS='-mod=vendor' GOOS=linux GOARCH=amd64
+ENV GO111MODULE=on GOOS=linux GOARCH=amd64
 WORKDIR /opt/spinnaker-operator/build/
 ADD ./ /opt/spinnaker-operator/build/
 ARG OPERATOR_VERSION
