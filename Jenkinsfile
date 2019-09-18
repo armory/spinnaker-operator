@@ -15,7 +15,7 @@ node {
             sh 'make build-docker'
         }
         def branch = sh(
-            script: 'git symbolic-ref --short HEAD',
+            script: 'git symbolic-ref --short HEAD || echo pr-branch',
             returnStdout: true
         ).trim()
 
