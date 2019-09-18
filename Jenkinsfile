@@ -14,12 +14,8 @@ node {
         stage("Build image ${version}") {
             sh 'make build-docker'
         }
-        def branch = sh(
-            script: 'git symbolic-ref --short HEAD || echo pr-branch',
-            returnStdout: true
-        ).trim()
 
-        if (branch == 'master') {
+        if (env.BRANCH_NAME == "master") {
             stage("Push image") {
                 sh 'make push publish'
             }
