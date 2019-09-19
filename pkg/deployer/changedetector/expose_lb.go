@@ -133,12 +133,23 @@ func (ch *exposeLbChangeDetector) exposePortUpToDate(ctx context.Context, servic
 		rLogger.Info(fmt.Sprintf("No exposed port for %s found", serviceName))
 		return false, nil
 	}
-	formattedServiceName := serviceName[len("spin-"):]
-	desiredPort := util.GetDesiredExposePort(ctx, formattedServiceName, hc, spinSvc)
-	if desiredPort != svc.Spec.Ports[0].Port {
+	svcNameWithoutPrefix := serviceName[len("spin-"):]
+	portName := fmt.Sprintf("%s-tcp", svcNameWithoutPrefix)
+	publicPort, _ := ch.getSvcPorts(portName, svc)
+	desiredPort := util.GetDesiredExposePort(ctx, svcNameWithoutPrefix, int32(80), hc, spinSvc)
+	if desiredPort != publicPort {
 		rLogger.Info(fmt.Sprintf("Service port for %s: expected: %d, actual: %d", serviceName,
-			desiredPort, svc.Spec.Ports[0].Port))
+			desiredPort, publicPort))
 		return false, nil
 	}
 	return true, nil
+}
+
+func (ch *exposeLbChangeDetector) getSvcPorts(portName string, svc *corev1.Service) (int32, int32) {
+	for _, p := range svc.Spec.Ports {
+		if p.Name == portName {
+			return p.Port, p.TargetPort.IntVal
+		}
+	}
+	return 0, 0
 }

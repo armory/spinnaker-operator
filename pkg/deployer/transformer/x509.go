@@ -77,9 +77,9 @@ func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtim
 func (t *x509Transformer) createX509Service(apiPort int32, gateSvc *corev1.Service) (*corev1.Service, error) {
 	x509Svc := gateSvc.DeepCopy()
 	x509Svc.Name = util.GateX509ServiceName
-	publicPort := t.getPublicPort(int32(80))
+	publicPort := t.getPublicPort(int32(443))
 	if len(x509Svc.Spec.Ports) > 0 {
-		x509Svc.Spec.Ports[0].Name = "gate-x509"
+		x509Svc.Spec.Ports[0].Name = util.GateX509PortName
 		x509Svc.Spec.Ports[0].Port = publicPort
 		x509Svc.Spec.Ports[0].TargetPort = intstr.IntOrString{
 			Type:   intstr.Int,
@@ -106,10 +106,10 @@ func (t *x509Transformer) scheduleForRemovalIfNeeded(gateConfig generated.Servic
 func (t *x509Transformer) getPublicPort(defaultPort int32) int32 {
 	publicPort := defaultPort
 	exp := t.svc.GetExpose()
-	if c, ok := exp.Service.Overrides["gate-x509"]; ok && c.Port != 0 {
-		publicPort = c.Port
-	} else if exp.Service.Port != 0 {
-		publicPort = exp.Service.Port
+	if c, ok := exp.Service.Overrides["gate-x509"]; ok && c.PublicPort != 0 {
+		publicPort = c.PublicPort
+	} else if exp.Service.PublicPort != 0 {
+		publicPort = exp.Service.PublicPort
 	}
 	return publicPort
 }

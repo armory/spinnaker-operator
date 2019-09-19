@@ -42,15 +42,7 @@ func FindLoadBalancerUrl(svcName string, namespace string, client client.Client,
 		scheme = "https"
 	}
 
-	if port != 80 && port != 443 && port != 0 {
-		host = fmt.Sprintf("%s:%d", host, port)
-	}
-
-	lbUrl := url.URL{
-		Scheme: scheme,
-		Host:   host,
-	}
-	return lbUrl.String(), nil
+	return BuildUrl(scheme, host, port), nil
 }
 
 func isSSLEnabled(svc *corev1.Service, port int32, hcSSLEnabled bool) bool {
@@ -71,6 +63,23 @@ func isSSLEnabled(svc *corev1.Service, port int32, hcSSLEnabled bool) bool {
 	} else {
 		return false
 	}
+}
+
+// BuildUrl builds a well formed url that only specifies the port if not derived by scheme already
+func BuildUrl(scheme string, hostWithoutPort string, port int32) string {
+	host := hostWithoutPort
+	if port > 0 {
+		if scheme == "https" && port != 443 {
+			host = fmt.Sprintf("%s:%d", hostWithoutPort, port)
+		} else if scheme == "http" && port != 80 {
+			host = fmt.Sprintf("%s:%d", hostWithoutPort, port)
+		}
+	}
+	myUrl := url.URL{
+		Scheme: scheme,
+		Host:   host,
+	}
+	return myUrl.String()
 }
 
 func GetService(name string, namespace string, client client.Client) (*corev1.Service, error) {
@@ -113,16 +122,16 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 	return defaultPort
 }
 
-func GetDesiredExposePort(ctx context.Context, svcName string, hc *halconfig.SpinnakerConfig, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
-	// Get port from spin config or set a default of 80
-	desiredPort := int32(80)
+// GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
+func GetDesiredExposePort(ctx context.Context, svcName string, defaultPort int32, hc *halconfig.SpinnakerConfig, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
+	desiredPort := defaultPort
 	exp := spinSvc.GetExpose()
 	if c, ok := exp.Service.Overrides[svcName]; ok {
-		if c.Port != 0 {
-			desiredPort = c.Port
+		if c.PublicPort != 0 {
+			desiredPort = c.PublicPort
 		}
-	} else if exp.Service.Port != 0 {
-		desiredPort = exp.Service.Port
+	} else if exp.Service.PublicPort != 0 {
+		desiredPort = exp.Service.PublicPort
 	}
 
 	// Get port from overrideBaseUrl, if any

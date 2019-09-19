@@ -15,7 +15,7 @@
       "type": "service",
       "service": {
         "type": "LoadBalancer",
-        "port": 80,
+        "publicPort": 80,
         "overrides": {
         }
       }

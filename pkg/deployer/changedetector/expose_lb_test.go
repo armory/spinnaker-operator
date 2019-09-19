@@ -65,7 +65,7 @@ func TestIsSpinnakerUpToDate_TestExposeConfigChangedPort(t *testing.T) {
 		th.buildSvc("spin-gate", "LoadBalancer", 7777))
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Service.Port = 80
+	spinSvc.Spec.Expose.Service.PublicPort = 80
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
@@ -81,7 +81,7 @@ func TestIsSpinnakerUpToDate_TestExposeConfigChangedPortOverriden(t *testing.T) 
 		th.buildSvc("spin-gate", "LoadBalancer", 7777))
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha1.ExposeConfigServiceOverrides{Port: 443}
+	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha1.ExposeConfigServiceOverrides{PublicPort: 443}
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
@@ -96,13 +96,13 @@ func TestIsSpinnakerUpToDate_UpToDateWithOverrides(t *testing.T) {
 		th.buildSvc("spin-gate", "LoadBalancer", 7777))
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Service.Port = 80
+	spinSvc.Spec.Expose.Service.PublicPort = 80
 	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha1.ExposeConfigServiceOverrides{
-		Port:        7777,
+		PublicPort:  7777,
 		Annotations: map[string]string{"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"},
 	}
 	spinSvc.Spec.Expose.Service.Overrides["deck"] = v1alpha1.ExposeConfigServiceOverrides{
-		Port:        7777,
+		PublicPort:  7777,
 		Annotations: map[string]string{"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"},
 	}
 
@@ -121,7 +121,7 @@ func TestIsSpinnakerUpToDate_UpToDateNoPortInConfig(t *testing.T) {
 	fakeClient := fake.NewFakeClient(deckSvc, gateSvc)
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Service.Port = 0
+	spinSvc.Spec.Expose.Service.PublicPort = 0
 	spinSvc.Spec.Expose.Service.Annotations = deckSvc.Annotations
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
@@ -137,7 +137,7 @@ func TestIsSpinnakerUpToDate_PortConfigRemoved(t *testing.T) {
 	fakeClient := fake.NewFakeClient(deckSvc, gateSvc)
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Service.Port = 0
+	spinSvc.Spec.Expose.Service.PublicPort = 0
 	spinSvc.Spec.Expose.Service.Annotations = deckSvc.Annotations
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
@@ -153,7 +153,7 @@ func TestIsSpinnakerUpToDate_OverrideBaseUrlAdded(t *testing.T) {
 	fakeClient := fake.NewFakeClient(deckSvc, gateSvc)
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Service.Port = 0
+	spinSvc.Spec.Expose.Service.PublicPort = 0
 	spinSvc.Spec.Expose.Service.Annotations = deckSvc.Annotations
 	err := hc.SetHalConfigProp(util.GateOverrideBaseUrlProp, "https://acme-api.com")
 	assert.Nil(t, err)

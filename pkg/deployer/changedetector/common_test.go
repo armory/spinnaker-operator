@@ -2,6 +2,7 @@ package changedetector
 
 import (
 	"encoding/json"
+	"fmt"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"gopkg.in/yaml.v2"
@@ -77,6 +78,7 @@ func (h *testHelpers) buildSvc(name string, svcType string, port int32) *corev1.
 	myAnnotations := map[string]string{
 		"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http",
 	}
+	portName := fmt.Sprintf("%s-tcp", name[len("spin-"):])
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -86,7 +88,7 @@ func (h *testHelpers) buildSvc(name string, svcType string, port int32) *corev1.
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceType(svcType),
 			Ports: []corev1.ServicePort{
-				{Name: name + "-tcp", Port: port, TargetPort: intstr.IntOrString{IntVal: port}},
+				{Name: portName, Port: port, TargetPort: intstr.IntOrString{IntVal: port}},
 			},
 		},
 		Status: corev1.ServiceStatus{

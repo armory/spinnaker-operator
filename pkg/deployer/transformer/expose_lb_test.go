@@ -120,7 +120,7 @@ func TestTransformManifests_ExposedPortFromConfig(t *testing.T) {
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
-	spinSvc.Spec.Expose.Service.Port = 7777
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -139,8 +139,8 @@ func TestTransformManifests_ExposedPortFromOverrides(t *testing.T) {
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
-	spinSvc.Spec.Expose.Service.Port = 7777
-	spinSvc.Spec.Expose.Service.Overrides["gate"] = spinnakerv1alpha1.ExposeConfigServiceOverrides{Port: 1111}
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
+	spinSvc.Spec.Expose.Service.Overrides["gate"] = spinnakerv1alpha1.ExposeConfigServiceOverrides{PublicPort: 1111}
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -164,7 +164,7 @@ func TestTransformHalconfig_ExposedPortAddedToConfig(t *testing.T) {
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
-	spinSvc.Spec.Expose.Service.Port = 7777
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
 
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
@@ -187,7 +187,7 @@ func TestTransformHalconfig_ExposedPortChanges(t *testing.T) {
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
-	spinSvc.Spec.Expose.Service.Port = 7777
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
 
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
@@ -210,7 +210,7 @@ func TestTransformHalconfig_ExposedPortRemovedFromConfig(t *testing.T) {
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
 	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
-	spinSvc.Spec.Expose.Service.Port = 0
+	spinSvc.Spec.Expose.Service.PublicPort = 0
 
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)

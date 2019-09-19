@@ -112,13 +112,8 @@ func (t *exposeLbTransformer) generateOverrideUrl(ctx context.Context, serviceNa
 	if err != nil {
 		return "", err
 	}
-	desiredPort := util.GetDesiredExposePort(ctx, serviceName, t.hc, t.svc)
-	if desiredPort != 80 && desiredPort != 443 && desiredPort != 0 {
-		parsedLbUrl.Host = fmt.Sprintf("%s:%d", parsedLbUrl.Hostname(), desiredPort)
-	} else {
-		parsedLbUrl.Host = parsedLbUrl.Hostname()
-	}
-	return parsedLbUrl.String(), nil
+	desiredPort := util.GetDesiredExposePort(ctx, serviceName, int32(80), t.hc, t.svc)
+	return util.BuildUrl(parsedLbUrl.Scheme, parsedLbUrl.Hostname(), desiredPort), nil
 }
 
 func (t *exposeLbTransformer) transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error {
@@ -126,7 +121,7 @@ func (t *exposeLbTransformer) transformServiceManifest(ctx context.Context, svcN
 		return nil
 	}
 	overrideUrlKeyName := ""
-	defaultPort := util.GetDesiredExposePort(ctx, svcName, t.hc, t.svc)
+	defaultPort := util.GetDesiredExposePort(ctx, svcName, int32(80), t.hc, t.svc)
 	if svcName == "gate" {
 		overrideUrlKeyName = util.GateOverrideBaseUrlProp
 	} else if svcName == "deck" {
