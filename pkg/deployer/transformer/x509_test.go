@@ -2,6 +2,7 @@ package transformer
 
 import (
 	"context"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +31,64 @@ func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
 	th.objectFromJson("output_service_lb.json", expected, t)
 	expected.Name = "spin-gate-x509"
 	expected.Spec.Ports[0].Name = "gate-x509"
-	expected.Spec.Ports[0].Port = 8085
+	expected.Spec.Ports[0].Port = 443
+	expected.Spec.Ports[0].TargetPort = intstr.IntOrString{
+		Type:   intstr.Int,
+		IntVal: 8085,
+	}
+	assert.Equal(t, expected, gen.Config["gate-x509"].Service)
+}
+
+func TestTransformManifests_ExposedWithCustomPort(t *testing.T) {
+	tr, spinSvc, _ := th.setupTransformer(&x509TransformerGenerator{}, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.PublicPort = 3333
+	spinSvc.Spec.Expose.Service.Annotations = map[string]string{
+		"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http",
+		"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         "arn::",
+		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
+	}
+
+	err := tr.TransformManifests(context.TODO(), nil, gen)
+	assert.Nil(t, err)
+
+	expected := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", expected, t)
+	expected.Name = "spin-gate-x509"
+	expected.Spec.Ports[0].Name = "gate-x509"
+	expected.Spec.Ports[0].Port = 3333
+	expected.Spec.Ports[0].TargetPort = intstr.IntOrString{
+		Type:   intstr.Int,
+		IntVal: 8085,
+	}
+	assert.Equal(t, expected, gen.Config["gate-x509"].Service)
+}
+
+func TestTransformManifests_ExposedWithOverridenPort(t *testing.T) {
+	tr, spinSvc, _ := th.setupTransformer(&x509TransformerGenerator{}, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.PublicPort = 80
+	spinSvc.Spec.Expose.Service.Annotations = map[string]string{
+		"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http",
+		"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         "arn::",
+		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
+	}
+	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha1.ExposeConfigServiceOverrides{PublicPort: 5555}
+
+	err := tr.TransformManifests(context.TODO(), nil, gen)
+	assert.Nil(t, err)
+
+	expected := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", expected, t)
+	expected.Name = "spin-gate-x509"
+	expected.Spec.Ports[0].Name = "gate-x509"
+	expected.Spec.Ports[0].Port = 5555
 	expected.Spec.Ports[0].TargetPort = intstr.IntOrString{
 		Type:   intstr.Int,
 		IntVal: 8085,

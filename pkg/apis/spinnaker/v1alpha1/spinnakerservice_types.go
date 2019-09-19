@@ -41,6 +41,7 @@ type ExposeConfig struct {
 type ExposeConfigService struct {
 	Type        string                                  `json:"type,omitempty"`
 	Annotations map[string]string                       `json:"annotations,omitempty"`
+	PublicPort  int32                                   `json:"publicPort,omitempty"`
 	Overrides   map[string]ExposeConfigServiceOverrides `json:"overrides,omitempty"`
 }
 
@@ -48,6 +49,7 @@ type ExposeConfigService struct {
 // +k8s:openapi-gen=true
 type ExposeConfigServiceOverrides struct {
 	Type        string            `json:"type,omitempty"`
+	PublicPort  int32             `json:"publicPort,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 

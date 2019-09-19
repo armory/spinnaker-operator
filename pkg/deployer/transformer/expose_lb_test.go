@@ -4,8 +4,11 @@ import (
 	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
 
@@ -109,4 +112,133 @@ func TestTransformManifests_NotExposed(t *testing.T) {
 	expected.Annotations = nil
 	expected.Spec.Type = "ClusterIP"
 	assert.Equal(t, expected, gen.Config["gate"].Service)
+}
+
+func TestTransformManifests_ExposedPortFromConfig(t *testing.T) {
+	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
+
+	err := tr.TransformManifests(context.TODO(), nil, gen)
+	assert.Nil(t, err)
+
+	expected := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", expected, t)
+	expected.Annotations = nil
+	expected.Spec.Ports[0].Port = 7777
+	expected.Spec.Ports[0].TargetPort = intstr.IntOrString{IntVal: 8084}
+	assert.Equal(t, expected, gen.Config["gate"].Service)
+}
+
+func TestTransformManifests_ExposedPortFromOverrides(t *testing.T) {
+	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
+	spinSvc.Spec.Expose.Service.Overrides["gate"] = spinnakerv1alpha1.ExposeConfigServiceOverrides{PublicPort: 1111}
+
+	err := tr.TransformManifests(context.TODO(), nil, gen)
+	assert.Nil(t, err)
+
+	expected := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", expected, t)
+	expected.Annotations = nil
+	expected.Spec.Ports[0].Port = 1111
+	expected.Spec.Ports[0].TargetPort = intstr.IntOrString{IntVal: 8084}
+	assert.Equal(t, expected, gen.Config["gate"].Service)
+}
+
+// Input: existing services running on default port, then spin config changes to custom port
+func TestTransformHalconfig_ExposedPortAddedToConfig(t *testing.T) {
+	gateSvc := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", gateSvc, t)
+	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
+	fakeClient := fake.NewFakeClient(gateSvc)
+	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
+
+	err := tr.TransformConfig(context.TODO())
+	assert.Nil(t, err)
+
+	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	assert.Nil(t, err)
+	assert.Equal(t, "http://abc.com:7777", actualHcUrl)
+	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
+}
+
+// Input: existing services running on default port, then spin config changes to custom port on override section
+func TestTransformHalconfig_ExposedPortOverrideAddedToConfig(t *testing.T) {
+	gateSvc := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", gateSvc, t)
+	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
+	fakeClient := fake.NewFakeClient(gateSvc)
+	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.Overrides["gate"] = spinnakerv1alpha1.ExposeConfigServiceOverrides{PublicPort: 7777}
+
+	err := tr.TransformConfig(context.TODO())
+	assert.Nil(t, err)
+
+	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	assert.Nil(t, err)
+	assert.Equal(t, "http://abc.com:7777", actualHcUrl)
+	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
+}
+
+// Input: existing services running on custom port, then spin config changes the port
+func TestTransformHalconfig_ExposedPortChanges(t *testing.T) {
+	gateSvc := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", gateSvc, t)
+	gateSvc.Spec.Ports[0].Port = 1111
+	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
+	fakeClient := fake.NewFakeClient(gateSvc)
+	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.PublicPort = 7777
+
+	err := tr.TransformConfig(context.TODO())
+	assert.Nil(t, err)
+
+	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	assert.Nil(t, err)
+	assert.Equal(t, "http://abc.com:7777", actualHcUrl)
+	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
+}
+
+// Input: existing services running on custom port, then spin config removes the custom port
+func TestTransformHalconfig_ExposedPortRemovedFromConfig(t *testing.T) {
+	gateSvc := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", gateSvc, t)
+	gateSvc.Spec.Ports[0].Port = 1111
+	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
+	fakeClient := fake.NewFakeClient(gateSvc)
+	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.PublicPort = 0
+
+	err := tr.TransformConfig(context.TODO())
+	assert.Nil(t, err)
+
+	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	assert.Nil(t, err)
+	assert.Equal(t, "http://abc.com", actualHcUrl)
+	assert.Equal(t, "http://abc.com", spinSvc.Status.APIUrl)
 }
