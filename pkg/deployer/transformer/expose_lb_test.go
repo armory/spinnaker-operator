@@ -175,6 +175,28 @@ func TestTransformHalconfig_ExposedPortAddedToConfig(t *testing.T) {
 	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
 }
 
+// Input: existing services running on default port, then spin config changes to custom port on override section
+func TestTransformHalconfig_ExposedPortOverrideAddedToConfig(t *testing.T) {
+	gateSvc := &corev1.Service{}
+	th.objectFromJson("output_service_lb.json", gateSvc, t)
+	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
+	fakeClient := fake.NewFakeClient(gateSvc)
+	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
+	spinSvc.Spec.Expose.Type = "service"
+	spinSvc.Spec.Expose.Service.Type = "LoadBalancer"
+	spinSvc.Spec.Expose.Service.Overrides["gate"] = spinnakerv1alpha1.ExposeConfigServiceOverrides{PublicPort: 7777}
+
+	err := tr.TransformConfig(context.TODO())
+	assert.Nil(t, err)
+
+	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	assert.Nil(t, err)
+	assert.Equal(t, "http://abc.com:7777", actualHcUrl)
+	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
+}
+
 // Input: existing services running on custom port, then spin config changes the port
 func TestTransformHalconfig_ExposedPortChanges(t *testing.T) {
 	gateSvc := &corev1.Service{}

@@ -123,10 +123,10 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 }
 
 // GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
-func GetDesiredExposePort(ctx context.Context, svcName string, defaultPort int32, hc *halconfig.SpinnakerConfig, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
+func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, hc *halconfig.SpinnakerConfig, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
 	desiredPort := defaultPort
 	exp := spinSvc.GetExpose()
-	if c, ok := exp.Service.Overrides[svcName]; ok {
+	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {
 		if c.PublicPort != 0 {
 			desiredPort = c.PublicPort
 		}
@@ -136,7 +136,7 @@ func GetDesiredExposePort(ctx context.Context, svcName string, defaultPort int32
 
 	// Get port from overrideBaseUrl, if any
 	propName := ""
-	formattedSvcName := fmt.Sprintf("spin-%s", svcName)
+	formattedSvcName := fmt.Sprintf("spin-%s", svcNameWithoutPrefix)
 	if formattedSvcName == GateServiceName {
 		propName = GateOverrideBaseUrlProp
 	} else if formattedSvcName == DeckServiceName {

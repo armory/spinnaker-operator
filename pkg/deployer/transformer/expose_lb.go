@@ -112,7 +112,7 @@ func (t *exposeLbTransformer) generateOverrideUrl(ctx context.Context, serviceNa
 	if err != nil {
 		return "", err
 	}
-	desiredPort := util.GetDesiredExposePort(ctx, serviceName, int32(80), t.hc, t.svc)
+	desiredPort := util.GetDesiredExposePort(ctx, serviceName[len("spin-"):], int32(80), t.hc, t.svc)
 	return util.BuildUrl(parsedLbUrl.Scheme, parsedLbUrl.Hostname(), desiredPort), nil
 }
 
