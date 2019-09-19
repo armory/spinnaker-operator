@@ -3,6 +3,8 @@ package util
 import (
 	"context"
 	"fmt"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -109,4 +111,32 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 		return 443
 	}
 	return defaultPort
+}
+
+func GetDesiredExposePort(ctx context.Context, svcName string, hc *halconfig.SpinnakerConfig, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
+	// Get port from spin config or set a default of 80
+	desiredPort := int32(80)
+	exp := spinSvc.GetExpose()
+	if c, ok := exp.Service.Overrides[svcName]; ok {
+		if c.Port != 0 {
+			desiredPort = c.Port
+		}
+	} else if exp.Service.Port != 0 {
+		desiredPort = exp.Service.Port
+	}
+
+	// Get port from overrideBaseUrl, if any
+	propName := ""
+	formattedSvcName := fmt.Sprintf("spin-%s", svcName)
+	if formattedSvcName == GateServiceName {
+		propName = GateOverrideBaseUrlProp
+	} else if formattedSvcName == DeckServiceName {
+		propName = DeckOverrideBaseUrlProp
+	}
+	overrideBaseUrl := ""
+	if propName != "" {
+		// ignore error, prop may be missing
+		overrideBaseUrl, _ = hc.GetHalConfigPropString(ctx, propName)
+	}
+	return GetPort(overrideBaseUrl, desiredPort)
 }

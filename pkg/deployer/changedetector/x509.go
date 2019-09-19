@@ -45,8 +45,22 @@ func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc s
 	if err != nil {
 		return false, err
 	}
-	if svc.Spec.Ports[0].Port != int32(apiPortInt) {
+	// TargetPort is different?
+	if svc.Spec.Ports[0].TargetPort.IntVal != int32(apiPortInt) {
 		return false, nil
 	}
+	// Public port is different?
+	desiredPort := util.GetDesiredExposePort(ctx, "gate-x509", hc, spinSvc)
+	if desiredPort != svc.Spec.Ports[0].Port {
+		return false, nil
+	}
+
 	return true, nil
+}
+
+func (ch *x509ChangeDetector) getPortOverride(exp spinnakerv1alpha1.ExposeConfig) int32 {
+	if c, ok := exp.Service.Overrides["gate-x509"]; ok {
+		return c.Port
+	}
+	return 0
 }

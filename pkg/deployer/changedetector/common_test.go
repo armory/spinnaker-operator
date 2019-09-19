@@ -1,12 +1,15 @@
 package changedetector
 
 import (
+	"encoding/json"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"testing"
@@ -22,6 +25,8 @@ func (h *testHelpers) setupChangeDetector(generator Generator, client client.Cli
 }
 
 func (h *testHelpers) buildSpinSvc(t *testing.T) (*spinnakerv1alpha1.SpinnakerService, *corev1.ConfigMap, *halconfig.SpinnakerConfig) {
+	spinSvc := &spinnakerv1alpha1.SpinnakerService{}
+	h.objectFromJson("spinsvc.json", spinSvc, t)
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "myconfig",
@@ -36,9 +41,7 @@ func (h *testHelpers) buildSpinSvc(t *testing.T) (*spinnakerv1alpha1.SpinnakerSe
 			ResourceVersion: "123456",
 		},
 	}
-	spinSvc := &spinnakerv1alpha1.SpinnakerService{
-		Status: spinnakerv1alpha1.SpinnakerServiceStatus{HalConfig: f},
-	}
+	spinSvc.Status.HalConfig = f
 	config := h.setupSpinnakerConfig(t)
 	return spinSvc, cm, config
 }
@@ -70,17 +73,20 @@ func (h *testHelpers) setupSpinnakerConfig(t *testing.T) *halconfig.SpinnakerCon
 	return &config
 }
 
-func (h *testHelpers) buildSvc(name string, svcType string, annotations map[string]string) *corev1.Service {
+func (h *testHelpers) buildSvc(name string, svcType string, port int32) *corev1.Service {
+	myAnnotations := map[string]string{
+		"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http",
+	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   "ns1",
-			Annotations: annotations,
+			Annotations: myAnnotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceType(svcType),
 			Ports: []corev1.ServicePort{
-				{Name: name + "-tcp", Port: 80},
+				{Name: name + "-tcp", Port: port, TargetPort: intstr.IntOrString{IntVal: port}},
 			},
 		},
 		Status: corev1.ServiceStatus{
@@ -89,4 +95,21 @@ func (h *testHelpers) buildSvc(name string, svcType string, annotations map[stri
 			}},
 		},
 	}
+}
+
+func (h *testHelpers) objectFromJson(fileName string, target interface{}, t *testing.T) {
+	fileContents := h.loadJsonFile(fileName, t)
+	err := json.Unmarshal([]byte(fileContents), target)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (h *testHelpers) loadJsonFile(fileName string, t *testing.T) string {
+	path := filepath.Join("testdata", fileName) // relative path
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(bytes)
 }

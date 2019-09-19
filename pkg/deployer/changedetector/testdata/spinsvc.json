@@ -1,0 +1,28 @@
+{
+  "apiVersion": "spinnaker.io/v1alpha1",
+  "kind": "SpinnakerService",
+  "metadata": {
+    "name": "spinnaker",
+    "namespace": "ns1"
+  },
+  "spec": {
+    "spinnakerConfig": {
+      "configMap": {
+        "name": "spinconfig-v001"
+      }
+    },
+    "expose": {
+      "type": "service",
+      "service": {
+        "type": "LoadBalancer",
+        "port": 80,
+        "overrides": {
+        }
+      }
+    }
+  },
+  "status": {
+    "apiUrl": "http://acme.com",
+    "uiUrl": "http://acme.com"
+  }
+}

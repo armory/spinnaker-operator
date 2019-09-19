@@ -2,6 +2,7 @@ package changedetector
 
 import (
 	"context"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
@@ -19,13 +20,58 @@ func TestIsSpinnakerUpToDate_Nox509ServiceYet(t *testing.T) {
 	assert.False(t, upTpDate)
 }
 
-func TestIsSpinnakerUpToDate_x509PortDifferent(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", nil)
-	x509Svc.Spec.Ports[0].Port = 9999
+func TestIsSpinnakerUpToDate_x509TargetPortDifferent(t *testing.T) {
+	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 9999)
 	fakeClient := fake.NewFakeClient(x509Svc)
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
 	spinSvc.Spec.Expose.Type = "Service"
+	spinSvc.Spec.Expose.Service.Port = 8085
+
+	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
+
+	assert.Nil(t, err)
+	assert.False(t, upTpDate)
+}
+
+func TestIsSpinnakerUpToDate_x509PublicPortDifferent(t *testing.T) {
+	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
+	fakeClient := fake.NewFakeClient(x509Svc)
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
+	spinSvc, cm, hc := th.buildSpinSvc(t)
+	spinSvc.Spec.Expose.Type = "Service"
+	spinSvc.Spec.Expose.Service.Port = 80
+
+	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
+
+	assert.Nil(t, err)
+	assert.False(t, upTpDate)
+}
+
+func TestIsSpinnakerUpToDate_x509PublicPortOverrideDifferent(t *testing.T) {
+	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
+	fakeClient := fake.NewFakeClient(x509Svc)
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
+	spinSvc, cm, hc := th.buildSpinSvc(t)
+	spinSvc.Spec.Expose.Type = "Service"
+	spinSvc.Spec.Expose.Service.Port = 8085
+	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha1.ExposeConfigServiceOverrides{Port: 80}
+
+	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
+
+	assert.Nil(t, err)
+	assert.False(t, upTpDate)
+}
+
+// Service was running with custom port, port config is removed, service needs to fallback to default (80)
+func TestIsSpinnakerUpToDate_x509PortConfigRemoved(t *testing.T) {
+	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
+	x509Svc.Spec.Ports[0].Port = 1111
+	fakeClient := fake.NewFakeClient(x509Svc)
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
+	spinSvc, cm, hc := th.buildSpinSvc(t)
+	spinSvc.Spec.Expose.Type = "Service"
+	spinSvc.Spec.Expose.Service.Port = 0
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
@@ -34,12 +80,14 @@ func TestIsSpinnakerUpToDate_x509PortDifferent(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_UpToDate(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", nil)
-	x509Svc.Spec.Ports[0].Port = 8085
+	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
+	x509Svc.Spec.Ports[0].Port = 80
 	fakeClient := fake.NewFakeClient(x509Svc)
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
 	spinSvc.Spec.Expose.Type = "Service"
+	spinSvc.Spec.Expose.Service.Port = 7777
+	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha1.ExposeConfigServiceOverrides{Port: 80}
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
 
@@ -48,7 +96,7 @@ func TestIsSpinnakerUpToDate_UpToDate(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_RemoveService(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", nil)
+	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 80)
 	x509Svc.Spec.Ports[0].Port = 8085
 	fakeClient := fake.NewFakeClient(x509Svc)
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)

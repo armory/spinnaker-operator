@@ -23,7 +23,7 @@
     "ports": [
       {
         "name": "gate-tcp",
-        "port": 8084,
+        "port": 80,
         "protocol": "TCP",
         "targetPort": 8084
       }
