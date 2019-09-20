@@ -7,8 +7,8 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	halconfig "github.com/armory/spinnaker-operator/pkg/halconfig"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	"gopkg.in/yaml.v2"
 
 	"bytes"
 	"github.com/armory/spinnaker-operator/pkg/generated"
@@ -86,6 +86,14 @@ func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *halconfig.S
 		if err != nil {
 			return nil, err
 		}
+
+		if k == "deck" {
+			if err = s.addPart(writer, "profiles__settings-local.js", b); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
 		if err = s.addPart(writer, fmt.Sprintf("profiles__%s-local.yml", k), b); err != nil {
 			return nil, err
 		}
