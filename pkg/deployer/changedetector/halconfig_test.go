@@ -22,8 +22,8 @@ func TestIsSpinnakerUpToDate_HalconfigChanged(t *testing.T) {
 
 func TestIsSpinnakerUpToDate_HalconfigUpToDate(t *testing.T) {
 	fakeClient := fake.NewFakeClient(
-		th.buildSvc("spin-deck", "ClusterIP", nil),
-		th.buildSvc("spin-gate", "ClusterIP", nil))
+		th.buildSvc("spin-deck", "ClusterIP", 80),
+		th.buildSvc("spin-gate", "ClusterIP", 80))
 	ch := th.setupChangeDetector(&halconfigChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc, cm, hc := th.buildSpinSvc(t)
 

@@ -37,7 +37,7 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc s
 		if err != nil {
 			isDeckSSLEnabled = false
 		}
-		upToDateDeck, err := ch.isExposeServiceUpToDate(svc, util.DeckServiceName, isDeckSSLEnabled)
+		upToDateDeck, err := ch.isExposeServiceUpToDate(ctx, svc, util.DeckServiceName, isDeckSSLEnabled, hc)
 		if !upToDateDeck || err != nil {
 			return false, err
 		}
@@ -45,7 +45,7 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc s
 		if err != nil {
 			isGateSSLEnabled = false
 		}
-		upToDateGate, err := ch.isExposeServiceUpToDate(svc, util.GateServiceName, isGateSSLEnabled)
+		upToDateGate, err := ch.isExposeServiceUpToDate(ctx, svc, util.GateServiceName, isGateSSLEnabled, hc)
 		if !upToDateGate || err != nil {
 			return false, err
 		}
@@ -55,7 +55,7 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc s
 	}
 }
 
-func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, serviceName string, hcSSLEnabled bool) (bool, error) {
+func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, serviceName string, hcSSLEnabled bool, hc *halconfig.SpinnakerConfig) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	ns := spinSvc.GetNamespace()
 	svc, err := util.GetService(serviceName, ns, ch.client)
@@ -69,6 +69,11 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(spinSvc spinnakerv1alp
 
 	// service type is different, redeploy
 	if upToDate, err := ch.exposeServiceTypeUpToDate(serviceName, spinSvc, svc); !upToDate || err != nil {
+		return false, err
+	}
+
+	// port is different, redeploy
+	if upToDate, err := ch.exposePortUpToDate(ctx, serviceName, spinSvc, svc, hc); !upToDate || err != nil {
 		return false, err
 	}
 
@@ -120,4 +125,31 @@ func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, 
 		}
 	}
 	return true, nil
+}
+
+func (ch *exposeLbChangeDetector) exposePortUpToDate(ctx context.Context, serviceName string, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, svc *corev1.Service, hc *halconfig.SpinnakerConfig) (bool, error) {
+	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
+	if len(svc.Spec.Ports) < 1 {
+		rLogger.Info(fmt.Sprintf("No exposed port for %s found", serviceName))
+		return false, nil
+	}
+	svcNameWithoutPrefix := serviceName[len("spin-"):]
+	portName := fmt.Sprintf("%s-tcp", svcNameWithoutPrefix)
+	publicPort, _ := ch.getSvcPorts(portName, svc)
+	desiredPort := util.GetDesiredExposePort(ctx, svcNameWithoutPrefix, int32(80), hc, spinSvc)
+	if desiredPort != publicPort {
+		rLogger.Info(fmt.Sprintf("Service port for %s: expected: %d, actual: %d", serviceName,
+			desiredPort, publicPort))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (ch *exposeLbChangeDetector) getSvcPorts(portName string, svc *corev1.Service) (int32, int32) {
+	for _, p := range svc.Spec.Ports {
+		if p.Name == portName {
+			return p.Port, p.TargetPort.IntVal
+		}
+	}
+	return 0, 0
 }

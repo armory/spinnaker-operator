@@ -3,6 +3,8 @@ package util
 import (
 	"context"
 	"fmt"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,15 +42,7 @@ func FindLoadBalancerUrl(svcName string, namespace string, client client.Client,
 		scheme = "https"
 	}
 
-	if port != 80 && port != 443 && port != 0 {
-		host = fmt.Sprintf("%s:%d", host, port)
-	}
-
-	lbUrl := url.URL{
-		Scheme: scheme,
-		Host:   host,
-	}
-	return lbUrl.String(), nil
+	return BuildUrl(scheme, host, port), nil
 }
 
 func isSSLEnabled(svc *corev1.Service, port int32, hcSSLEnabled bool) bool {
@@ -69,6 +63,23 @@ func isSSLEnabled(svc *corev1.Service, port int32, hcSSLEnabled bool) bool {
 	} else {
 		return false
 	}
+}
+
+// BuildUrl builds a well formed url that only specifies the port if not derived by scheme already
+func BuildUrl(scheme string, hostWithoutPort string, port int32) string {
+	host := hostWithoutPort
+	if port > 0 {
+		if scheme == "https" && port != 443 {
+			host = fmt.Sprintf("%s:%d", hostWithoutPort, port)
+		} else if scheme == "http" && port != 80 {
+			host = fmt.Sprintf("%s:%d", hostWithoutPort, port)
+		}
+	}
+	myUrl := url.URL{
+		Scheme: scheme,
+		Host:   host,
+	}
+	return myUrl.String()
 }
 
 func GetService(name string, namespace string, client client.Client) (*corev1.Service, error) {
@@ -109,4 +120,32 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 		return 443
 	}
 	return defaultPort
+}
+
+// GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
+func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, hc *halconfig.SpinnakerConfig, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
+	desiredPort := defaultPort
+	exp := spinSvc.GetExpose()
+	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {
+		if c.PublicPort != 0 {
+			desiredPort = c.PublicPort
+		}
+	} else if exp.Service.PublicPort != 0 {
+		desiredPort = exp.Service.PublicPort
+	}
+
+	// Get port from overrideBaseUrl, if any
+	propName := ""
+	formattedSvcName := fmt.Sprintf("spin-%s", svcNameWithoutPrefix)
+	if formattedSvcName == GateServiceName {
+		propName = GateOverrideBaseUrlProp
+	} else if formattedSvcName == DeckServiceName {
+		propName = DeckOverrideBaseUrlProp
+	}
+	overrideBaseUrl := ""
+	if propName != "" {
+		// ignore error, prop may be missing
+		overrideBaseUrl, _ = hc.GetHalConfigPropString(ctx, propName)
+	}
+	return GetPort(overrideBaseUrl, desiredPort)
 }

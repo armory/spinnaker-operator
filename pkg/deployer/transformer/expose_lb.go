@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -95,10 +96,24 @@ func (t *exposeLbTransformer) findStatusUrl(ctx context.Context, serviceName str
 			}
 		}
 		lbUrl, err := util.FindLoadBalancerUrl(serviceName, t.svc.GetNamespace(), t.client, isSSLEnabled)
-		return lbUrl, false, err
+		desiredUrl, err := t.generateOverrideUrl(ctx, serviceName, lbUrl)
+		if err != nil {
+			return "", false, err
+		}
+		return desiredUrl, false, err
 	default:
 		return "", false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", exp.Type)
 	}
+}
+
+// generateOverrideUrl replaces the lb port for the one coming from spin expose config, if any
+func (t *exposeLbTransformer) generateOverrideUrl(ctx context.Context, serviceName string, lbUrl string) (string, error) {
+	parsedLbUrl, err := url.Parse(lbUrl)
+	if err != nil {
+		return "", err
+	}
+	desiredPort := util.GetDesiredExposePort(ctx, serviceName[len("spin-"):], int32(80), t.hc, t.svc)
+	return util.BuildUrl(parsedLbUrl.Scheme, parsedLbUrl.Hostname(), desiredPort), nil
 }
 
 func (t *exposeLbTransformer) transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error {
@@ -106,13 +121,11 @@ func (t *exposeLbTransformer) transformServiceManifest(ctx context.Context, svcN
 		return nil
 	}
 	overrideUrlKeyName := ""
-	defaultPort := int32(0)
+	defaultPort := util.GetDesiredExposePort(ctx, svcName, int32(80), t.hc, t.svc)
 	if svcName == "gate" {
 		overrideUrlKeyName = util.GateOverrideBaseUrlProp
-		defaultPort = int32(8084)
 	} else if svcName == "deck" {
 		overrideUrlKeyName = util.DeckOverrideBaseUrlProp
-		defaultPort = int32(9000)
 	}
 	if err := t.applyPortChanges(ctx, fmt.Sprintf("%s-tcp", svcName), defaultPort, overrideUrlKeyName, svc); err != nil {
 		return err
