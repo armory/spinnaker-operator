@@ -5,10 +5,7 @@ import (
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"regexp"
 )
-
-var fileRegex = regexp.MustCompile(`^files__(.+)$`)
 
 func (s *SpinnakerConfig) FromConfigObject(obj runtime.Object) error {
 	cm, ok := obj.(*corev1.ConfigMap)
@@ -61,16 +58,12 @@ func (s *SpinnakerConfig) parse(key string, data []byte) error {
 	switch key {
 	case "config":
 		return s.ParseHalConfig(data)
-	case "serviceSettings":
+	case "service-settings":
 		return s.ParseServiceSettings(data)
 	case "profiles":
 		return s.ParseProfiles(data)
 	default:
-		a := fileRegex.FindStringSubmatch(key)
-		if len(a) > 1 {
-			s.Files[a[1]] = string(data)
-			return nil
-		}
-		return fmt.Errorf("configuration found with an invalid key: %s, use one of [config|profiles|serviceSettings|files__*]", key)
+		s.Files[key] = string(data)
+		return nil
 	}
 }
