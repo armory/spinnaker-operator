@@ -27,9 +27,9 @@ func TestParseConfigMap(t *testing.T) {
 name: default
 version: 1.14.2
 `,
-			"profiles":        "gate:\n  test:\n    deep: abc\norca:\n  test.other: def",
-			"files__somefile": "test3",
-			"files__profiles__rosco__packer__aws-custom.json": `{
+			"profiles": "gate:\n  test:\n    deep: abc\norca:\n  test.other: def",
+			"somefile": "test3",
+			"profiles__rosco__packer__aws-custom.json": `{
 "variables": {
   "docker_source_image": "null",
   "docker_target_image": null,
@@ -75,5 +75,5 @@ version: 1.14.2
 		},
 	}
 	err := hc.FromConfigMap(cm)
-	assert.Error(t, err, "config key could not be found in config map: randomkey")
+	assert.Nil(t, err)
 }
