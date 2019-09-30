@@ -100,6 +100,8 @@ func (d *Deployer) patch(original runtime.Object) error {
 		i = d.rawClient.AppsV1().RESTClient()
 	case "apps/v1beta1":
 		i = d.rawClient.AppsV1beta1().RESTClient()
+	case "networking.k8s.io/v1":
+		i = d.rawClient.NetworkingV1().RESTClient()
 	default:
 		return fmt.Errorf("Unable to find a REST interface for %s", gvk.String())
 	}
