@@ -163,3 +163,20 @@ func TestIsSpinnakerUpToDate_OverrideBaseUrlAdded(t *testing.T) {
 	assert.False(t, upToDate)
 	assert.Nil(t, err)
 }
+
+// No annotations specified in expose configurations
+func TestIsSpinnakerUpToDate_NoAnnotations(t *testing.T) {
+	deckSvc := th.buildSvc("spin-deck", "LoadBalancer", 80)
+	gateSvc := th.buildSvc("spin-gate", "LoadBalancer", 80)
+	deckSvc.Annotations = nil
+	gateSvc.Annotations = nil
+	fakeClient := fake.NewFakeClient(deckSvc, gateSvc)
+	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
+	spinSvc, cm, hc := th.buildSpinSvc(t)
+	spinSvc.Spec.Expose.Service.Annotations = nil
+
+	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc, cm, hc)
+
+	assert.True(t, upToDate)
+	assert.Nil(t, err)
+}
