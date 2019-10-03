@@ -81,7 +81,7 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, s
 	simpleServiceName := serviceName[len("spin-"):]
 	exp := spinSvc.GetExpose()
 	expectedAnnotations := exp.GetAggregatedAnnotations(simpleServiceName)
-	if !reflect.DeepEqual(svc.Annotations, expectedAnnotations) {
+	if !ch.areAnnotationsEqual(svc.Annotations, expectedAnnotations) {
 		rLogger.Info(fmt.Sprintf("Service annotations for %s: expected: %s, actual: %s", serviceName,
 			expectedAnnotations, svc.Annotations))
 		return false, nil
@@ -152,4 +152,14 @@ func (ch *exposeLbChangeDetector) getSvcPorts(portName string, svc *corev1.Servi
 		}
 	}
 	return 0, 0
+}
+
+func (ch *exposeLbChangeDetector) areAnnotationsEqual(first map[string]string, other map[string]string) bool {
+	if len(first) != len(other) {
+		return false
+	}
+	if first == nil || other == nil {
+		return true
+	}
+	return reflect.DeepEqual(first, other)
 }
