@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -106,7 +105,7 @@ func (d *Deployer) patch(original runtime.Object) error {
 		return fmt.Errorf("Unable to find a REST interface for %s", gvk.String())
 	}
 
-	rsc := fmt.Sprintf("%ss", strings.ToLower(gvk.Kind))
+	rsc, _ := apimeta.UnsafeGuessKindToResource(gvk)
 	// gvk.GroupKind().Group
 	// e := d.rawClient.CoreV1().Services(o.GetNamespace())
 	// o.GetResourceVersion()
@@ -115,7 +114,7 @@ func (d *Deployer) patch(original runtime.Object) error {
 
 	err = i.Get().
 		Namespace(o.GetNamespace()).
-		Resource(rsc).
+		Resource(rsc.Resource).
 		Name(o.GetName()).
 		Do().
 		Into(cp)
@@ -135,7 +134,7 @@ func (d *Deployer) patch(original runtime.Object) error {
 	}
 	return i.Patch(types.MergePatchType).
 		Namespace(o.GetNamespace()).
-		Resource(rsc).
+		Resource(rsc.Resource).
 		// SubResource("spec").
 		Name(o.GetName()).
 		Body(data).
