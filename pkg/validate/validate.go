@@ -8,15 +8,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
-// Transformers tracks the list of transformers
-var Validators []SpinnakerValidator
+// generators is used to register all ValidatorGenerator
+var generators []ValidatorGenerator
 
 func init() {
-	Validators = append(Validators, &singleNamespaceValidator{})
+	generators = append(generators, &singleNamespaceValidatorGenerator{})
 }
 
 type SpinnakerValidator interface {
-	Validate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) error
+	Validate() ValidationResult
+}
+
+type ValidationResult struct {
+	Error error
+	Fatal bool
+}
+
+type ValidatorGenerator interface {
+	Generate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error)
 }
 
 type Options struct {
@@ -25,15 +34,26 @@ type Options struct {
 	Req    types.Request
 }
 
-func Validate(svc v1alpha1.SpinnakerServiceInterface, options Options) error {
+func Validate(svc v1alpha1.SpinnakerServiceInterface, options Options) []error {
 	_, hc, err := v1alpha1.GetConfig(svc, options.Client)
 	if err != nil {
-		return err
+		return []error{err}
 	}
-
-	for _, v := range Validators {
-		if err := v.Validate(svc, hc, options); err != nil {
-			return err
+	var errors []error
+	for _, g := range generators {
+		va, err := g.Generate(svc, hc, options)
+		if err != nil {
+			return []error{err}
+		}
+		for _, v := range va {
+			r := v.Validate()
+			if r.Error == nil {
+				continue
+			}
+			errors = append(errors, r.Error)
+			if r.Fatal {
+				return errors
+			}
 		}
 	}
 	return nil

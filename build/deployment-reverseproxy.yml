@@ -1,0 +1,31 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    name: spinnaker-operator
+  name: spinnaker-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: spinnaker-operator
+  template:
+    metadata:
+      labels:
+        name: spinnaker-operator
+    spec:
+      containers:
+      - image: armory/sshd:feat-reverse-ssh-7b83973
+        imagePullPolicy: IfNotPresent
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        name: sshd
+        volumeMounts:
+        - name: ssh-key
+          mountPath: /root/.ssh
+      volumes:
+      - name: ssh-key
+        configMap:
+          name: ssh-key
+          defaultMode: 0600

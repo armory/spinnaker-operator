@@ -7,6 +7,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"net/http"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -35,9 +36,13 @@ var log = logf.Log.WithName("spinvalidate")
 
 // Add adds the validating admission controller
 func Add(m manager.Manager) error {
-	ns, err := k8sutil.GetOperatorNamespace()
-	if err != nil {
-		return err
+	ns := os.Getenv("WATCH_NAMESPACE")
+	if ns == "" {
+		clusterNs, err := k8sutil.GetOperatorNamespace()
+		if err != nil {
+			return err
+		}
+		ns = clusterNs
 	}
 
 	validatingWebhook, err := builder.NewWebhookBuilder().
@@ -93,9 +98,12 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Re
 		Client: v.client,
 		Req:    req,
 	}
-	if err := validate.Validate(svc, opts); err != nil {
-		log.Error(err, "SpinnakerService validation failed", "metadata.name", svc)
-		return admission.ErrorResponse(http.StatusBadRequest, err)
+	errors := validate.Validate(svc, opts)
+	if len(errors) > 0 {
+		for _, e := range errors {
+			log.Error(e, "SpinnakerService validation failed", "metadata.name", svc)
+		}
+		return admission.ErrorResponse(http.StatusBadRequest, errors[0])
 	}
 	log.Info("SpinnakerService is valid", "metadata.name", svc)
 	return admission.ValidationResponse(true, "")

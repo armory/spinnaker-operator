@@ -8,18 +8,33 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type singleNamespaceValidator struct{}
+type singleNamespaceValidator struct {
+	SpinSvc    v1alpha1.SpinnakerServiceInterface
+	SpinConfig *halconfig.SpinnakerConfig
+	Options    Options
+}
 
-func (s *singleNamespaceValidator) Validate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, opts Options) error {
-	if opts.Req.AdmissionRequest.Operation == v1beta1.Create {
+type singleNamespaceValidatorGenerator struct{}
+
+func (g *singleNamespaceValidatorGenerator) Generate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error) {
+	v := &singleNamespaceValidator{
+		SpinSvc:    svc,
+		SpinConfig: hc,
+		Options:    options,
+	}
+	return []SpinnakerValidator{v}, nil
+}
+
+func (s *singleNamespaceValidator) Validate() ValidationResult {
+	if s.Options.Req.AdmissionRequest.Operation == v1beta1.Create {
 		// Make sure that's the only SpinnakerService
 		ss := &v1alpha1.SpinnakerServiceList{}
-		if err := opts.Client.List(opts.Ctx, client.InNamespace(svc.GetNamespace()), ss); err != nil {
-			return err
+		if err := s.Options.Client.List(s.Options.Ctx, client.InNamespace(s.SpinSvc.GetNamespace()), ss); err != nil {
+			return ValidationResult{Error: err, Fatal: true}
 		}
 		if len(ss.Items) > 0 {
-			return errors.New("SpinnakerService must be unique per namespace")
+			return ValidationResult{Error: errors.New("SpinnakerService must be unique per namespace"), Fatal: true}
 		}
 	}
-	return nil
+	return ValidationResult{}
 }
