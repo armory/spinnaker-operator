@@ -25,6 +25,14 @@ func (g *singleNamespaceValidatorGenerator) Generate(svc v1alpha1.SpinnakerServi
 	return []SpinnakerValidator{v}, nil
 }
 
+func (s *singleNamespaceValidator) GetName() string {
+	return "singleNamespaceValidator"
+}
+
+func (s *singleNamespaceValidator) GetPriority() Priority {
+	return Priority{NoPreference: false, Order: 10}
+}
+
 func (s *singleNamespaceValidator) Validate() ValidationResult {
 	if s.Options.Req.AdmissionRequest.Operation == v1beta1.Create {
 		// Make sure that's the only SpinnakerService

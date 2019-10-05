@@ -143,3 +143,34 @@ notNested: notASecret
 		}
 	}
 }
+
+func TestGetHalconfigObjectArray(t *testing.T) {
+	h := SpinnakerConfig{}
+	ctx := context.TODO()
+	var c = `
+name: default
+version: 1.14.2
+providers:
+  kubernetes:
+    accounts:
+    - name: spinnaker
+      cacheThreads: 1
+      namespaces:
+      - expose-test
+      serviceAccount: true
+    - name: target-kubernetes-cluster
+      cacheThreads: 1
+      namespaces: []
+      kubeconfigFile: target-kubeconfig
+`
+	err := h.ParseHalConfig([]byte(c))
+	if assert.Nil(t, err) {
+		a, err := h.GetHalConfigObjectArray(ctx, "providers.kubernetes.accounts")
+		assert.Nil(t, err)
+		assert.Len(t, a, 2)
+		first := a[0].(map[interface{}]interface{})
+		assert.Equal(t, "spinnaker", first["name"])
+		second := a[1].(map[interface{}]interface{})
+		assert.Equal(t, "target-kubernetes-cluster", second["name"])
+	}
+}

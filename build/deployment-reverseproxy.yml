@@ -15,7 +15,7 @@ spec:
         name: spinnaker-operator
     spec:
       containers:
-      - image: armory/sshd:feat-reverse-ssh-7b83973
+      - image: armory/debugging-tools-sshd:feat-reverse-ssh-6409f76
         imagePullPolicy: IfNotPresent
         resources: {}
         terminationMessagePath: /dev/termination-log

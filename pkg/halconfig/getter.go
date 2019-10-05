@@ -39,6 +39,19 @@ func getObjectPropString(ctx context.Context, obj interface{}, prop string) (str
 	return "", fmt.Errorf("%s is not a string, found %s", prop, c.Kind().String())
 }
 
+func getObjectArray(obj interface{}, prop string) ([]interface{}, error) {
+	v, err := getObjectProp(obj, prop)
+	if err != nil {
+		return nil, err
+	}
+	var result []interface{}
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i)
+		result = append(result, elem.Interface())
+	}
+	return result, nil
+}
+
 func getObjectProp(obj interface{}, prop string) (reflect.Value, error) {
 	addr := strings.Split(prop, ".")
 	v, err := getObjectPropFromKeys(obj, addr)

@@ -41,6 +41,11 @@ func (s *SpinnakerConfig) GetHalConfigPropString(ctx context.Context, prop strin
 	return getObjectPropString(ctx, s.HalConfig, prop)
 }
 
+// GetHalConfigObjectArray reads an untyped array
+func (s *SpinnakerConfig) GetHalConfigObjectArray(ctx context.Context, prop string) ([]interface{}, error) {
+	return getObjectArray(s.HalConfig, prop)
+}
+
 // SetHalConfigProp sets a property in the config
 func (s *SpinnakerConfig) SetHalConfigProp(prop string, value interface{}) error {
 	return setObjectProp(s.HalConfig, prop, value)

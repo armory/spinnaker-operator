@@ -2,10 +2,12 @@ package spinnakervalidating
 
 import (
 	"context"
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -48,9 +50,8 @@ func Add(m manager.Manager) error {
 	validatingWebhook, err := builder.NewWebhookBuilder().
 		Name("validating.k8s.io").
 		Validating().
-		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
 		WithManager(m).
-		ForType(SpinnakerServiceBuilder.New()).
+		Rules(getSpinnakerServiceRule(), getConfigMapRule()).
 		Handlers(&spinnakerValidatingController{}).
 		Build()
 
@@ -82,6 +83,36 @@ func Add(m manager.Manager) error {
 	return as.Register(validatingWebhook)
 }
 
+func getSpinnakerServiceRule() admissionregistrationv1beta1.RuleWithOperations {
+	gv := v1alpha1.SchemeGroupVersion
+	return admissionregistrationv1beta1.RuleWithOperations{
+		Operations: []admissionregistrationv1beta1.OperationType{
+			admissionregistrationv1beta1.Create,
+			admissionregistrationv1beta1.Update,
+		},
+		Rule: admissionregistrationv1beta1.Rule{
+			APIGroups:   []string{gv.Group},
+			APIVersions: []string{gv.Version},
+			Resources:   []string{"spinnakerservices"},
+		},
+	}
+}
+
+func getConfigMapRule() admissionregistrationv1beta1.RuleWithOperations {
+	gv := corev1.SchemeGroupVersion
+	return admissionregistrationv1beta1.RuleWithOperations{
+		Operations: []admissionregistrationv1beta1.OperationType{
+			admissionregistrationv1beta1.Create,
+			admissionregistrationv1beta1.Update,
+		},
+		Rule: admissionregistrationv1beta1.Rule{
+			APIGroups:   []string{gv.Group},
+			APIVersions: []string{gv.Version},
+			Resources:   []string{"configmaps"},
+		},
+	}
+}
+
 // spinnakerValidatingController adds an annotation to every incoming pods.
 func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Request) types.Response {
 	svc, err := v.getSpinnakerService(req)
@@ -90,6 +121,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Re
 		return admission.ErrorResponse(http.StatusExpectationFailed, err)
 	}
 	if svc == nil {
+		// TODO: Need to retrieve SpinnakerService when the request was for its ConfigMap
 		log.Info("No SpinnakerService found in request")
 		return admission.ValidationResponse(true, "")
 	}
@@ -97,11 +129,13 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Re
 		Ctx:    ctx,
 		Client: v.client,
 		Req:    req,
+		Log:    log,
 	}
+	log.Info("Starting validation")
 	errors := validate.Validate(svc, opts)
 	if len(errors) > 0 {
 		for _, e := range errors {
-			log.Error(e, "SpinnakerService validation failed", "metadata.name", svc)
+			log.Error(e, fmt.Sprintf("SpinnakerService validation failed: %s", e.Error()), "metadata.name", svc)
 		}
 		return admission.ErrorResponse(http.StatusBadRequest, errors[0])
 	}
