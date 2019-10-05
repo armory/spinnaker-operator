@@ -1,12 +1,10 @@
 package validate
 
 import (
-	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/armory/spinnaker-operator/pkg/validate/configfinder"
-	"time"
 )
 
 type kubernetesAccount struct {
@@ -61,12 +59,5 @@ func (g *KubernetesAccountValidatorGenerator) Generate(svc v1alpha1.SpinnakerSer
 
 func (v *kubernetesAccountValidator) Validate() ValidationResult {
 	v.Options.Log.Info(fmt.Sprintf("Validating account: %s", v.Account.GetName()))
-	if v.Account.GetName() == "spinnaker" {
-		time.Sleep(3 * time.Second)
-		//return ValidationResult{}
-		return ValidationResult{Error: errors.New("SpinnakerService must be unique per namespace JAJAJAJ"), Fatal: true}
-	} else {
-		time.Sleep(20 * time.Second)
-		return ValidationResult{}
-	}
+	return ValidationResult{}
 }
