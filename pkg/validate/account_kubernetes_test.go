@@ -15,8 +15,12 @@ func TestGenerate(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Len(t, va, 2)
-	assert.Equal(t, "kubernetesAccountValidator,account=first-account", va[0].GetName())
+	validatorNames := []string{
+		"kubernetesAccountValidator,account=first-account",
+		"kubernetesAccountValidator,account=second-account",
+	}
+	assert.Contains(t, validatorNames, va[0].GetName())
+	assert.Contains(t, validatorNames, va[1].GetName())
 	assert.True(t, va[0].GetPriority().NoPreference)
-	assert.Equal(t, "kubernetesAccountValidator,account=second-account", va[1].GetName())
 	assert.True(t, va[1].GetPriority().NoPreference)
 }
