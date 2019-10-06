@@ -28,7 +28,7 @@ func (a *kubernetesAccount) GetChecksum() string {
 	return p["name"].(string)
 }
 
-type KubernetesAccountValidatorGenerator struct{}
+type kubernetesAccountValidatorGenerator struct{}
 
 func (v *kubernetesAccountValidator) GetName() string {
 	return fmt.Sprintf("kubernetesAccountValidator,account=%s", v.Account.GetName())
@@ -38,7 +38,7 @@ func (v *kubernetesAccountValidator) GetPriority() Priority {
 	return Priority{NoPreference: true}
 }
 
-func (g *KubernetesAccountValidatorGenerator) Generate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error) {
+func (g *kubernetesAccountValidatorGenerator) Generate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error) {
 	configFinder := configfinder.NewConfigFinder(options.Ctx, hc)
 	accounts, err := configFinder.GetAccounts("kubernetes")
 	if err != nil {

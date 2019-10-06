@@ -66,8 +66,8 @@ func (v *spinnakerValidatingController) getMatchedSpinnakerService(cm *corev1.Co
 	for _, s := range ss {
 		c := s.GetSpinnakerConfig()
 		if c.ConfigMap != nil &&
-			c.ConfigMap.Name == cm.GetName() &&
-			c.ConfigMap.Namespace == cm.GetNamespace() {
+			s.GetNamespace() == cm.GetNamespace() &&
+			c.ConfigMap.Name == cm.GetName() {
 			return s, nil
 		}
 	}

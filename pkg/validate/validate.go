@@ -15,7 +15,7 @@ import (
 var generators []ValidatorGenerator
 
 func init() {
-	generators = append(generators, &singleNamespaceValidatorGenerator{}, &KubernetesAccountValidatorGenerator{})
+	generators = append(generators, &singleNamespaceValidatorGenerator{}, &kubernetesAccountValidatorGenerator{})
 }
 
 type SpinnakerValidator interface {

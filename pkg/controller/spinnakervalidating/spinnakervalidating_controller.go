@@ -121,7 +121,6 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Re
 		return admission.ErrorResponse(http.StatusExpectationFailed, err)
 	}
 	if svc == nil {
-		// TODO: Need to retrieve SpinnakerService when the request was for its ConfigMap
 		log.Info("No SpinnakerService found in request")
 		return admission.ValidationResponse(true, "")
 	}
