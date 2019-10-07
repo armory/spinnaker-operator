@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -100,11 +99,19 @@ func (d *Deployer) patch(original runtime.Object) error {
 		i = d.rawClient.AppsV1().RESTClient()
 	case "apps/v1beta1":
 		i = d.rawClient.AppsV1beta1().RESTClient()
+	case "networking.k8s.io/v1":
+		i = d.rawClient.NetworkingV1().RESTClient()
+	case "storage.k8s.io/v1":
+		i = d.rawClient.StorageV1().RESTClient()
+	case "authorization.k8s.io/v":
+		i = d.rawClient.AuthorizationV1().RESTClient()
+	case "authentication.k8s.io/v1":
+		i = d.rawClient.AuthenticationV1().RESTClient()
 	default:
 		return fmt.Errorf("Unable to find a REST interface for %s", gvk.String())
 	}
 
-	rsc := fmt.Sprintf("%ss", strings.ToLower(gvk.Kind))
+	rsc, _ := apimeta.UnsafeGuessKindToResource(gvk)
 	// gvk.GroupKind().Group
 	// e := d.rawClient.CoreV1().Services(o.GetNamespace())
 	// o.GetResourceVersion()
@@ -113,7 +120,7 @@ func (d *Deployer) patch(original runtime.Object) error {
 
 	err = i.Get().
 		Namespace(o.GetNamespace()).
-		Resource(rsc).
+		Resource(rsc.Resource).
 		Name(o.GetName()).
 		Do().
 		Into(cp)
@@ -133,7 +140,7 @@ func (d *Deployer) patch(original runtime.Object) error {
 	}
 	return i.Patch(types.MergePatchType).
 		Namespace(o.GetNamespace()).
-		Resource(rsc).
+		Resource(rsc.Resource).
 		// SubResource("spec").
 		Name(o.GetName()).
 		Body(data).
