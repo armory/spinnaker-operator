@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type SpinnakerServiceInterface interface {
@@ -22,6 +23,7 @@ type SpinnakerServiceListInterface interface {
 type SpinnakerServiceBuilderInterface interface {
 	New() SpinnakerServiceInterface
 	NewList() SpinnakerServiceListInterface
+	GetGroupVersion() schema.GroupVersion
 }
 
 func (s *SpinnakerService) DeepCopyInterface() SpinnakerServiceInterface {
@@ -56,4 +58,8 @@ func (s *SpinnakerServiceBuilder) New() SpinnakerServiceInterface {
 
 func (s *SpinnakerServiceBuilder) NewList() SpinnakerServiceListInterface {
 	return &SpinnakerServiceList{}
+}
+
+func (s *SpinnakerServiceBuilder) GetGroupVersion() schema.GroupVersion {
+	return SchemeGroupVersion
 }

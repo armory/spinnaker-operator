@@ -9,13 +9,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 	"sort"
+	"strings"
 )
 
 // generators is used to register all ValidatorGenerator
 var generators []ValidatorGenerator
+var generatorsByProvider map[string]ValidatorGenerator
 
 func init() {
-	generators = append(generators, &singleNamespaceValidatorGenerator{}, &kubernetesAccountValidatorGenerator{})
+	generatorsByProvider = make(map[string]ValidatorGenerator)
+	generatorsByProvider["kubernetes"] = &kubernetesAccountValidatorGenerator{}
+	generators = append(generators, &singleNamespaceValidatorGenerator{})
+
+	for _, g := range generatorsByProvider {
+		generators = append(generators, g)
+	}
 }
 
 type SpinnakerValidator interface {
@@ -70,6 +78,24 @@ func Validate(svc v1alpha1.SpinnakerServiceInterface, options Options) []error {
 	return collectErrors(results)
 }
 
+func ValidateProvider(providerName string, svc v1alpha1.SpinnakerServiceInterface, options Options) []error {
+	_, hc, err := v1alpha1.GetConfig(svc, options.Client)
+	if err != nil {
+		return []error{err}
+	}
+	validators, err := generateProviderValidators(providerName, svc, hc, options)
+	if err != nil {
+		return []error{err}
+	}
+	seq, parallel := splitSequentialAndParallel(validators)
+	results, abort := runInSequence(seq, options.Log)
+	if abort {
+		return collectErrors(results)
+	}
+	results, _ = runInParallel(parallel, options.Log)
+	return collectErrors(results)
+}
+
 func generateValidators(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error) {
 	var validators []SpinnakerValidator
 	for _, g := range generators {
@@ -80,6 +106,19 @@ func generateValidators(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.Sp
 		for _, v := range va {
 			validators = append(validators, v)
 		}
+	}
+	return validators, nil
+}
+
+func generateProviderValidators(providerName string, svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error) {
+	var validators []SpinnakerValidator
+	g := generatorsByProvider[strings.ToLower(providerName)]
+	va, err := g.Generate(svc, hc, options)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range va {
+		validators = append(validators, v)
 	}
 	return validators, nil
 }

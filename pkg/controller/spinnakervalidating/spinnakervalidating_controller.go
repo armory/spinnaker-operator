@@ -2,6 +2,7 @@ package spinnakervalidating
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/validate"
@@ -84,7 +85,7 @@ func Add(m manager.Manager) error {
 }
 
 func getSpinnakerServiceRule() admissionregistrationv1beta1.RuleWithOperations {
-	gv := v1alpha1.SchemeGroupVersion
+	gv := SpinnakerServiceBuilder.GetGroupVersion()
 	return admissionregistrationv1beta1.RuleWithOperations{
 		Operations: []admissionregistrationv1beta1.OperationType{
 			admissionregistrationv1beta1.Create,
@@ -131,12 +132,15 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Re
 		Log:    log,
 	}
 	log.Info("Starting validation")
-	errors := validate.Validate(svc, opts)
-	if len(errors) > 0 {
-		for _, e := range errors {
-			log.Error(e, fmt.Sprintf("SpinnakerService validation failed: %s", e.Error()), "metadata.name", svc)
+	validationErrors := validate.Validate(svc, opts)
+	if len(validationErrors) > 0 {
+		errorMsg := "SpinnakerService validation failed:\n"
+		for _, e := range validationErrors {
+			errorMsg = fmt.Sprintf("%s%s\n", errorMsg, e.Error())
 		}
-		return admission.ErrorResponse(http.StatusBadRequest, errors[0])
+		aggregatedError := errors.New(errorMsg)
+		log.Error(aggregatedError, aggregatedError.Error(), "metadata.name", svc)
+		return admission.ErrorResponse(http.StatusBadRequest, aggregatedError)
 	}
 	log.Info("SpinnakerService is valid", "metadata.name", svc)
 	return admission.ValidationResponse(true, "")
