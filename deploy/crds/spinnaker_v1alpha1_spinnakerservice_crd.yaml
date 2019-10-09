@@ -59,14 +59,14 @@ spec:
                             additionalProperties:
                               type: string
                             type: object
-                          port:
+                          publicPort:
                             format: int32
                             type: integer
                           type:
                             type: string
                         type: object
                       type: object
-                    port:
+                    publicPort:
                       format: int32
                       type: integer
                     type:
