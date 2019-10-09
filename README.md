@@ -8,13 +8,11 @@ The Spinnaker operator:
 - should perform preflight checks to confidently upgrade Spinnaker
 
 More concretely, the operator:
-- is configured via a `configMap` or a `secret`
-- can deploy in a single namespace or in multiple namespaces
+- can deploy Spinnaker in a single namespace or in multiple namespaces
 - garbage collect configuration (secrets, deployments, ...)
 - provides a validating admission webhook to validate the configuration before it is applied
 
 We plan to support many validations such as provider (AWS, Kubernetes,...) validation, connectivity to CI. Please let us know what would make your life easier when installing Spinnaker! You can use GitHub issues for the time being.
-
 
 ## Limitations
 *The operator is in alpha and its CRD may change quite a bit. It is actively being developed.*
