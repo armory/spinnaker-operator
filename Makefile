@@ -79,8 +79,14 @@ push:
 
 .PHONY: publish
 publish:
-	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:latest
-	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:latest
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
+
+.PHONY: publishRelease
+publishRelease:
+	@test -n "${RELEASE_VERSION}"
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(RELEASE_VERSION)
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(RELEASE_VERSION)
 
 .PHONY: version
 version:
