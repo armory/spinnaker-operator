@@ -15,7 +15,7 @@ spec:
       serviceAccountName: spinnaker-operator
       containers:
         - name: spinnaker-operator
-          image: armory/spinnaker-operator:0.1.0
+          image: armory/spinnaker-operator:dev
           command:
             - spinnaker-operator
           args:
