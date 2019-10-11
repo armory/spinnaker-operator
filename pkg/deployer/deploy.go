@@ -113,7 +113,5 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerSe
 func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface) error {
 	status := svc.GetStatus()
 	status.LastConfigurationTime = metav1.NewTime(time.Now())
-	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
-	// TODO Investigate issue on earlier Kubernetes version, works fine in 1.13
 	return d.client.Status().Update(ctx, svc)
 }

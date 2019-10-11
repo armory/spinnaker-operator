@@ -108,6 +108,9 @@ spec:
             apiUrl:
               description: Exposed Gate URL
               type: string
+            lastConfigHash:
+              description: Last deployed hash
+              type: string
             lastConfigurationTime:
               description: Last time the configuration was updated
               format: date-time

@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -23,15 +26,15 @@ type SpinnakerConfig struct {
 	Config FreeForm `json:"config,omitempty"`
 }
 
-//func (s *SpinnakerConfigMap) DeepCopySpinnakerConfig() SpinnakerConfig {
-//	return &SpinnakerConfigMap{}
-//}
-
-//// SpinnakerConfig represents the main config, profiles, service settings and supporting files
-//// +k8s:openapi-gen=true
-//// +k8s:deepcopy-gen=true
-//type SpinnakerConfig struct {
-//}
+// GetHash returns a hash of the config used
+func (s *SpinnakerConfig) GetHash() (string, error) {
+	data, err := json.Marshal(s)
+	if err != nil {
+		return "", err
+	}
+	m := md5.Sum(data)
+	return hex.EncodeToString(m[:]), nil
+}
 
 // ExposeConfig represents the configuration for exposing Spinnaker
 // +k8s:openapi-gen=true
@@ -100,6 +103,9 @@ type SpinnakerServiceStatus struct {
 	// Last time the configuration was updated
 	// +optional
 	LastConfigurationTime metav1.Time `json:"lastConfigurationTime,omitempty"`
+	// Last deployed hash
+	// +optional
+	LastConfigHash string `json:"lastConfigHash,omitempty"`
 	// Services deployment information
 	// +optional
 	Services []SpinnakerDeploymentStatus `json:"services,omitempty"`

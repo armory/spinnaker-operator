@@ -21,5 +21,11 @@ func (g *configChangeDetectorGenerator) NewChangeDetector(client client.Client, 
 
 // IsSpinnakerUpToDate returns true if there is a x509 configuration with a matching service
 func (ch *configChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) (bool, error) {
-	return false, nil
+	h, err := spinSvc.GetSpinnakerConfig().GetHash()
+	if err != nil {
+		return false, err
+	}
+	eh := spinSvc.GetStatus().LastConfigHash
+	spinSvc.GetStatus().LastConfigHash = h
+	return h == eh, nil
 }

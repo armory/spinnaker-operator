@@ -229,6 +229,13 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"lastConfigHash": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Last deployed hash",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Services deployment information",
