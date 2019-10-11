@@ -249,11 +249,18 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 							},
 						},
 					},
-					"ready": {
+					"status": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Indicates when all services are ready",
-							Type:        []string{"boolean"},
+							Description: "Overall Spinnaker status",
+							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"serviceCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Indicates number of services deployed",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 					"uiUrl": {

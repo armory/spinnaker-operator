@@ -109,9 +109,12 @@ type SpinnakerServiceStatus struct {
 	// Services deployment information
 	// +optional
 	Services []SpinnakerDeploymentStatus `json:"services,omitempty"`
-	// Indicates when all services are ready
+	// Overall Spinnaker status
 	// +optional
-	Ready bool `json:"ready,omitempty"`
+	Status string `json:"status,omitempty"`
+	// Indicates number of services deployed
+	// +optional
+	ServiceCount int `json:"serviceCount,omitempty"`
 	// Exposed Deck URL
 	// +optional
 	UIUrl string `json:"uiUrl"`
@@ -126,8 +129,11 @@ type SpinnakerServiceStatus struct {
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="version",type="string",JSONPath=".status.version",description="Version"
-// +kubebuilder:printcolumn:name="uiUrl",type="string",JSONPath=".status.uiUrl",description="UI URL"
-// +kubebuilder:printcolumn:name="apiUrl",type="string",JSONPath=".status.apiUrl",description="API URL"
+// +kubebuilder:printcolumn:name="lastConfigured",type="date",JSONPath=".status.lastConfigurationTime",description="Last Configured"
+// +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.status",description="Status"
+// +kubebuilder:printcolumn:name="services",type="number",JSONPath=".status.serviceCount",description="Services"
+// +kubebuilder:printcolumn:name="url",type="string",JSONPath=".status.uiUrl",description="URL"
+// +kubebuilder:printcolumn:name="apiUrl",type="string",JSONPath=".status.apiUrl",description="API URL",priority=1
 // +kubebuilder:resource:path=spinnakerservices,shortName=spinsvc
 type SpinnakerService struct {
 	metav1.TypeMeta   `json:",inline"`

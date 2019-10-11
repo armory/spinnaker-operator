@@ -12,6 +12,13 @@ type statusChecker struct {
 	client client.Client
 }
 
+const (
+	Ok          = "OK"
+	Updating    = "Updating"
+	Unavailable = "Unavailable"
+	Na          = "N/A"
+)
+
 func newStatusChecker(client client.Client) statusChecker {
 	return statusChecker{client: client}
 }
@@ -25,23 +32,40 @@ func (s *statusChecker) checks(instance spinnakerv1alpha1.SpinnakerServiceInterf
 	}
 
 	svcs := make([]spinnakerv1alpha1.SpinnakerDeploymentStatus, 0)
-	for i := range list.Items {
-		it := list.Items[i]
-		st := spinnakerv1alpha1.SpinnakerDeploymentStatus{
-			Name:                it.ObjectMeta.Name,
-			ObservedGeneration:  it.Status.ObservedGeneration,
-			Replicas:            it.Status.Replicas,
-			UpdatedReplicas:     it.Status.UpdatedReplicas,
-			ReadyReplicas:       it.Status.ReadyReplicas,
-			AvailableReplicas:   it.Status.AvailableReplicas,
-			UnavailableReplicas: it.Status.UnavailableReplicas,
-			LastUpdateTime:      it.ObjectMeta.CreationTimestamp,
-		}
-		svcs = append(svcs, st)
-	}
 	svc := instance.DeepCopyInterface()
 	status := svc.GetStatus()
-	status.Services = svcs
+	if len(list.Items) == 0 {
+		status.Status = Na
+		status.Services = []spinnakerv1alpha1.SpinnakerDeploymentStatus{}
+	} else {
+		status.Status = Ok
+		for i := range list.Items {
+			it := list.Items[i]
+
+			st := spinnakerv1alpha1.SpinnakerDeploymentStatus{
+				Name:                it.ObjectMeta.Name,
+				ObservedGeneration:  it.Status.ObservedGeneration,
+				Replicas:            it.Status.Replicas,
+				UpdatedReplicas:     it.Status.UpdatedReplicas,
+				ReadyReplicas:       it.Status.ReadyReplicas,
+				AvailableReplicas:   it.Status.AvailableReplicas,
+				UnavailableReplicas: it.Status.UnavailableReplicas,
+				LastUpdateTime:      it.ObjectMeta.CreationTimestamp,
+			}
+			// Spinnaker not ready if any of the services has zero pods
+			if it.Status.ReadyReplicas == 0 {
+				status.Status = Unavailable
+			}
+
+			// If number of replicas desired != number of replicas with the given spec, they're "deploying"
+			if it.Status.Replicas != it.Status.UpdatedReplicas {
+				status.Status = Updating
+			}
+			svcs = append(svcs, st)
+		}
+		status.Services = svcs
+	}
+	status.ServiceCount = len(list.Items)
 	// Go through the list
 	return s.client.Status().Update(context.Background(), svc)
 }

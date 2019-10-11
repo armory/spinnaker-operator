@@ -1,0 +1,19 @@
+apiVersion: spinnaker.io/v1alpha1
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    config:
+      version: 1.15.1
+      persistentStorage:
+        persistentStoreType: s3
+        s3:
+          bucket: mybucket
+          rootFolder: front50
+  expose:
+    type: service
+    service:
+      type: LoadBalancer
+      annotations:
+        "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"

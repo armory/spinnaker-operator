@@ -8,13 +8,26 @@ spec:
     description: Version
     name: version
     type: string
+  - JSONPath: .status.lastConfigurationTime
+    description: Last Configured
+    name: lastConfigured
+    type: date
+  - JSONPath: .status.status
+    description: Status
+    name: status
+    type: string
+  - JSONPath: .status.serviceCount
+    description: Services
+    name: services
+    type: number
   - JSONPath: .status.uiUrl
-    description: UI URL
-    name: uiUrl
+    description: URL
+    name: url
     type: string
   - JSONPath: .status.apiUrl
     description: API URL
     name: apiUrl
+    priority: 1
     type: string
   group: spinnaker.io
   names:
@@ -115,9 +128,9 @@ spec:
               description: Last time the configuration was updated
               format: date-time
               type: string
-            ready:
-              description: Indicates when all services are ready
-              type: boolean
+            serviceCount:
+              description: Indicates number of services deployed
+              type: integer
             services:
               description: Services deployment information
               items:
@@ -168,6 +181,9 @@ spec:
                 - name
                 type: object
               type: array
+            status:
+              description: Overall Spinnaker status
+              type: string
             uiUrl:
               description: Exposed Deck URL
               type: string
