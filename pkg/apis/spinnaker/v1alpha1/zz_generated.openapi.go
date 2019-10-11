@@ -11,14 +11,12 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha1_ExposeConfig(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource":          schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSource(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus":    schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSourceStatus(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerService":             schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec":         schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus":       schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref),
+		"./pkg/apis/spinnaker/v1alpha1.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha1_ExposeConfig(ref),
+		"./pkg/apis/spinnaker/v1alpha1.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref),
+		"./pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerService":             schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec":         schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref),
+		"./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus":       schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref),
 	}
 }
 
@@ -27,6 +25,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfig(ref common.ReferenceCallbac
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ExposeConfig represents the configuration for exposing Spinnaker",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
@@ -36,14 +35,14 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfig(ref common.ReferenceCallbac
 					},
 					"service": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigService"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha1.ExposeConfigService"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigService"},
+			"./pkg/apis/spinnaker/v1alpha1.ExposeConfigService"},
 	}
 }
 
@@ -52,6 +51,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref common.Reference
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ExposeConfigService represents the configuration for exposing Spinnaker using k8s services",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
@@ -63,6 +63,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -72,7 +73,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref common.Reference
 							},
 						},
 					},
-					"port": {
+					"publicPort": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
@@ -82,9 +83,10 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides"),
+										Ref: ref("./pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides"),
 									},
 								},
 							},
@@ -94,7 +96,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigService(ref common.Reference
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides"},
+			"./pkg/apis/spinnaker/v1alpha1.ExposeConfigServiceOverrides"},
 	}
 }
 
@@ -103,6 +105,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref common.
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ExposeConfigServiceOverrides represents expose configurations of type service, overriden by specific services",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
@@ -110,7 +113,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref common.
 							Format: "",
 						},
 					},
-					"port": {
+					"publicPort": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
@@ -120,6 +123,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref common.
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -132,59 +136,6 @@ func schema_pkg_apis_spinnaker_v1alpha1_ExposeConfigServiceOverrides(ref common.
 				},
 			},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSource(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SpinnakerFileSource represents a source for Spinnaker files",
-				Properties: map[string]spec.Schema{
-					"configMap": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Config map reference if Spinnaker config stored in a configMap",
-							Ref:         ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference"),
-						},
-					},
-					"secret": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Config map reference if Spinnaker config stored in a secret",
-							Ref:         ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReference"},
-	}
-}
-
-func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerFileSourceStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SpinnakerFileSourceStatus represents a source for Spinnaker files",
-				Properties: map[string]spec.Schema{
-					"configMap": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Config map reference if Spinnaker config stored in a configMap",
-							Ref:         ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReferenceStatus"),
-						},
-					},
-					"secret": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Config map reference if Spinnaker config stored in a secret",
-							Ref:         ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReferenceStatus"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceReferenceStatus"},
 	}
 }
 
@@ -193,6 +144,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref common.ReferenceCal
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SpinnakerService is the Schema for the spinnakerservices API",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -215,19 +167,19 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerService(ref common.ReferenceCal
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceSpec", "./pkg/apis/spinnaker/v1alpha1.SpinnakerServiceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -236,15 +188,16 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref common.Referenc
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SpinnakerServiceSpec defines the desired state of SpinnakerService",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"spinnakerConfig": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerConfig"),
 						},
 					},
 					"expose": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfig"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha1.ExposeConfig"),
 						},
 					},
 				},
@@ -252,7 +205,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.ExposeConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSource"},
+			"./pkg/apis/spinnaker/v1alpha1.ExposeConfig", "./pkg/apis/spinnaker/v1alpha1.SpinnakerConfig"},
 	}
 }
 
@@ -261,6 +214,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "SpinnakerServiceStatus defines the observed state of SpinnakerService",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"version": {
 						SchemaProps: spec.SchemaProps{
@@ -275,12 +229,6 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
-					"halConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Spinnaker Halyard configuration current configured",
-							Ref:         ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus"),
-						},
-					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Services deployment information",
@@ -288,7 +236,7 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus"),
+										Ref: ref("./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus"),
 									},
 								},
 							},
@@ -319,6 +267,6 @@ func schema_pkg_apis_spinnaker_v1alpha1_SpinnakerServiceStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1.SpinnakerFileSourceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"./pkg/apis/spinnaker/v1alpha1.SpinnakerDeploymentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }

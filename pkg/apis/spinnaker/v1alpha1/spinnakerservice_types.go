@@ -7,27 +7,31 @@ import (
 // SpinnakerServiceSpec defines the desired state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceSpec struct {
-	SpinnakerConfig SpinnakerFileSource `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
-	Expose          ExposeConfig        `json:"expose,omitempty"`
+	SpinnakerConfig SpinnakerConfig `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
+	Expose          ExposeConfig    `json:"expose,omitempty"`
 }
 
-// SpinnakerFileSource represents a source for Spinnaker files
-// +k8s:openapi-gen=true
-type SpinnakerFileSource struct {
-	// Config map reference if Spinnaker config stored in a configMap
-	ConfigMap *SpinnakerFileSourceReference `json:"configMap,omitempty"`
-	// Config map reference if Spinnaker config stored in a secret
-	Secret *SpinnakerFileSourceReference `json:"secret,omitempty"`
+// +k8s:deepcopy-gen=true
+type SpinnakerConfig struct {
+	// Supporting files for the Spinnaker config
+	Files map[string]string `json:"files,omitempty"`
+	// Parsed service settings - comments are stripped
+	//ServiceSettings map[string]interface{} `json:"service-settings,omitempty"`
+	// Service profiles will be parsed as YAML
+	Profiles Profiles `json:"profiles,omitempty"`
+	// Main deployment configuration to be passed to Halyard
+	//Config map[string]interface{} `json:"config,omitempty"`
 }
 
-// SpinnakerFileSourceReference represents a reference to a secret or file
-// that is optionally namespaced
-type SpinnakerFileSourceReference struct {
-	// Name of the configMap or secret
-	Name string `json:"name"`
-	// Optional namespace for the configMap or secret, defaults to the CR's namespace
-	Namespace string `json:"namespace,omitempty"`
-}
+//func (s *SpinnakerConfigMap) DeepCopySpinnakerConfig() SpinnakerConfig {
+//	return &SpinnakerConfigMap{}
+//}
+
+//// SpinnakerConfig represents the main config, profiles, service settings and supporting files
+//// +k8s:openapi-gen=true
+//// +k8s:deepcopy-gen=true
+//type SpinnakerConfig struct {
+//}
 
 // ExposeConfig represents the configuration for exposing Spinnaker
 // +k8s:openapi-gen=true
@@ -87,24 +91,6 @@ type SpinnakerDeploymentStatus struct {
 	UnavailableReplicas int32 `json:"unavailableReplicas,omitempty" protobuf:"varint,5,opt,name=unavailableReplicas"`
 }
 
-// SpinnakerFileSourceStatus represents a source for Spinnaker files
-// +k8s:openapi-gen=true
-type SpinnakerFileSourceStatus struct {
-	// Config map reference if Spinnaker config stored in a configMap
-	ConfigMap *SpinnakerFileSourceReferenceStatus `json:"configMap,omitempty"`
-	// Config map reference if Spinnaker config stored in a secret
-	Secret *SpinnakerFileSourceReferenceStatus `json:"secret,omitempty"`
-}
-
-// SpinnakerFileSourceReferenceStatus represents a reference to a specific version of a secret or file
-type SpinnakerFileSourceReferenceStatus struct {
-	// Name of the configMap or secret
-	Name string `json:"name"`
-	// Optional namespace for the configMap or secret, defaults to the CR's namespace
-	Namespace       string `json:"namespace"`
-	ResourceVersion string `json:"resourceVersion"`
-}
-
 // SpinnakerServiceStatus defines the observed state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceStatus struct {
@@ -114,9 +100,6 @@ type SpinnakerServiceStatus struct {
 	// Last time the configuration was updated
 	// +optional
 	LastConfigurationTime metav1.Time `json:"lastConfigurationTime,omitempty"`
-	// Spinnaker Halyard configuration current configured
-	// +optional
-	HalConfig SpinnakerFileSourceStatus `json:"halConfig,omitempty"`
 	// Services deployment information
 	// +optional
 	Services []SpinnakerDeploymentStatus `json:"services,omitempty"`

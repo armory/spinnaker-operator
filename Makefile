@@ -115,3 +115,8 @@ debug:
 	dlv debug --headless  --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
 	--kubeconfig ~/.kube/config --disable-admission-controller
 
+k8s:
+	@go run tools/generate.go k8s
+
+openapi:
+	@go run tools/generate.go openapi

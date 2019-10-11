@@ -3,11 +3,11 @@ package halyard
 import (
 	"context"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"io"
 	"mime/multipart"
 	"net/http"
 
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"gopkg.in/yaml.v2"
 
 	"bytes"
@@ -26,7 +26,7 @@ func NewService() *Service {
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
-func (s *Service) Generate(ctx context.Context, spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
+func (s *Service) Generate(ctx context.Context, spinConfig *v1alpha1.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
 	req, err := s.newHalyardRequest(ctx, spinConfig)
 	if err != nil {
 		return nil, err
@@ -53,28 +53,28 @@ func (s *Service) parse(d []byte) (*generated.SpinnakerGeneratedConfig, error) {
 	return sgc, err
 }
 
-func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *halconfig.SpinnakerConfig) (*http.Request, error) {
+func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha1.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	// Add config
-	b, err := yaml.Marshal(spinConfig.HalConfig)
-	if err != nil {
-		return nil, err
-	}
-	if err = s.addPart(writer, "config", b); err != nil {
-		return nil, err
-	}
+	//b, err := yaml.Marshal(spinConfig.HalConfig)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if err = s.addPart(writer, "config", b); err != nil {
+	//	return nil, err
+	//}
 	// Add service settings
-	for k := range spinConfig.ServiceSettings {
-		b, err := yaml.Marshal(spinConfig.ServiceSettings[k])
-		if err != nil {
-			return nil, err
-		}
-
-		if err = s.addPart(writer, fmt.Sprintf("service-settings__%s.yml", k), b); err != nil {
-			return nil, err
-		}
-	}
+	//for k := range spinConfig.ServiceSettings {
+	//	b, err := yaml.Marshal(spinConfig.ServiceSettings[k])
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	if err = s.addPart(writer, fmt.Sprintf("service-settings__%s.yml", k), b); err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	// Add required files
 	for k := range spinConfig.Files {
@@ -83,26 +83,22 @@ func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *halconfig.S
 		}
 	}
 
+	var err error
+
 	// Add profile files
-	for k := range spinConfig.Profiles {
+	mp := spinConfig.Profiles.AsMap()
+	for k := range mp {
 		if k == "deck" {
-			if err = s.writeDeckProfile(spinConfig.Profiles[k], writer); err != nil {
+			if err = s.writeDeckProfile(mp[k], writer); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		b, err := yaml.Marshal(spinConfig.Profiles[k])
+		b, err := yaml.Marshal(mp[k])
 		if err != nil {
 			return nil, err
 		}
 		if err = s.addPart(writer, fmt.Sprintf("profiles__%s-local.yml", k), b); err != nil {
-			return nil, err
-		}
-	}
-
-	// Add binary files (configMap)
-	for k := range spinConfig.BinaryFiles {
-		if err := s.addPart(writer, k, spinConfig.BinaryFiles[k]); err != nil {
 			return nil, err
 		}
 	}

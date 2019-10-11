@@ -10,7 +10,7 @@ type SpinnakerServiceInterface interface {
 	runtime.Object
 	GetStatus() *SpinnakerServiceStatus
 	GetExpose() ExposeConfig
-	GetSpinnakerConfig() SpinnakerFileSource
+	GetSpinnakerConfig() *SpinnakerConfig
 	DeepCopyInterface() SpinnakerServiceInterface
 }
 
@@ -28,16 +28,16 @@ func (s *SpinnakerService) DeepCopyInterface() SpinnakerServiceInterface {
 	return s.DeepCopy()
 }
 
-func (s *SpinnakerService) GetSpinnakerConfig() SpinnakerFileSource {
-	return s.Spec.SpinnakerConfig
-}
-
 func (s *SpinnakerService) GetExpose() ExposeConfig {
 	return s.Spec.Expose
 }
 
 func (s *SpinnakerService) GetStatus() *SpinnakerServiceStatus {
 	return &s.Status
+}
+
+func (s *SpinnakerService) GetSpinnakerConfig() *SpinnakerConfig {
+	return &s.Spec.SpinnakerConfig
 }
 
 func (s *SpinnakerServiceList) GetItems() []SpinnakerServiceInterface {

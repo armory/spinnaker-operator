@@ -4,7 +4,6 @@ import (
 	"context"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/generated"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +17,6 @@ type x509Transformer struct {
 	*DefaultTransformer
 	exposeLbTr *exposeLbTransformer
 	svc        spinnakerv1alpha1.SpinnakerServiceInterface
-	hc         *halconfig.SpinnakerConfig
 	client     client.Client
 	log        logr.Logger
 }
@@ -27,15 +25,15 @@ type x509TransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
 func (g *x509TransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
-	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
 	exGen := exposeLbTransformerGenerator{}
-	exTr, err := exGen.NewTransformer(svc, hc, client, log)
+	exTr, err := exGen.NewTransformer(svc, client, log)
 	if err != nil {
 		return nil, err
 	}
 	exLbTr := exTr.(*exposeLbTransformer)
-	tr := x509Transformer{svc: svc, hc: hc, log: log, DefaultTransformer: base, exposeLbTr: exLbTr, client: client}
+	tr := x509Transformer{svc: svc, log: log, DefaultTransformer: base, exposeLbTr: exLbTr, client: client}
 	base.ChildTransformer = &tr
 	return &tr, nil
 }
@@ -55,7 +53,7 @@ func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtim
 		return nil
 	}
 	// ignore error as api port property may not exist
-	apiPort, err := t.hc.GetServiceConfigPropString(ctx, "gate", "default.apiPort")
+	apiPort, err := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "default.apiPort")
 	if err != nil || apiPort == "" {
 		return t.scheduleForRemovalIfNeeded(gateConfig, gen)
 	}

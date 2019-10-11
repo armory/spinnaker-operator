@@ -4,26 +4,18 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func isSpinnakerRequest(req types.Request) bool {
+func isSpinnakerRequest(req admission.Request) bool {
 	gv := v1alpha1.SchemeGroupVersion
 	return "SpinnakerService" == req.AdmissionRequest.Kind.Kind &&
 		gv.Group == req.AdmissionRequest.Kind.Group &&
 		gv.Version == req.AdmissionRequest.Kind.Version
 }
 
-func isConfigMapRequest(req types.Request) bool {
-	gv := corev1.SchemeGroupVersion
-	return "ConfigMap" == req.AdmissionRequest.Kind.Kind &&
-		gv.Group == req.AdmissionRequest.Kind.Group &&
-		gv.Version == req.AdmissionRequest.Kind.Version
-}
-
-func (v *spinnakerValidatingController) getSpinnakerService(req types.Request) (v1alpha1.SpinnakerServiceInterface, error) {
+func (v *spinnakerValidatingController) getSpinnakerService(req admission.Request) (v1alpha1.SpinnakerServiceInterface, error) {
 	if isSpinnakerRequest(req) {
 		svc := SpinnakerServiceBuilder.New()
 		if err := v.decoder.Decode(req, svc); err != nil {
@@ -31,45 +23,19 @@ func (v *spinnakerValidatingController) getSpinnakerService(req types.Request) (
 		}
 		return svc, nil
 	}
-	if isConfigMapRequest(req) {
-		cm := &corev1.ConfigMap{}
-		if err := v.decoder.Decode(req, cm); err != nil {
-			return nil, err
-		}
-		// Check if the configMap is for v spinnaker service
-		return v.getMatchedSpinnakerService(cm)
-	}
 	return nil, nil
 }
 
 func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha1.SpinnakerServiceInterface, error) {
 	list := SpinnakerServiceBuilder.NewList()
-	var opts *client.ListOptions
+	var opts client.ListOption
 	ns, _ := k8sutil.GetWatchNamespace()
 	if ns == "" {
-		opts = &client.ListOptions{}
-	} else {
-		opts = &client.ListOptions{Namespace: ns}
+		opts = client.InNamespace(ns)
 	}
-	err := v.client.List(context.TODO(), opts, list)
+	err := v.client.List(context.TODO(), list, opts)
 	if err != nil {
 		return nil, err
 	}
 	return list.GetItems(), nil
-}
-
-func (v *spinnakerValidatingController) getMatchedSpinnakerService(cm *corev1.ConfigMap) (v1alpha1.SpinnakerServiceInterface, error) {
-	ss, err := v.getSpinnakerServices()
-	if err != nil {
-		return nil, err
-	}
-	for _, s := range ss {
-		c := s.GetSpinnakerConfig()
-		if c.ConfigMap != nil &&
-			c.ConfigMap.Name == cm.GetName() &&
-			c.ConfigMap.Namespace == cm.GetNamespace() {
-			return s, nil
-		}
-	}
-	return nil, nil
 }
