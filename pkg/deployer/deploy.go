@@ -84,7 +84,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerSe
 	}
 
 	rLogger.Info("Generating manifests with Halyard")
-	l, err := d.m.Generate(ctx, svc.GetSpinnakerConfig())
+	l, err := d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
 	if err != nil {
 		return err
 	}

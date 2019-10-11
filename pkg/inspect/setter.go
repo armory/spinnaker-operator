@@ -1,46 +1,62 @@
 package inspect
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
-func SetObjectProp(obj interface{}, prop string, value interface{}) error {
+func SetObjectProp(obj map[string]interface{}, prop string, value interface{}) error {
 	addr := strings.Split(prop, ".")
-	c, err := getObjectPropFromKeys(obj, addr[:len(addr)-1])
-	if err != nil {
-		return nil
+
+	c := reflect.ValueOf(obj)
+	for i, a := range addr {
+		var p reflect.Value
+		var err error
+		if i == len(addr)-1 {
+			p, err = inspectPropertyOrSet(c, a, value, false)
+		} else {
+			p, err = inspectPropertyOrSet(c, a, make(map[string]interface{}), true)
+		}
+		if err != nil {
+			return err
+		}
+		c = p
 	}
-	name := addr[len(addr)-1]
-	v := reflect.ValueOf(value)
-
-	if c.Kind() == reflect.Map {
-		c.SetMapIndex(reflect.ValueOf(name), v)
-		return nil
-	}
-
-	if c.Kind() != reflect.Ptr {
-		return errors.New("object must be a pointer to a struct")
-	}
-
-	sVal := c.FieldByName(name)
-
-	if !sVal.IsValid() {
-		return fmt.Errorf("no such field: %s in obj", name)
-	}
-
-	if !sVal.CanSet() {
-		return fmt.Errorf("cannot set %s field value", name)
-	}
-
-	sType := sVal.Type()
-	if sType != v.Type() {
-		invalidTypeError := errors.New("provided value type didn't match obj field type")
-		return invalidTypeError
-	}
-
-	sVal.Set(v)
 	return nil
+}
+
+func inspectPropertyOrSet(v reflect.Value, key string, value interface{}, onlyDefault bool) (reflect.Value, error) {
+	var i reflect.Value
+	switch v.Kind() {
+	case reflect.Map:
+		i = v.MapIndex(reflect.ValueOf(key))
+		if !i.IsValid() || !onlyDefault {
+			i = reflect.ValueOf(value)
+			v.SetMapIndex(reflect.ValueOf(key), i)
+		}
+	case reflect.Slice, reflect.Array:
+		idx, err := strconv.Atoi(key)
+		if err != nil {
+			return v, err
+		}
+		if v.Len() <= idx {
+			return i, fmt.Errorf("unable to address element %d of a %d slice (%s)", idx, v.Len(), key)
+		}
+		i = v.Index(idx)
+		if !onlyDefault {
+			// Replace the value in the slice
+			i.Set(reflect.ValueOf(value))
+		}
+	case reflect.Struct:
+		i = v.FieldByName(key)
+	default:
+		return v, fmt.Errorf("unknown type of %v for key %s", v.Kind(), key)
+	}
+
+	if !i.IsValid() {
+		return i, fmt.Errorf("invalid interface found at %s", key)
+	}
+	return reflect.ValueOf(i.Interface()), nil
 }

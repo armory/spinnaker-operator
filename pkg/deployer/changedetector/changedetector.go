@@ -17,6 +17,7 @@ type Generator interface {
 }
 
 var Generators = []Generator{
+	&configChangeDetectorGenerator{},
 	&exposeLbChangeDetectorGenerator{},
 	&x509ChangeDetectorGenerator{},
 }

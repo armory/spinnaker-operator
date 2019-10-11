@@ -1,0 +1,180 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: spinnakerservices.spinnaker.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.version
+    description: Version
+    name: version
+    type: string
+  - JSONPath: .status.uiUrl
+    description: UI URL
+    name: uiUrl
+    type: string
+  - JSONPath: .status.apiUrl
+    description: API URL
+    name: apiUrl
+    type: string
+  group: spinnaker.io
+  names:
+    kind: SpinnakerService
+    listKind: SpinnakerServiceList
+    plural: spinnakerservices
+    shortNames:
+    - spinsvc
+    singular: spinnakerservice
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: SpinnakerService is the Schema for the spinnakerservices API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: SpinnakerServiceSpec defines the desired state of SpinnakerService
+          properties:
+            expose:
+              description: ExposeConfig represents the configuration for exposing
+                Spinnaker
+              properties:
+                service:
+                  description: ExposeConfigService represents the configuration for
+                    exposing Spinnaker using k8s services
+                  properties:
+                    annotations:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    overrides:
+                      additionalProperties:
+                        description: ExposeConfigServiceOverrides represents expose
+                          configurations of type service, overriden by specific services
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          publicPort:
+                            format: int32
+                            type: integer
+                          type:
+                            type: string
+                        type: object
+                      type: object
+                    publicPort:
+                      format: int32
+                      type: integer
+                    type:
+                      type: string
+                  type: object
+                type:
+                  type: string
+              type: object
+            spinnakerConfig:
+              properties:
+                config:
+                  description: Main deployment configuration to be passed to Halyard
+                files:
+                  additionalProperties:
+                    type: string
+                  description: Supporting files for the Spinnaker config
+                  type: object
+                profiles:
+                  additionalProperties: {}
+                  description: Service profiles will be parsed as YAML
+                  type: object
+                service-settings:
+                  description: Parsed service settings - comments are stripped
+              type: object
+          required:
+          - spinnakerConfig
+          type: object
+        status:
+          description: SpinnakerServiceStatus defines the observed state of SpinnakerService
+          properties:
+            apiUrl:
+              description: Exposed Gate URL
+              type: string
+            lastConfigurationTime:
+              description: Last time the configuration was updated
+              format: date-time
+              type: string
+            ready:
+              description: Indicates when all services are ready
+              type: boolean
+            services:
+              description: Services deployment information
+              items:
+                description: SpinnakerDeploymentStatus represents the deployment status
+                  of a single service
+                properties:
+                  availableReplicas:
+                    description: Total number of available pods (ready for at least
+                      minReadySeconds) targeted by this deployment.
+                    format: int32
+                    type: integer
+                  lastUpdateTime:
+                    description: Last time the service was updated by the operator
+                    format: date-time
+                    type: string
+                  name:
+                    description: Name of the service deployed
+                    type: string
+                  observedGeneration:
+                    description: Copied from DeploymentStatus, "operator-sdk generate
+                      k8s" doesn't like it. The generation observed by the deployment
+                      controller.
+                    format: int64
+                    type: integer
+                  readyReplicas:
+                    description: Total number of ready pods targeted by this deployment.
+                    format: int32
+                    type: integer
+                  replicas:
+                    description: Total number of non-terminated pods targeted by this
+                      deployment (their labels match the selector).
+                    format: int32
+                    type: integer
+                  unavailableReplicas:
+                    description: Total number of unavailable pods targeted by this
+                      deployment. This is the total number of pods that are still
+                      required for the deployment to have 100% available capacity.
+                      They may either be pods that are running but not yet available
+                      or pods that still have not been created.
+                    format: int32
+                    type: integer
+                  updatedReplicas:
+                    description: Total number of non-terminated pods targeted by this
+                      deployment that have the desired template spec.
+                    format: int32
+                    type: integer
+                required:
+                - name
+                type: object
+              type: array
+            uiUrl:
+              description: Exposed Deck URL
+              type: string
+            version:
+              description: Current deployed version of Spinnaker
+              type: string
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

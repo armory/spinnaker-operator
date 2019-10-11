@@ -30,5 +30,9 @@ func (g *targetTransformerGenerator) GetName() string {
 
 // TransformConfig is a nop
 func (t *targetTransformer) TransformConfig(ctx context.Context) error {
-	return t.svc.GetSpinnakerConfig().SetHalConfigProp("deploymentEnvironment.location", t.svc.GetNamespace())
+	err := t.svc.GetSpinnakerConfig().SetHalConfigProp("deploymentEnvironment.location", t.svc.GetNamespace())
+	if err != nil {
+		return err
+	}
+	return t.svc.GetSpinnakerConfig().SetHalConfigProp("deploymentEnvironment.type", "Operator")
 }

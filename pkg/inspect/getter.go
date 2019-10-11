@@ -77,11 +77,11 @@ func inspectProperty(v reflect.Value, key string) (reflect.Value, error) {
 	case reflect.Struct:
 		i = v.FieldByName(key)
 	default:
-		return v, fmt.Errorf("Unknown type of %v for key %s", v.Kind(), key)
+		return v, fmt.Errorf("unknown type of %v for key %s", v.Kind(), key)
 	}
 
 	if !i.IsValid() {
-		return i, fmt.Errorf("Invalid interface found at %s", key)
+		return i, fmt.Errorf("invalid interface found at %s", key)
 	}
 	return reflect.ValueOf(i.Interface()), nil
 }

@@ -57,24 +57,24 @@ func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha1.Sp
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	// Add config
-	//b, err := yaml.Marshal(spinConfig.HalConfig)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if err = s.addPart(writer, "config", b); err != nil {
-	//	return nil, err
-	//}
-	// Add service settings
-	//for k := range spinConfig.ServiceSettings {
-	//	b, err := yaml.Marshal(spinConfig.ServiceSettings[k])
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	if err = s.addPart(writer, fmt.Sprintf("service-settings__%s.yml", k), b); err != nil {
-	//		return nil, err
-	//	}
-	//}
+	b, err := yaml.Marshal(spinConfig.Config)
+	if err != nil {
+		return nil, err
+	}
+	if err = s.addPart(writer, "config", b); err != nil {
+		return nil, err
+	}
+	//Add service settings
+	for k := range spinConfig.ServiceSettings {
+		b, err := yaml.Marshal(spinConfig.ServiceSettings[k])
+		if err != nil {
+			return nil, err
+		}
+
+		if err = s.addPart(writer, fmt.Sprintf("service-settings__%s.yml", k), b); err != nil {
+			return nil, err
+		}
+	}
 
 	// Add required files
 	for k := range spinConfig.Files {
@@ -83,18 +83,16 @@ func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha1.Sp
 		}
 	}
 
-	var err error
-
 	// Add profile files
-	mp := spinConfig.Profiles.AsMap()
-	for k := range mp {
+	//mp := spinConfig.Profiles.AsMap()
+	for k := range spinConfig.Profiles {
 		if k == "deck" {
-			if err = s.writeDeckProfile(mp[k], writer); err != nil {
+			if err = s.writeDeckProfile(spinConfig.Profiles[k], writer); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		b, err := yaml.Marshal(mp[k])
+		b, err := yaml.Marshal(spinConfig.Profiles[k])
 		if err != nil {
 			return nil, err
 		}
