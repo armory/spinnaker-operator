@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,53 +23,10 @@ func (h *testHelpers) setupChangeDetector(generator Generator, client client.Cli
 	return ch
 }
 
-func (h *testHelpers) buildSpinSvc(t *testing.T) (*spinnakerv1alpha1.SpinnakerService, *corev1.ConfigMap, *halconfig.SpinnakerConfig) {
-	spinSvc := &spinnakerv1alpha1.SpinnakerService{}
-	h.objectFromJson("spinsvc.json", spinSvc, t)
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "myconfig",
-			Namespace:       "ns1",
-			ResourceVersion: "123456",
-		},
-	}
-	f := spinnakerv1alpha1.SpinnakerFileSourceStatus{
-		ConfigMap: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
-			Name:            "myconfig",
-			Namespace:       "ns1",
-			ResourceVersion: "123456",
-		},
-	}
-	spinSvc.Status.HalConfig = f
-	config := h.setupSpinnakerConfig(t)
-	return spinSvc, cm, config
-}
-
-func (h *testHelpers) setupSpinnakerConfig(t *testing.T) *halconfig.SpinnakerConfig {
-	path := "testdata/halconfig.yml"
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var hc interface{}
-	err = yaml.Unmarshal(bytes, &hc)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	path = "testdata/profile_gate.yml"
-	bytes, err = ioutil.ReadFile(path)
-	var profile interface{}
-	err = yaml.Unmarshal(bytes, &profile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	config := halconfig.SpinnakerConfig{
-		HalConfig: hc,
-		Profiles:  map[string]interface{}{},
-	}
-	config.Profiles["gate"] = profile
-	return &config
+func (h *testHelpers) buildSpinSvc(t *testing.T) *spinnakerv1alpha1.SpinnakerService {
+	ss := &spinnakerv1alpha1.SpinnakerService{}
+	h.objectFromJson("spinsvc.json", ss, t)
+	return ss
 }
 
 func (h *testHelpers) buildSvc(name string, svcType string, port int32) *corev1.Service {
@@ -100,14 +55,14 @@ func (h *testHelpers) buildSvc(name string, svcType string, port int32) *corev1.
 }
 
 func (h *testHelpers) objectFromJson(fileName string, target interface{}, t *testing.T) {
-	fileContents := h.loadJsonFile(fileName, t)
+	fileContents := h.loadFileContent(fileName, t)
 	err := json.Unmarshal([]byte(fileContents), target)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (h *testHelpers) loadJsonFile(fileName string, t *testing.T) string {
+func (h *testHelpers) loadFileContent(fileName string, t *testing.T) string {
 	path := filepath.Join("testdata", fileName) // relative path
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {

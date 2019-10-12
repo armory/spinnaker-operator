@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
 	"github.com/armory/spinnaker-operator/pkg/generated"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -22,22 +21,25 @@ type testHelpers struct{}
 
 var th = testHelpers{}
 
-func (h *testHelpers) setupTransformer(generator Generator, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService, *halconfig.SpinnakerConfig) {
+func (h *testHelpers) setupTransformer(generator Generator, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService) {
 	fakeClient := fake.NewFakeClient()
 	return h.setupTransformerWithFakeClient(generator, fakeClient, t)
 }
 
-func (h *testHelpers) setupTransformerWithFakeClient(generator Generator, fakeClient client.Client, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService, *halconfig.SpinnakerConfig) {
+func (h *testHelpers) setupTransformerWithFakeClient(generator Generator, fakeClient client.Client, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService) {
 	spinSvc := h.setupSpinSvc()
-	hc := h.setupSpinnakerConfig(t)
-	tr, _ := generator.NewTransformer(spinSvc, hc, fakeClient, log.Log.WithName("spinnakerservice"))
-	return tr, spinSvc, hc
+	h.setupSpinnakerConfig(t, spinSvc.GetSpinnakerConfig())
+	tr, _ := generator.NewTransformer(spinSvc, fakeClient, log.Log.WithName("spinnakerservice"))
+	return tr, spinSvc
 }
 
 func (h *testHelpers) setupSpinSvc() *spinnakerv1alpha1.SpinnakerService {
-	spinSvc := &spinnakerv1alpha1.SpinnakerService{
+	return &spinnakerv1alpha1.SpinnakerService{
 		Spec: spinnakerv1alpha1.SpinnakerServiceSpec{
-			SpinnakerConfig: spinnakerv1alpha1.SpinnakerFileSource{},
+			SpinnakerConfig: spinnakerv1alpha1.SpinnakerConfig{
+				Config:   spinnakerv1alpha1.FreeForm{},
+				Profiles: map[string]spinnakerv1alpha1.FreeForm{},
+			},
 			Expose: spinnakerv1alpha1.ExposeConfig{
 				Type: "",
 				Service: spinnakerv1alpha1.ExposeConfigService{
@@ -45,9 +47,7 @@ func (h *testHelpers) setupSpinSvc() *spinnakerv1alpha1.SpinnakerService {
 				},
 			},
 		},
-		Status: spinnakerv1alpha1.SpinnakerServiceStatus{},
 	}
-	return spinSvc
 }
 
 func (h *testHelpers) objectFromJson(fileName string, target interface{}, t *testing.T) {
@@ -67,31 +67,25 @@ func (h *testHelpers) loadJsonFile(fileName string, t *testing.T) string {
 	return string(bytes)
 }
 
-func (h *testHelpers) setupSpinnakerConfig(t *testing.T) *halconfig.SpinnakerConfig {
+func (h *testHelpers) setupSpinnakerConfig(t *testing.T, spinsvc *spinnakerv1alpha1.SpinnakerConfig) {
 	path := "testdata/halconfig.yml"
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var hc interface{}
-	err = yaml.Unmarshal(bytes, &hc)
+	err = yaml.Unmarshal(bytes, &spinsvc.Config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	path = "testdata/profile_gate.yml"
 	bytes, err = ioutil.ReadFile(path)
-	var profile interface{}
+	var profile spinnakerv1alpha1.FreeForm
 	err = yaml.Unmarshal(bytes, &profile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := halconfig.SpinnakerConfig{
-		HalConfig: hc,
-		Profiles:  map[string]interface{}{},
-	}
-	config.Profiles["gate"] = profile
-	return &config
+	spinsvc.Profiles["gate"] = profile
 }
 
 func (h *testHelpers) addServiceToGenConfig(gen *generated.SpinnakerGeneratedConfig, svcName string, fileName string, t *testing.T) {

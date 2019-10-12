@@ -6,17 +6,55 @@
     "namespace": "ns1"
   },
   "spec": {
-    "spinnakerConfig": {
-      "configMap": {
-        "name": "spinconfig-v001"
-      }
-    },
     "expose": {
-      "type": "service",
       "service": {
-        "type": "LoadBalancer",
+        "overrides": {},
         "publicPort": 80,
-        "overrides": {
+        "type": "LoadBalancer"
+      },
+      "type": "service"
+    },
+    "spinnakerConfig": {
+      "config": {
+        "deploymentEnvironment": {
+          "accountName": "kubernetes",
+          "size": "SMALL",
+          "type": "Distributed"
+        },
+        "name": "default",
+        "persistentStorage": {
+          "azs": {},
+          "gcs": {
+            "rootFolder": "front50"
+          },
+          "oracle": {},
+          "persistentStoreType": "s3",
+          "redis": {},
+          "s3": {
+            "bucket": "german-spinnaker",
+            "region": "us-west-2",
+            "rootFolder": "front50"
+          }
+        },
+        "version": "1.15.1",
+        "security": {
+          "apiSecurity": {
+            "ssl": {
+              "enabled": false
+            }
+          },
+          "uiSecurity": {
+            "ssl": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      "profiles": {
+        "gate": {
+          "default": {
+            "apiPort": 8085
+          }
         }
       }
     }

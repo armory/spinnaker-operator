@@ -30,6 +30,10 @@ func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (str
 		return secrets.Decode(ctx, c.String())
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(c.Int(), 10), nil
+	case reflect.Float64:
+		return strconv.FormatFloat(c.Float(), 'f', -1, 64), nil
+	case reflect.Float32:
+		return strconv.FormatFloat(c.Float(), 'f', -1, 32), nil
 	case reflect.Bool:
 		if c.Bool() {
 			return "true", nil
