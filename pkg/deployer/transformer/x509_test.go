@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -79,7 +79,7 @@ func TestTransformManifests_ExposedWithOverridenPort(t *testing.T) {
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         "arn::",
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
 	}
-	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha1.ExposeConfigServiceOverrides{PublicPort: 5555}
+	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 5555}
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -103,7 +103,7 @@ func TestTransformManifests_RemoveX509Service(t *testing.T) {
 	fakeClient := fake.NewFakeClient(x509Svc)
 	tr, spinSvc := th.setupTransformerWithFakeClient(&x509TransformerGenerator{}, fakeClient, t)
 	spinSvc.Spec.Expose.Type = "service"
-	spinSvc.GetSpinnakerConfig().Profiles = map[string]v1alpha1.FreeForm{}
+	spinSvc.GetSpinnakerConfig().Profiles = map[string]v1alpha2.FreeForm{}
 	gen := &generated.SpinnakerGeneratedConfig{}
 	th.addServiceToGenConfig(gen, "gate", "input_service.json", t)
 

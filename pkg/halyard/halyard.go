@@ -3,7 +3,7 @@ package halyard
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -26,7 +26,7 @@ func NewService() *Service {
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
-func (s *Service) Generate(ctx context.Context, spinConfig *v1alpha1.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
+func (s *Service) Generate(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
 	req, err := s.newHalyardRequest(ctx, spinConfig)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (s *Service) parse(d []byte) (*generated.SpinnakerGeneratedConfig, error) {
 	return sgc, err
 }
 
-func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha1.SpinnakerConfig) (*http.Request, error) {
+func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	// Add config

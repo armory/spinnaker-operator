@@ -2,20 +2,20 @@ package spinnakervalidating
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func isSpinnakerRequest(req admission.Request) bool {
-	gv := v1alpha1.SchemeGroupVersion
+	gv := v1alpha2.SchemeGroupVersion
 	return "SpinnakerService" == req.AdmissionRequest.Kind.Kind &&
 		gv.Group == req.AdmissionRequest.Kind.Group &&
 		gv.Version == req.AdmissionRequest.Kind.Version
 }
 
-func (v *spinnakerValidatingController) getSpinnakerService(req admission.Request) (v1alpha1.SpinnakerServiceInterface, error) {
+func (v *spinnakerValidatingController) getSpinnakerService(req admission.Request) (v1alpha2.SpinnakerServiceInterface, error) {
 	if isSpinnakerRequest(req) {
 		svc := SpinnakerServiceBuilder.New()
 		if err := v.decoder.Decode(req, svc); err != nil {
@@ -26,7 +26,7 @@ func (v *spinnakerValidatingController) getSpinnakerService(req admission.Reques
 	return nil, nil
 }
 
-func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha1.SpinnakerServiceInterface, error) {
+func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha2.SpinnakerServiceInterface, error) {
 	list := SpinnakerServiceBuilder.NewList()
 	var opts client.ListOption
 	ns, _ := k8sutil.GetWatchNamespace()

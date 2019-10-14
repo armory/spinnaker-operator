@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	deploy "github.com/armory/spinnaker-operator/pkg/deployer"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	extv1 "k8s.io/api/extensions/v1beta1"

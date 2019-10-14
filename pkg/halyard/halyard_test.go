@@ -2,7 +2,7 @@ package halyard
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func makeBasicSpinnakerConfig() *v1alpha1.SpinnakerConfig {
-	return &v1alpha1.SpinnakerConfig{
+func makeBasicSpinnakerConfig() *v1alpha2.SpinnakerConfig {
+	return &v1alpha2.SpinnakerConfig{
 		Config: map[string]interface{}{
 			"name":    "default",
 			"version": "1.14.2",
@@ -30,7 +30,7 @@ func TestService_newHalyardRequest(t *testing.T) {
 	}
 	type args struct {
 		ctx        context.Context
-		spinConfig *v1alpha1.SpinnakerConfig
+		spinConfig *v1alpha2.SpinnakerConfig
 	}
 
 	tests := []struct {
@@ -74,9 +74,9 @@ version: 1.14.2`)
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() *v1alpha1.SpinnakerConfig {
+				spinConfig: (func() *v1alpha2.SpinnakerConfig {
 					hc := makeBasicSpinnakerConfig()
-					hc.Profiles = map[string]v1alpha1.FreeForm{
+					hc.Profiles = map[string]v1alpha2.FreeForm{
 						"deck": {
 							"content": "windows.settings = 55;",
 						},
@@ -108,9 +108,9 @@ version: 1.14.2`)
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() *v1alpha1.SpinnakerConfig {
+				spinConfig: (func() *v1alpha2.SpinnakerConfig {
 					hc := makeBasicSpinnakerConfig()
-					hc.Profiles = map[string]v1alpha1.FreeForm{
+					hc.Profiles = map[string]v1alpha2.FreeForm{
 						"clouddriver": {
 							"hello": map[string]interface{}{
 								"world": 48,

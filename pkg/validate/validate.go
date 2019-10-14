@@ -2,7 +2,7 @@ package validate
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -15,7 +15,7 @@ func init() {
 }
 
 type SpinnakerValidator interface {
-	Validate(svc v1alpha1.SpinnakerServiceInterface, options Options) error
+	Validate(svc v1alpha2.SpinnakerServiceInterface, options Options) error
 }
 
 type Options struct {
@@ -24,7 +24,7 @@ type Options struct {
 	Req    admission.Request
 }
 
-func Validate(svc v1alpha1.SpinnakerServiceInterface, options Options) error {
+func Validate(svc v1alpha2.SpinnakerServiceInterface, options Options) error {
 	for _, v := range Validators {
 		if err := v.Validate(svc, options); err != nil {
 			return err

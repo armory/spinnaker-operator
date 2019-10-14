@@ -2,7 +2,7 @@ package spinnakervalidating
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"net/http"
@@ -22,7 +22,7 @@ type spinnakerValidatingController struct {
 }
 
 // NewSpinnakerService instantiates the type we're going to validate
-var SpinnakerServiceBuilder v1alpha1.SpinnakerServiceBuilderInterface
+var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
 
 // Implement admission.Handler so the controller can handle admission request.
 var _ admission.Handler = &spinnakerValidatingController{}

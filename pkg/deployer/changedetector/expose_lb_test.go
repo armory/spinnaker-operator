@@ -2,7 +2,7 @@ package changedetector
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -32,7 +32,7 @@ func TestIsSpinnakerUpToDate_TestExposeConfigUpToDateDontExpose(t *testing.T) {
 		th.buildSvc("spin-gate", "ClusterIP", 80))
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose = v1alpha1.ExposeConfig{}
+	spinSvc.Spec.Expose = v1alpha2.ExposeConfig{}
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -81,7 +81,7 @@ func TestIsSpinnakerUpToDate_TestExposeConfigChangedPortOverriden(t *testing.T) 
 		th.buildSvc("spin-gate", "LoadBalancer", 7777))
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha1.ExposeConfigServiceOverrides{PublicPort: 443}
+	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 443}
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -97,11 +97,11 @@ func TestIsSpinnakerUpToDate_UpToDateWithOverrides(t *testing.T) {
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, fakeClient, t)
 	spinSvc := th.buildSpinSvc(t)
 	spinSvc.Spec.Expose.Service.PublicPort = 80
-	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha1.ExposeConfigServiceOverrides{
+	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha2.ExposeConfigServiceOverrides{
 		PublicPort:  7777,
 		Annotations: map[string]string{"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"},
 	}
-	spinSvc.Spec.Expose.Service.Overrides["deck"] = v1alpha1.ExposeConfigServiceOverrides{
+	spinSvc.Spec.Expose.Service.Overrides["deck"] = v1alpha2.ExposeConfigServiceOverrides{
 		PublicPort:  7777,
 		Annotations: map[string]string{"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"},
 	}

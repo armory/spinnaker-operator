@@ -1,4 +1,4 @@
-package v1alpha1
+package v1alpha2
 
 func (e *ExposeConfig) GetAggregatedAnnotations(serviceName string) map[string]string {
 	annotations := map[string]string{}

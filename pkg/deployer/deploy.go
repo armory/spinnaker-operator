@@ -3,7 +3,7 @@ package deployer
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/deployer/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/deployer/transformer"
 	"github.com/armory/spinnaker-operator/pkg/generated"
