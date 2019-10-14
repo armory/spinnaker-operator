@@ -15,6 +15,10 @@ Note: If you can't use the validation webhook, pass the `--without-admission-con
 
 ## Installation
 Download CRDs and example manifests from the [latest stable release](https://github.com/armory/spinnaker-operator/releases).
+CRD and examples on `master` are unstable and subject to change.
+
+**Breaking Change**: In 0.2.x+, the CRD no longer references a `configMap` but contains the whole configuration. 
+It allows users to use `kustomize` to layer their Spinnaker changes and makes validation easier.    
 
 ### Operator Installation
 

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -36,41 +36,8 @@ func Add(m manager.Manager) error {
 		return err
 	}
 
-	//validatingWebhook, err := builder.NewWebhookBuilder().
-	//	Name("validating.k8s.io").
-	//	Validating().
-	//	Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
-	//	WithManager(m).
-	//	ForType(SpinnakerServiceBuilder.New()).
-	//	Handlers(&spinnakerValidatingController{}).
-	//	Build()
-	//
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//disableWebhookConfigInstaller := false
-	//
-	//as, err := webhook.NewServer("spinnaker-admission-server", m, webhook.ServerOptions{
-	//	Port:                          9876,
-	//	CertDir:                       "/tmp/cert",
-	//	DisableWebhookConfigInstaller: &disableWebhookConfigInstaller,
-	//	BootstrapOptions: &webhook.BootstrapOptions{
-	//		Service: &webhook.Service{
-	//			Namespace: ns,
-	//			Name:      "spinnaker-admission-service",
-	//			// Selectors should select the pods that runs this webhook server.
-	//			Selectors: map[string]string{
-	//				"name": "spinnaker-operator",
-	//			},
-	//		},
-	//	},
-	//})
-	//
-	//if err != nil {
-	//	return err
-	//}
-	//return as.Register(validatingWebhook)
+	hookServer := m.GetWebhookServer()
+	hookServer.Register("/validate-v1alpha1-spinnakerservice", &webhook.Admission{Handler: &spinnakerValidatingController{}})
 	return nil
 }
 
@@ -98,19 +65,11 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	return admission.ValidationResponse(true, "")
 }
 
-// spinnakerValidatingController implements inject.Client.
-// A client will be automatically injected.
-var _ inject.Client = &spinnakerValidatingController{}
-
 // InjectClient injects the client.
 func (v *spinnakerValidatingController) InjectClient(c client.Client) error {
 	v.client = c
 	return nil
 }
-
-// spinnakerValidatingController implements inject.Decoder.
-// A decoder will be automatically injected.
-//var _ inject.Decoder = &spinnakerValidatingController{}
 
 // InjectDecoder injects the decoder.
 func (v *spinnakerValidatingController) InjectDecoder(d admission.Decoder) error {
