@@ -2,24 +2,21 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    name: spinnaker-operator
-  name: spinnaker-operator
+    name: spinnaker-operator-proxy
+  name: spinnaker-operator-proxy
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: spinnaker-operator
+      name: spinnaker-operator-proxy
   template:
     metadata:
       labels:
-        name: spinnaker-operator
+        name: spinnaker-operator-proxy
     spec:
       containers:
       - image: armory/debugging-tools-sshd:feat-reverse-ssh-6409f76
         imagePullPolicy: IfNotPresent
-        resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
         name: sshd
         volumeMounts:
         - name: ssh-key

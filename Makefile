@@ -120,7 +120,8 @@ debug:
 reverse-proxy:
 	kubectl --kubeconfig=${KUBECONFIG} create cm ssh-key --from-file=authorized_keys=${HOME}/.ssh/id_rsa.pub --dry-run -o yaml | kubectl apply -f -
 	kubectl --kubeconfig=${KUBECONFIG} apply -f build/deployment-reverseproxy.yml
-	kubectl --kubeconfig=${KUBECONFIG} port-forward deployment/spinnaker-operator 2222:22 & echo $$! > pf-pid
+	sleep 5
+	kubectl --kubeconfig=${KUBECONFIG} port-forward deployment/spinnaker-operator-proxy 2222:22 & echo $$! > pf-pid
 	sleep 5
 	ssh -p 2222 -g -R 9876:localhost:9876 root@localhost
 	kill `cat pf-pid` && rm pf-pid

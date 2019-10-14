@@ -11,15 +11,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/builder"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
@@ -39,15 +38,6 @@ var log = logf.Log.WithName("spinvalidate")
 
 // Add adds the validating admission controller
 func Add(m manager.Manager) error {
-	ns := os.Getenv("WATCH_NAMESPACE")
-	if ns == "" {
-		clusterNs, err := k8sutil.GetOperatorNamespace()
-		if err != nil {
-			return err
-		}
-		ns = clusterNs
-	}
-
 	validatingWebhook, err := builder.NewWebhookBuilder().
 		Name("validating.k8s.io").
 		Validating().
@@ -62,20 +52,15 @@ func Add(m manager.Manager) error {
 
 	disableWebhookConfigInstaller := false
 
+	options, err := getWebhookBootstrapOptions()
+	if err != nil {
+		return err
+	}
 	as, err := webhook.NewServer("spinnaker-admission-server", m, webhook.ServerOptions{
 		Port:                          9876,
 		CertDir:                       "/tmp/cert",
 		DisableWebhookConfigInstaller: &disableWebhookConfigInstaller,
-		BootstrapOptions: &webhook.BootstrapOptions{
-			Service: &webhook.Service{
-				Namespace: ns,
-				Name:      "spinnaker-admission-service",
-				// Selectors should select the pods that runs this webhook server.
-				Selectors: map[string]string{
-					"name": "spinnaker-operator",
-				},
-			},
-		},
+		BootstrapOptions:              options,
 	})
 
 	if err != nil {
@@ -112,6 +97,32 @@ func getConfigMapRule() admissionregistrationv1beta1.RuleWithOperations {
 			Resources:   []string{"configmaps"},
 		},
 	}
+}
+
+func getWebhookBootstrapOptions() (*webhook.BootstrapOptions, error) {
+	selector := "spinnaker-operator"
+	name := "spinnaker-admission-service"
+	ns, err := k8sutil.GetOperatorNamespace()
+	if err != nil {
+		envNs := os.Getenv("ADMISSION_PROXY_NAMESPACE")
+		if envNs == "" {
+			return nil, fmt.Errorf("Error getting operator namespace: %s  and env var ADMISSION_PROXY_NAMESPACE, not set", err.Error())
+		}
+		ns = envNs
+		selector = "spinnaker-operator-proxy"
+		name = "spinnaker-admission-service-proxy"
+	}
+
+	return &webhook.BootstrapOptions{
+		Service: &webhook.Service{
+			Namespace: ns,
+			Name:      name,
+			// Selectors should select the pods that runs this webhook server.
+			Selectors: map[string]string{
+				"name": selector,
+			},
+		},
+	}, nil
 }
 
 // spinnakerValidatingController adds an annotation to every incoming pods.
