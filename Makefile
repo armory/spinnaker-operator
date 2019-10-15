@@ -53,12 +53,6 @@ build-dirs:
 	@echo "Creating build directories ${BUILD_DIR}"
 	@mkdir -p $(BUILD_DIR)
 
-# Regenerates CRD yamls out of any changes in spinnakerservice_types.go
-.PHONY: generate
-generate: build-dirs
-	operator-sdk generate k8s
-	operator-sdk generate openapi
-
 .PHONY: build
 build: build-dirs Makefile
 	@echo "Building: $(BINARIES)"
@@ -115,3 +109,8 @@ debug:
 	dlv debug --headless  --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
 	--kubeconfig ~/.kube/config --disable-admission-controller
 
+k8s:
+	@go run tools/generate.go k8s
+
+openapi:
+	@go run tools/generate.go openapi
