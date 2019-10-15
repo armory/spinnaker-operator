@@ -2,6 +2,8 @@ package spinnakerservice
 
 import (
 	"context"
+	v1 "k8s.io/api/core/v1"
+	"strings"
 
 	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1beta2"
@@ -26,7 +28,7 @@ func newStatusChecker(client client.Client) statusChecker {
 func (s *statusChecker) checks(instance spinnakerv1alpha1.SpinnakerServiceInterface) error {
 	// Get current deployment owned by the service
 	list := &appsv1.DeploymentList{}
-	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/managed-by": "halyard"})
+	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/managed-by": "spinnaker-operator"})
 	if err != nil {
 		return err
 	}
@@ -43,14 +45,10 @@ func (s *statusChecker) checks(instance spinnakerv1alpha1.SpinnakerServiceInterf
 			it := list.Items[i]
 
 			st := spinnakerv1alpha1.SpinnakerDeploymentStatus{
-				Name:                it.ObjectMeta.Name,
-				ObservedGeneration:  it.Status.ObservedGeneration,
-				Replicas:            it.Status.Replicas,
-				UpdatedReplicas:     it.Status.UpdatedReplicas,
-				ReadyReplicas:       it.Status.ReadyReplicas,
-				AvailableReplicas:   it.Status.AvailableReplicas,
-				UnavailableReplicas: it.Status.UnavailableReplicas,
-				LastUpdateTime:      it.ObjectMeta.CreationTimestamp,
+				Name:          it.ObjectMeta.Name,
+				Replicas:      it.Status.Replicas,
+				ReadyReplicas: it.Status.ReadyReplicas,
+				Image:         s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec),
 			}
 			// Spinnaker not ready if any of the services has zero pods
 			if it.Status.ReadyReplicas == 0 {
@@ -68,4 +66,18 @@ func (s *statusChecker) checks(instance spinnakerv1alpha1.SpinnakerServiceInterf
 	status.ServiceCount = len(list.Items)
 	// Go through the list
 	return s.client.Status().Update(context.Background(), svc)
+}
+
+// getSpinnakerServiceImageFromDeployment returns the name of the image
+func (s *statusChecker) getSpinnakerServiceImageFromDeployment(p v1.PodSpec) string {
+	for _, c := range p.Containers {
+		if strings.HasPrefix(c.Name, "spin-") {
+			return c.Image
+		}
+	}
+	// Default to first container if it exists
+	if len(p.Containers) > 0 {
+		return p.Containers[0].Image
+	}
+	return ""
 }

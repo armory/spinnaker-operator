@@ -137,24 +137,12 @@ spec:
                 description: SpinnakerDeploymentStatus represents the deployment status
                   of a single service
                 properties:
-                  availableReplicas:
-                    description: Total number of available pods (ready for at least
-                      minReadySeconds) targeted by this deployment.
-                    format: int32
-                    type: integer
-                  lastUpdateTime:
-                    description: Last time the service was updated by the operator
-                    format: date-time
+                  image:
+                    description: Image deployed
                     type: string
                   name:
                     description: Name of the service deployed
                     type: string
-                  observedGeneration:
-                    description: Copied from DeploymentStatus, "operator-sdk generate
-                      k8s" doesn't like it. The generation observed by the deployment
-                      controller.
-                    format: int64
-                    type: integer
                   readyReplicas:
                     description: Total number of ready pods targeted by this deployment.
                     format: int32
@@ -162,19 +150,6 @@ spec:
                   replicas:
                     description: Total number of non-terminated pods targeted by this
                       deployment (their labels match the selector).
-                    format: int32
-                    type: integer
-                  unavailableReplicas:
-                    description: Total number of unavailable pods targeted by this
-                      deployment. This is the total number of pods that are still
-                      required for the deployment to have 100% available capacity.
-                      They may either be pods that are running but not yet available
-                      or pods that still have not been created.
-                    format: int32
-                    type: integer
-                  updatedReplicas:
-                    description: Total number of non-terminated pods targeted by this
-                      deployment that have the desired template spec.
                     format: int32
                     type: integer
                 required:

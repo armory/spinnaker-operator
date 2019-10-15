@@ -237,6 +237,12 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 						},
 					},
 					"services": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-map-keys": "name",
+								"x-kubernetes-list-type":     "map",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Services deployment information",
 							Type:        []string{"array"},

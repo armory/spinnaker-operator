@@ -39,6 +39,8 @@ func (t *ownerTransformer) TransformManifests(ctx context.Context, scheme *runti
 			if err := controllerutil.SetControllerReference(t.svc, s.Deployment, scheme); err != nil {
 				return err
 			}
+			s.Deployment.Labels["app.kubernetes.io/managed-by"] = "spinnaker-operator"
+			s.Deployment.Spec.Template.Labels["app.kubernetes.io/managed-by"] = "spinnaker-operator"
 		}
 		if s.Service != nil {
 			if err := controllerutil.SetControllerReference(t.svc, s.Service, scheme); err != nil {
