@@ -258,7 +258,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 					},
 					"serviceCount": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Indicates number of services deployed",
+							Description: "Number of services in Spinnaker",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

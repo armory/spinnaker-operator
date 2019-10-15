@@ -129,7 +129,7 @@ spec:
               format: date-time
               type: string
             serviceCount:
-              description: Indicates number of services deployed
+              description: Number of services in Spinnaker
               type: integer
             services:
               description: Services deployment information

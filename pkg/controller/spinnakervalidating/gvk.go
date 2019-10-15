@@ -30,7 +30,7 @@ func (v *spinnakerValidatingController) getSpinnakerServices() ([]v1alpha2.Spinn
 	list := SpinnakerServiceBuilder.NewList()
 	var opts client.ListOption
 	ns, _ := k8sutil.GetWatchNamespace()
-	if ns == "" {
+	if ns != "" {
 		opts = client.InNamespace(ns)
 	}
 	err := v.client.List(context.TODO(), list, opts)

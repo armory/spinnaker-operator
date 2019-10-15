@@ -112,7 +112,7 @@ type SpinnakerServiceStatus struct {
 	// Overall Spinnaker status
 	// +optional
 	Status string `json:"status,omitempty"`
-	// Indicates number of services deployed
+	// Number of services in Spinnaker
 	// +optional
 	ServiceCount int `json:"serviceCount,omitempty"`
 	// Exposed Deck URL
