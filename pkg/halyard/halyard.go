@@ -78,7 +78,7 @@ func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha2.Sp
 
 	// Add required files
 	for k := range spinConfig.Files {
-		if err := s.addPart(writer, k, []byte(spinConfig.Files[k])); err != nil {
+		if err := s.addPart(writer, k, spinConfig.GetFileContent(k)); err != nil {
 			return nil, err
 		}
 	}
