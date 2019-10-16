@@ -2,6 +2,7 @@ package v1alpha2
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 )
@@ -48,4 +49,15 @@ func (e *ExposeConfig) GetAggregatedAnnotations(serviceName string) map[string]s
 		}
 	}
 	return annotations
+}
+
+// GetFileContent returns the file content at key. It will be base64 decoded if possible.
+func (s *SpinnakerConfig) GetFileContent(key string) []byte {
+	str := s.Files[key]
+	r, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return []byte(str)
+	}
+	return r
+
 }

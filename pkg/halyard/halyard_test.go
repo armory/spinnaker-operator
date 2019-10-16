@@ -142,6 +142,40 @@ hello:
 				}
 			},
 		},
+
+		{
+			name:   "make sure file content is decoded",
+			fields: fields{url: "http://localhost:8086"},
+			args: args{
+				ctx: context.TODO(),
+				spinConfig: (func() *v1alpha2.SpinnakerConfig {
+					hc := makeBasicSpinnakerConfig()
+					hc.Files = map[string]string{
+						"test":  "some content here",
+						"other": "dGVzdA==", // = base64("test")
+					}
+					return hc
+				})(),
+			},
+
+			wantErr: false,
+			expected: func(t *testing.T, got *http.Request) {
+				_ = got.ParseMultipartForm(32 << 20)
+
+				assert.Equal(t, len(got.MultipartForm.File), 3)
+
+				if f, _, err := got.FormFile("test"); assert.Nil(t, err) {
+					if gotBody, err := ioutil.ReadAll(f); assert.Nil(t, err) {
+						assert.Equal(t, []byte("some content here"), gotBody)
+					}
+				}
+				if f, _, err := got.FormFile("other"); assert.Nil(t, err) {
+					if gotBody, err := ioutil.ReadAll(f); assert.Nil(t, err) {
+						assert.Equal(t, []byte("test"), gotBody)
+					}
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
