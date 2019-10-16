@@ -1,4 +1,4 @@
-package halconfig
+package inspect
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -42,7 +42,7 @@ func TestAddObject(t *testing.T) {
 		name      string
 		namespace string
 	}
-	err := InsertObjectProp(obj, "provider.kubernetes", &ka{
+	err := SetObjectProp(obj, "provider.kubernetes", &ka{
 		name:      "test",
 		namespace: "ns1",
 	})

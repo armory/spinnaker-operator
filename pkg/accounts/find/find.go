@@ -3,21 +3,21 @@ package find
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	v12 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func FindSpinnakerService(c client.Client, ns string) (v1alpha1.SpinnakerServiceInterface, error) {
-	l := &v1alpha1.SpinnakerServiceList{}
-	if err := c.List(context.TODO(), client.InNamespace(ns), l); err != nil {
+func FindSpinnakerService(c client.Client, ns string) (v1alpha2.SpinnakerServiceInterface, error) {
+	l := &v1alpha2.SpinnakerServiceList{}
+	if err := c.List(context.TODO(), l, client.InNamespace(ns)); err != nil {
 		return nil, err
 	}
 	return &l.Items[0], nil
 }
 
-func FindDeployment(c client.Client, spinsvc v1alpha1.SpinnakerServiceInterface, service string) (*v12.Deployment, error) {
+func FindDeployment(c client.Client, spinsvc v1alpha2.SpinnakerServiceInterface, service string) (*v12.Deployment, error) {
 	dep := &v12.Deployment{}
 	err := c.Get(context.TODO(), client.ObjectKey{Namespace: spinsvc.GetNamespace(), Name: fmt.Sprintf("spin-%s", service)}, dep)
 	return dep, err

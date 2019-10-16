@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/find"
 	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,7 +43,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SpinnakerService
-	err = c.Watch(&source.Kind{Type: &v1alpha1.SpinnakerAccount{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &v1alpha2.SpinnakerAccount{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling SpinnakerAccount")
 
 	// Fetch the SpinnakerService instance
-	instance := &v1alpha1.SpinnakerAccount{}
+	instance := &v1alpha2.SpinnakerAccount{}
 	ctx := secrets.NewContext(context.TODO())
 	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
@@ -104,12 +104,12 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileSpinnakerAccount) validateAccount(account *v1alpha1.SpinnakerAccount) error {
+func (r *ReconcileSpinnakerAccount) validateAccount(account *v1alpha2.SpinnakerAccount) error {
 	// We should validate
 	return nil
 }
 
-func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha1.SpinnakerAccount) error {
+func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount) error {
 	svcs := settings.GetAffectedServices(*account)
 	sets, err := settings.PrepareSettings(r.client, account.Namespace, svcs)
 	if err != nil {

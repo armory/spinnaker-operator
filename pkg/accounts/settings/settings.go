@@ -3,7 +3,7 @@ package settings
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/ghodss/yaml"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,12 +19,12 @@ type ServiceSettings struct {
 }
 
 type AccountConfigurer interface {
-	Accept(account v1alpha1.SpinnakerAccount) bool
-	Add(account v1alpha1.SpinnakerAccount, serviceSettings ServiceSettings) error
+	Accept(account v1alpha2.SpinnakerAccount) bool
+	Add(account v1alpha2.SpinnakerAccount, serviceSettings ServiceSettings) error
 	GetService() string
 }
 
-func GetAffectedServices(account v1alpha1.SpinnakerAccount) []string {
+func GetAffectedServices(account v1alpha2.SpinnakerAccount) []string {
 	svcs := make([]string, 0)
 	for _, c := range Configurers {
 		if c.Accept(account) && !foundIn(c.GetService(), svcs) {
@@ -44,8 +44,8 @@ func foundIn(obj string, list []string) bool {
 }
 
 func PrepareSettings(c client.Client, namespace string, svcs []string) ([]ServiceSettings, error) {
-	l := &v1alpha1.SpinnakerAccountList{}
-	if err := c.List(context.TODO(), client.InNamespace(namespace), l); err != nil {
+	l := &v1alpha2.SpinnakerAccountList{}
+	if err := c.List(context.TODO(), l, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
