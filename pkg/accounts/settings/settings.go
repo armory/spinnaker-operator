@@ -3,6 +3,7 @@ package settings
 import (
 	"context"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/accounts/settings/kubernetes"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/ghodss/yaml"
 	v1 "k8s.io/api/core/v1"
@@ -10,7 +11,7 @@ import (
 )
 
 var Configurers = []AccountConfigurer{
-	&KubernetesAccountConfigurer{},
+	&kubernetes.KubernetesAccountConfigurer{},
 }
 
 type ServiceSettings struct {

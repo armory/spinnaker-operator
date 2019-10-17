@@ -110,19 +110,21 @@ func (r *ReconcileSpinnakerAccount) validateAccount(account *v1alpha2.SpinnakerA
 }
 
 func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount) error {
+	ss, err := find.FindSpinnakerService(r.client, account.Namespace)
+	if err != nil {
+		return err
+	}
+
+	// Check we can inject dynamic accounts in the SpinnakerService
+	if !ss.GetAccountsConfig().Enabled || !ss.GetAccountsConfig().Dynamic {
+		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", ss)
+	}
+
 	svcs := settings.GetAffectedServices(*account)
 	sets, err := settings.PrepareSettings(r.client, account.Namespace, svcs)
 	if err != nil {
 		return err
 	}
-	ss, err := find.FindSpinnakerService(r.client, account.Namespace)
-	if err != nil {
-		return err
-	}
-	// Don't update if not dynamic
-	// if !ss.GetSpinnakerConfig().Dynamic {
-	//
-	//}
 	for _, s := range sets {
 		dep, err := find.FindDeployment(r.client, ss, s.Service)
 		if err != nil {

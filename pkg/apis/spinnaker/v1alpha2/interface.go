@@ -12,6 +12,7 @@ type SpinnakerServiceInterface interface {
 	GetExpose() ExposeConfig
 	GetSpinnakerConfig() *SpinnakerConfig
 	DeepCopyInterface() SpinnakerServiceInterface
+	GetAccountsConfig() AccountConfig
 }
 
 type SpinnakerServiceListInterface interface {
@@ -56,4 +57,8 @@ func (s *SpinnakerServiceBuilder) New() SpinnakerServiceInterface {
 
 func (s *SpinnakerServiceBuilder) NewList() SpinnakerServiceListInterface {
 	return &SpinnakerServiceList{}
+}
+
+func (s *SpinnakerService) GetAccountsConfig() AccountConfig {
+	return s.Spec.Accounts
 }

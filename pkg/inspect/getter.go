@@ -77,7 +77,11 @@ func inspectProperty(v reflect.Value, key string) (reflect.Value, error) {
 		if err != nil {
 			return v, err
 		}
-		i = v.Index(idx)
+		if idx < v.Len() {
+			i = v.Index(idx)
+		} else {
+			return v, fmt.Errorf("array reference out of bounds %d for key %s", idx, key)
+		}
 	case reflect.Struct:
 		i = v.FieldByName(key)
 	default:

@@ -335,12 +335,17 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref common.Referenc
 							Ref: ref("./pkg/apis/spinnaker/v1alpha2.ExposeConfig"),
 						},
 					},
+					"accounts": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.AccountConfig"),
+						},
+					},
 				},
 				Required: []string{"spinnakerConfig"},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha2.ExposeConfig", "./pkg/apis/spinnaker/v1alpha2.SpinnakerConfig"},
+			"./pkg/apis/spinnaker/v1alpha2.AccountConfig", "./pkg/apis/spinnaker/v1alpha2.ExposeConfig", "./pkg/apis/spinnaker/v1alpha2.SpinnakerConfig"},
 	}
 }
 
@@ -416,6 +421,13 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 							Description: "Exposed Gate URL",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"accountCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Number of accounts",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},
