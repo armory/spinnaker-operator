@@ -2,9 +2,8 @@ package transformer
 
 import (
 	"context"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,7 +19,7 @@ type ownerTransformer struct {
 type ownerTransformerGenerator struct{}
 
 func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
-	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
 	tr := ownerTransformer{svc: svc, log: log, DefaultTransformer: base}
 	base.ChildTransformer = &tr
@@ -40,6 +39,8 @@ func (t *ownerTransformer) TransformManifests(ctx context.Context, scheme *runti
 			if err := controllerutil.SetControllerReference(t.svc, s.Deployment, scheme); err != nil {
 				return err
 			}
+			s.Deployment.Labels["app.kubernetes.io/managed-by"] = "spinnaker-operator"
+			s.Deployment.Spec.Template.Labels["app.kubernetes.io/managed-by"] = "spinnaker-operator"
 		}
 		if s.Service != nil {
 			if err := controllerutil.SetControllerReference(t.svc, s.Service, scheme); err != nil {

@@ -2,47 +2,23 @@ package validate
 
 import (
 	"errors"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"k8s.io/api/admission/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type singleNamespaceValidator struct {
-	SpinSvc    v1alpha1.SpinnakerServiceInterface
-	SpinConfig *halconfig.SpinnakerConfig
-	Options    Options
-}
+type singleNamespaceValidator struct{}
 
-type singleNamespaceValidatorGenerator struct{}
-
-func (g *singleNamespaceValidatorGenerator) Generate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error) {
-	v := &singleNamespaceValidator{
-		SpinSvc:    svc,
-		SpinConfig: hc,
-		Options:    options,
-	}
-	return []SpinnakerValidator{v}, nil
-}
-
-func (s *singleNamespaceValidator) GetName() string {
-	return "singleNamespaceValidator"
-}
-
-func (s *singleNamespaceValidator) GetPriority() Priority {
-	return Priority{NoPreference: false, Order: 10}
-}
-
-func (s *singleNamespaceValidator) Validate() ValidationResult {
-	if s.Options.Req.AdmissionRequest.Operation == v1beta1.Create {
+func (s *singleNamespaceValidator) Validate(svc v1alpha2.SpinnakerServiceInterface, opts Options) error {
+	if opts.Req.AdmissionRequest.Operation == v1beta1.Create {
 		// Make sure that's the only SpinnakerService
-		ss := &v1alpha1.SpinnakerServiceList{}
-		if err := s.Options.Client.List(s.Options.Ctx, client.InNamespace(s.SpinSvc.GetNamespace()), ss); err != nil {
-			return ValidationResult{Error: err, Fatal: true}
+		ss := &v1alpha2.SpinnakerServiceList{}
+		if err := opts.Client.List(opts.Ctx, ss, client.InNamespace(svc.GetNamespace())); err != nil {
+			return err
 		}
 		if len(ss.Items) > 0 {
-			return ValidationResult{Error: errors.New("SpinnakerService must be unique per namespace"), Fatal: true}
+			return errors.New("SpinnakerService must be unique per namespace")
 		}
 	}
-	return ValidationResult{}
+	return nil
 }

@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"context"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestTransformManifests_ExposedNoOverrideUrl(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -34,7 +34,7 @@ func TestTransformManifests_ExposedNoOverrideUrl(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
-	tr, spinSvc, hc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -44,7 +44,7 @@ func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         "arn::",
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
 	}
-	err := hc.SetHalConfigProp("security.apiSecurity.overrideBaseUrl", "https://my-api.spin.com")
+	err := spinSvc.GetSpinnakerConfig().SetHalConfigProp("security.apiSecurity.overrideBaseUrl", "https://my-api.spin.com")
 
 	err = tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -56,7 +56,7 @@ func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -80,7 +80,7 @@ func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedServiceTypeOverridden(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -100,7 +100,7 @@ func TestTransformManifests_ExposedServiceTypeOverridden(t *testing.T) {
 }
 
 func TestTransformManifests_NotExposed(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = ""
@@ -116,7 +116,7 @@ func TestTransformManifests_NotExposed(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedPortFromConfig(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -135,7 +135,7 @@ func TestTransformManifests_ExposedPortFromConfig(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedPortFromOverrides(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -160,7 +160,7 @@ func TestTransformHalconfig_ExposedPortAddedToConfig(t *testing.T) {
 	test.ObjectFromJson("testdata/output_service_lb.json", gateSvc, t)
 	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
 	fakeClient := fake.NewFakeClient(gateSvc)
-	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	tr, spinSvc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -170,7 +170,7 @@ func TestTransformHalconfig_ExposedPortAddedToConfig(t *testing.T) {
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
 
-	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	actualHcUrl, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://abc.com:7777", actualHcUrl)
 	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
@@ -182,7 +182,7 @@ func TestTransformHalconfig_ExposedPortOverrideAddedToConfig(t *testing.T) {
 	test.ObjectFromJson("testdata/output_service_lb.json", gateSvc, t)
 	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
 	fakeClient := fake.NewFakeClient(gateSvc)
-	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	tr, spinSvc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -192,7 +192,7 @@ func TestTransformHalconfig_ExposedPortOverrideAddedToConfig(t *testing.T) {
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
 
-	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	actualHcUrl, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://abc.com:7777", actualHcUrl)
 	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
@@ -205,7 +205,7 @@ func TestTransformHalconfig_ExposedPortChanges(t *testing.T) {
 	gateSvc.Spec.Ports[0].Port = 1111
 	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
 	fakeClient := fake.NewFakeClient(gateSvc)
-	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	tr, spinSvc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -215,7 +215,7 @@ func TestTransformHalconfig_ExposedPortChanges(t *testing.T) {
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
 
-	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	actualHcUrl, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://abc.com:7777", actualHcUrl)
 	assert.Equal(t, "http://abc.com:7777", spinSvc.Status.APIUrl)
@@ -228,7 +228,7 @@ func TestTransformHalconfig_ExposedPortRemovedFromConfig(t *testing.T) {
 	gateSvc.Spec.Ports[0].Port = 1111
 	gateSvc.Status.LoadBalancer.Ingress = append(gateSvc.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "abc.com"})
 	fakeClient := fake.NewFakeClient(gateSvc)
-	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
+	tr, spinSvc := th.setupTransformerWithFakeClient(&exposeLbTransformerGenerator{}, fakeClient, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -238,7 +238,7 @@ func TestTransformHalconfig_ExposedPortRemovedFromConfig(t *testing.T) {
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
 
-	actualHcUrl, err := hc.GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
+	actualHcUrl, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), util.GateOverrideBaseUrlProp)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://abc.com", actualHcUrl)
 	assert.Equal(t, "http://abc.com", spinSvc.Status.APIUrl)

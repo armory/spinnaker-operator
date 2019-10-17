@@ -10,7 +10,7 @@ import (
 )
 
 func TestTransformManifests_CustomServerPort(t *testing.T) {
-	tr, _, _ := th.setupTransformer(&serverPortTransformerGenerator{}, t)
+	tr, _ := th.setupTransformer(&serverPortTransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddDeploymentToGenConfig(gen, "gate", "testdata/input_deployment.json", t)
 

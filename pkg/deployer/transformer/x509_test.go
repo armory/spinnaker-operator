@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&x509TransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&x509TransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -41,7 +41,7 @@ func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedWithCustomPort(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&x509TransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&x509TransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -69,7 +69,7 @@ func TestTransformManifests_ExposedWithCustomPort(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedWithOverridenPort(t *testing.T) {
-	tr, spinSvc, _ := th.setupTransformer(&x509TransformerGenerator{}, t)
+	tr, spinSvc := th.setupTransformer(&x509TransformerGenerator{}, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 	spinSvc.Spec.Expose.Type = "service"
@@ -80,7 +80,7 @@ func TestTransformManifests_ExposedWithOverridenPort(t *testing.T) {
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         "arn::",
 		"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "80,443",
 	}
-	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha1.ExposeConfigServiceOverrides{PublicPort: 5555}
+	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 5555}
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -102,9 +102,9 @@ func TestTransformManifests_RemoveX509Service(t *testing.T) {
 	test.ObjectFromJson("testdata/output_service_lb.json", x509Svc, t)
 	x509Svc.Name = util.GateX509ServiceName
 	fakeClient := fake.NewFakeClient(x509Svc)
-	tr, spinSvc, hc := th.setupTransformerWithFakeClient(&x509TransformerGenerator{}, fakeClient, t)
+	tr, spinSvc := th.setupTransformerWithFakeClient(&x509TransformerGenerator{}, fakeClient, t)
 	spinSvc.Spec.Expose.Type = "service"
-	hc.Profiles = map[string]interface{}{}
+	spinSvc.GetSpinnakerConfig().Profiles = map[string]v1alpha2.FreeForm{}
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.json", t)
 
