@@ -10,16 +10,16 @@ import (
 )
 
 func TestTransformManifests_CustomServerPort(t *testing.T) {
-	tr, _ := th.setupTransformer(&serverPortTransformerGenerator{}, t)
+	tr, _ := th.setupTransformer(&serverPortTransformerGenerator{}, "testdata/spinsvc_profile.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
-	test.AddDeploymentToGenConfig(gen, "gate", "testdata/input_deployment.json", t)
+	test.AddDeploymentToGenConfig(gen, "gate", "testdata/input_deployment.yml", t)
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
 
 	expected := &v1beta2.Deployment{}
-	test.ObjectFromJson("testdata/input_deployment.json", expected, t)
-	expected.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = int32(8084)
-	expected.Spec.Template.Spec.Containers[0].ReadinessProbe.Exec.Command[4] = "http://localhost:8084/health"
+	test.ReadYamlFile("testdata/input_deployment.yml", expected, t)
+	expected.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = int32(1111)
+	expected.Spec.Template.Spec.Containers[0].ReadinessProbe.Exec.Command[4] = "http://localhost:1111/health"
 	assert.Equal(t, expected, gen.Config["gate"].Deployment)
 }

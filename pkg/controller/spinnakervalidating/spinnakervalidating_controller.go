@@ -2,6 +2,8 @@ package spinnakervalidating
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -15,7 +17,7 @@ import (
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
 
-// spinnakerValidatingController annotates Pods
+// spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
 	client  client.Client
 	decoder admission.Decoder
@@ -37,11 +39,11 @@ func Add(m manager.Manager) error {
 	}
 
 	hookServer := m.GetWebhookServer()
-	hookServer.Register("/validate-v1alpha1-spinnakerservice", &webhook.Admission{Handler: &spinnakerValidatingController{}})
+	hookServer.Register("/validate-v1alpha2-spinnakerservice", &webhook.Admission{Handler: &spinnakerValidatingController{}})
 	return nil
 }
 
-// spinnakerValidatingController adds an annotation to every incoming pods.
+// Handle is the entry point for spinnaker preflight validations
 func (v *spinnakerValidatingController) Handle(ctx context.Context, req admission.Request) admission.Response {
 	svc, err := v.getSpinnakerService(req)
 	if err != nil {
@@ -56,9 +58,13 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		Ctx:    ctx,
 		Client: v.client,
 		Req:    req,
+		Log:    log,
 	}
-	if err := validate.Validate(svc, opts); err != nil {
-		log.Error(err, "SpinnakerService validation failed", "metadata.name", svc)
+	log.Info("Starting validation")
+	validationResults := validate.ValidateAll(svc, opts)
+	err = v.collectErrors(validationResults)
+	if err != nil {
+		log.Error(err, err.Error(), "metadata.name", svc)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	log.Info("SpinnakerService is valid", "metadata.name", svc)
@@ -75,4 +81,20 @@ func (v *spinnakerValidatingController) InjectClient(c client.Client) error {
 func (v *spinnakerValidatingController) InjectDecoder(d admission.Decoder) error {
 	v.decoder = d
 	return nil
+}
+
+func (v *spinnakerValidatingController) collectErrors(results []validate.ValidationResult) error {
+	errorMsg := "SpinnakerService validation failed:\n"
+	hasErrors := false
+	for _, r := range results {
+		if r.Error != nil {
+			hasErrors = true
+			errorMsg = fmt.Sprintf("%s%s\n", errorMsg, r.Error.Error())
+		}
+	}
+	if hasErrors {
+		return errors.New(errorMsg)
+	} else {
+		return nil
+	}
 }

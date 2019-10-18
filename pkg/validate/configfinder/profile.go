@@ -2,11 +2,11 @@ package configfinder
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 )
 
 type profileConfigFinder struct {
-	SpinConfig *halconfig.SpinnakerConfig
+	SpinConfig *v1alpha2.SpinnakerConfig
 	Context    context.Context
 }
 

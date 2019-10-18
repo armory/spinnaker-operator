@@ -2,7 +2,7 @@ package configfinder
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 )
 
 type ConfigFinder interface {
@@ -13,7 +13,7 @@ type composedConfigFinder struct {
 	Finders []ConfigFinder
 }
 
-func NewConfigFinder(context context.Context, spinConfig *halconfig.SpinnakerConfig) ConfigFinder {
+func NewConfigFinder(context context.Context, spinConfig *v1alpha2.SpinnakerConfig) ConfigFinder {
 	var finders []ConfigFinder
 
 	// NOTE: precedence order is important, last one overwrites previous ones

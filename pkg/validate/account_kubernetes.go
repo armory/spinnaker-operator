@@ -2,20 +2,20 @@ package validate
 
 import (
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/validate/configfinder"
 )
 
-type kubernetesAccount struct {
-	Config interface{}
-}
+const (
+	kubernetesType = "kubernetes"
+)
 
 type kubernetesAccountValidator struct {
-	Account    *kubernetesAccount
-	SpinSvc    v1alpha1.SpinnakerServiceInterface
-	SpinConfig *halconfig.SpinnakerConfig
-	Options    Options
+	ParallelValidator
+}
+
+type kubernetesAccount struct {
+	Config interface{}
 }
 
 func (a *kubernetesAccount) GetName() string {
@@ -23,41 +23,41 @@ func (a *kubernetesAccount) GetName() string {
 	return p["name"].(string)
 }
 
-func (a *kubernetesAccount) GetChecksum() string {
+func (a *kubernetesAccount) GetHash() string {
 	p := a.Config.(map[interface{}]interface{})
 	return p["name"].(string)
 }
 
-type kubernetesAccountValidatorGenerator struct{}
-
-func (v *kubernetesAccountValidator) GetName() string {
-	return fmt.Sprintf("kubernetesAccountValidator,account=%s", v.Account.GetName())
+func (a *kubernetesAccount) GetType() string {
+	return kubernetesType
 }
 
-func (v *kubernetesAccountValidator) GetPriority() Priority {
-	return Priority{NoPreference: true}
+func (v *kubernetesAccountValidator) GetType() string {
+	return kubernetesType
 }
 
-func (g *kubernetesAccountValidatorGenerator) Generate(svc v1alpha1.SpinnakerServiceInterface, hc *halconfig.SpinnakerConfig, options Options) ([]SpinnakerValidator, error) {
-	configFinder := configfinder.NewConfigFinder(options.Ctx, hc)
+func (v *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
+	as, err := v.getAccounts(spinSvc, options)
+	if err != nil {
+		return ValidationResult{Error: err, Fatal: true}
+	}
+	return v.validateAccountsInParallel(as, options, v.ValidateAccount)
+}
+
+func (v *kubernetesAccountValidator) ValidateAccount(account Account, options Options) ValidationResult {
+	options.Log.Info(fmt.Sprintf("Validating account: %s", account.GetName()))
+	return ValidationResult{}
+}
+
+func (v *kubernetesAccountValidator) getAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ([]Account, error) {
+	configFinder := configfinder.NewConfigFinder(options.Ctx, spinSvc.GetSpinnakerConfig())
 	accounts, err := configFinder.GetAccounts("kubernetes")
 	if err != nil {
 		return nil, err
 	}
-	var validators []SpinnakerValidator
+	var results []Account
 	for _, ua := range accounts {
-		account := &kubernetesAccount{Config: ua}
-		validators = append(validators, &kubernetesAccountValidator{
-			Account:    account,
-			SpinSvc:    svc,
-			SpinConfig: hc,
-			Options:    options,
-		})
+		results = append(results, &kubernetesAccount{Config: ua})
 	}
-	return validators, nil
-}
-
-func (v *kubernetesAccountValidator) Validate() ValidationResult {
-	v.Options.Log.Info(fmt.Sprintf("Validating account: %s", v.Account.GetName()))
-	return ValidationResult{}
+	return results, nil
 }

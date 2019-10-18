@@ -707,6 +707,7 @@ sigs.k8s.io/controller-runtime v0.1.10 h1:amLOmcekVdnsD1uIpmgRqfTbQWJ2qxvQkcdeFh
 sigs.k8s.io/controller-runtime v0.1.10/go.mod h1:HFAYoOh6XMV+jKF1UjFwrknPbowfyHEHHRdJMf2jMX8=
 sigs.k8s.io/controller-runtime v0.2.0 h1:5gL30PXOisGZl+Osi4CmLhvMUj77BO3wJeouKF2va50=
 sigs.k8s.io/controller-runtime v0.2.0/go.mod h1:ZHqrRDZi3f6BzONcvlUxkqCKgwasGk5FZrnSv9TVZF4=
+sigs.k8s.io/controller-runtime v0.3.0 h1:ZtdgqJXVHsIytjdmDuk0QjagnzyLq9FjojXRqIp+dU4=
 sigs.k8s.io/controller-tools v0.2.2-0.20190919011008-6ed4ff330711 h1:7XTIepp4OPWIHbSl8hFCR/YhYgk2TEs/an/8j4gYpmQ=
 sigs.k8s.io/controller-tools v0.2.2-0.20190919011008-6ed4ff330711/go.mod h1:8SNGuj163x/sMwydREj7ld5mIMJu1cDanIfnx6xsU70=
 sigs.k8s.io/kustomize v2.0.3+incompatible/go.mod h1:MkjgH3RdOWrievjo6c9T245dYlB5QeXV4WCbnt/PEpU=
