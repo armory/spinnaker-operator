@@ -24,6 +24,13 @@ const (
 
 type AccountPermissions map[Authorization][]string
 
+type SpinnakerAccountInterface interface {
+	GetAuth() map[string]interface{}
+	GetEnv() map[string]interface{}
+	GetSettings() map[string]interface{}
+	GetPermissions() *AccountPermissions
+}
+
 // SpinnakerAccountSpec defines the desired state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountSpec struct {
@@ -34,6 +41,9 @@ type SpinnakerAccountSpec struct {
 	Type        AccountType        `json:"type"`
 	Validate    bool               `json:"validate"`
 	Permissions AccountPermissions `json:"permissions"`
+	Auth        FreeForm           `json:"auth,omitEmpty"`
+	Env         FreeForm           `json:"env,omitEmpty'`
+	Settings    FreeForm           `json:"settings,omitEmpty"`
 }
 
 // SpinnakerAccountStatus defines the observed state of SpinnakerAccount
