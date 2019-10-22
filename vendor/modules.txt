@@ -162,6 +162,7 @@ github.com/modern-go/reflect2
 # github.com/operator-framework/operator-sdk v0.10.1-0.20190926170752-c0a7fc360048 => github.com/operator-framework/operator-sdk v0.10.1-0.20191004014855-dc713e4d7890
 github.com/operator-framework/operator-sdk/cmd/operator-sdk/generate
 github.com/operator-framework/operator-sdk/pkg/k8sutil
+github.com/operator-framework/operator-sdk/pkg/tls
 github.com/operator-framework/operator-sdk/pkg/kube-metrics
 github.com/operator-framework/operator-sdk/pkg/leader
 github.com/operator-framework/operator-sdk/pkg/log/zap
@@ -253,6 +254,7 @@ golang.org/x/text/transform
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
 # golang.org/x/tools v0.0.0-20190912185636-87d9f09c5d89
+golang.org/x/tools/go/ssa/interp/testdata/src/os
 golang.org/x/tools/imports
 golang.org/x/tools/internal/imports
 golang.org/x/tools/go/packages
@@ -430,12 +432,12 @@ k8s.io/client-go/tools/reference
 k8s.io/client-go/tools/cache
 k8s.io/client-go/restmapper
 k8s.io/client-go/tools/clientcmd
+k8s.io/client-go/testing
 k8s.io/client-go/pkg/apis/clientauthentication
 k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1
 k8s.io/client-go/pkg/apis/clientauthentication/v1beta1
 k8s.io/client-go/util/connrotation
 k8s.io/client-go/util/keyutil
-k8s.io/client-go/testing
 k8s.io/client-go/tools/pager
 k8s.io/client-go/util/retry
 k8s.io/client-go/tools/auth
@@ -503,6 +505,7 @@ sigs.k8s.io/controller-runtime/pkg/webhook/admission
 sigs.k8s.io/controller-runtime/pkg/controller/controllerutil
 sigs.k8s.io/controller-runtime/pkg/client/config
 sigs.k8s.io/controller-runtime/pkg/runtime/signals
+sigs.k8s.io/controller-runtime/pkg/client/fake
 sigs.k8s.io/controller-runtime/pkg/scheme
 sigs.k8s.io/controller-runtime/pkg/cache
 sigs.k8s.io/controller-runtime/pkg/client/apiutil
@@ -520,11 +523,10 @@ sigs.k8s.io/controller-runtime/pkg/log/zap
 sigs.k8s.io/controller-runtime/pkg/source/internal
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/certwatcher
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/metrics
-sigs.k8s.io/controller-runtime/pkg/client/fake
 sigs.k8s.io/controller-runtime/pkg/manager/signals
+sigs.k8s.io/controller-runtime/pkg/internal/objectutil
 sigs.k8s.io/controller-runtime/pkg/cache/internal
 sigs.k8s.io/controller-runtime/pkg/internal/controller/metrics
-sigs.k8s.io/controller-runtime/pkg/internal/objectutil
 # sigs.k8s.io/controller-tools v0.2.1 => sigs.k8s.io/controller-tools v0.2.2-0.20190919011008-6ed4ff330711
 sigs.k8s.io/controller-tools/pkg/crd
 sigs.k8s.io/controller-tools/pkg/genall
