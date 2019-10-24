@@ -26,6 +26,9 @@ func (p *ParallelValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface,
 
 func (p *ParallelValidator) validateAccountsInParallel(accounts []Account, options Options, f func(Account, Options) ValidationResult) ValidationResult {
 	options.Log.Info(fmt.Sprintf("Running validation of %d accounts in parallel", len(accounts)))
+	if len(accounts) == 0 {
+		return ValidationResult{}
+	}
 	resultsChannel := make(chan ValidationResult, len(accounts))
 	abortSignal := make(chan bool)
 	var results []ValidationResult
@@ -56,7 +59,7 @@ func (p *ParallelValidator) validateAccountsInParallel(accounts []Account, optio
 			break
 		}
 	}
-	options.Log.Info(fmt.Sprintf("Finished %d parallel runInParallel with %d results", len(accounts), len(results)))
+	options.Log.Info(fmt.Sprintf("Finished validation of %d accounts in parallel with %d results", len(accounts), len(results)))
 	return p.aggregateResults(results)
 }
 

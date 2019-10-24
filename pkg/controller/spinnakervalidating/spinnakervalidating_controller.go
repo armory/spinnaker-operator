@@ -25,8 +25,7 @@ import (
 
 // spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
-	client  client.Client
-	decoder admission.Decoder
+	client client.Client
 }
 
 // NewSpinnakerService instantiates the type we're going to validate
@@ -52,8 +51,8 @@ func Add(m manager.Manager) error {
 		return err
 	}
 
-	// Create certificates
-	c, err := setupServerCert(ns, name)
+	// Create or get certificates
+	c, err := getCertContext(ns, name)
 	if err != nil {
 		return err
 	}
@@ -160,44 +159,36 @@ func getSpinnakerServiceRule() v1beta1.RuleWithOperations {
 
 // Handle is the entry point for spinnaker preflight validations
 func (v *spinnakerValidatingController) Handle(ctx context.Context, req admission.Request) admission.Response {
-	log.Info("======== Handle!!!!")
-
-	return admission.Errored(http.StatusBadRequest, fmt.Errorf("LOL"))
-	//svc, err := v.getSpinnakerService(req)
-	//if err != nil {
-	//	log.Error(err, "Unable to retrieve Spinnaker service from request")
-	//	return admission.Errored(http.StatusExpectationFailed, err)
-	//}
-	//if svc == nil {
-	//	log.Info("No SpinnakerService found in request")
-	//	return admission.ValidationResponse(true, "")
-	//}
-	//opts := validate.Options{
-	//	Ctx:    ctx,
-	//	Client: v.client,
-	//	Req:    req,
-	//	Log:    log,
-	//}
-	//log.Info("Starting validation")
-	//validationResults := validate.ValidateAll(svc, opts)
-	//err = v.collectErrors(validationResults)
-	//if err != nil {
-	//	log.Error(err, err.Error(), "metadata.name", svc)
-	//	return admission.Errored(http.StatusBadRequest, err)
-	//}
-	//log.Info("SpinnakerService is valid", "metadata.name", svc)
-	//return admission.ValidationResponse(true, "")
+	log.Info(fmt.Sprintf("Handling admission request for: %s", req.AdmissionRequest.Kind.Kind))
+	svc, err := v.getSpinnakerService(req)
+	if err != nil {
+		log.Error(err, "Unable to retrieve Spinnaker service from request")
+		return admission.Errored(http.StatusExpectationFailed, err)
+	}
+	if svc == nil {
+		log.Info("No SpinnakerService found in request")
+		return admission.ValidationResponse(true, "")
+	}
+	opts := validate.Options{
+		Ctx:    ctx,
+		Client: v.client,
+		Req:    req,
+		Log:    log,
+	}
+	log.Info("Starting validation")
+	validationResults := validate.ValidateAll(svc, opts)
+	err = v.collectErrors(validationResults)
+	if err != nil {
+		log.Error(err, err.Error(), "metadata.name", svc)
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	log.Info("SpinnakerService is valid", "metadata.name", svc)
+	return admission.ValidationResponse(true, "")
 }
 
 // InjectClient injects the client.
 func (v *spinnakerValidatingController) InjectClient(c client.Client) error {
 	v.client = c
-	return nil
-}
-
-// InjectDecoder injects the decoder.
-func (v *spinnakerValidatingController) InjectDecoder(d admission.Decoder) error {
-	v.decoder = d
 	return nil
 }
 

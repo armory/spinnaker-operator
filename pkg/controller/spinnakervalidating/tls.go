@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
@@ -35,9 +36,53 @@ type certContext struct {
 	certDir     string
 }
 
-func setupServerCert(ns string, serviceName string) (*certContext, error) {
-	certDir := filepath.Join(os.TempDir(), "spinnaker-operator-certs")
-	_ = os.Mkdir(certDir, 0700)
+func getCertContext(operatorNamespace string, operatorServiceName string) (*certContext, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	certDir := filepath.Join(home, "spinnaker-operator-certs")
+	err = os.Mkdir(certDir, 0700)
+	if err != nil && !os.IsExist(err) {
+		return nil, err
+	}
+	_, err = os.Stat(filepath.Join(certDir, caName))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return createCerts(operatorNamespace, operatorServiceName)
+		} else {
+			return nil, fmt.Errorf("error trying to load %s: %s", caName, err.Error())
+		}
+	}
+	_, err = os.Stat(filepath.Join(certDir, certName))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return createCerts(operatorNamespace, operatorServiceName)
+		} else {
+			return nil, fmt.Errorf("error trying to load %s: %s", certName, err.Error())
+		}
+	}
+	_, err = os.Stat(filepath.Join(certDir, keyName))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return createCerts(operatorNamespace, operatorServiceName)
+		} else {
+			return nil, fmt.Errorf("error trying to load %s: %s", keyName, err.Error())
+		}
+	}
+	return loadCerts(certDir)
+}
+
+func createCerts(operatorNamespace string, operatorServiceName string) (*certContext, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	certDir := filepath.Join(home, "spinnaker-operator-certs")
+	err = os.Mkdir(certDir, 0700)
+	if !os.IsExist(err) {
+		return nil, err
+	}
 	signingKey, err := newPrivateKey()
 	if err != nil {
 		return nil, err
@@ -55,7 +100,7 @@ func setupServerCert(ns string, serviceName string) (*certContext, error) {
 	}
 	signedCert, err := newSignedCert(
 		&cert.Config{
-			CommonName: serviceName + "." + ns + ".svc",
+			CommonName: operatorServiceName + "." + operatorNamespace + ".svc",
 			Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		},
 		key, signingCert, signingKey,
@@ -77,6 +122,27 @@ func setupServerCert(ns string, serviceName string) (*certContext, error) {
 		cert:        encodeCertPEM(signedCert),
 		key:         privateKeyPEM,
 		signingCert: encodeCertPEM(signingCert),
+		certDir:     certDir,
+	}, nil
+}
+
+func loadCerts(certDir string) (*certContext, error) {
+	caBytes, err := ioutil.ReadFile(filepath.Join(certDir, caName))
+	if err != nil {
+		return nil, err
+	}
+	certBytes, err := ioutil.ReadFile(filepath.Join(certDir, certName))
+	if err != nil {
+		return nil, err
+	}
+	keyBytes, err := ioutil.ReadFile(filepath.Join(certDir, keyName))
+	if err != nil {
+		return nil, err
+	}
+	return &certContext{
+		cert:        certBytes,
+		key:         keyBytes,
+		signingCert: caBytes,
 		certDir:     certDir,
 	}, nil
 }

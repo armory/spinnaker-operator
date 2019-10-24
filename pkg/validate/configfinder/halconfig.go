@@ -12,13 +12,11 @@ type halConfigFinder struct {
 }
 
 func (f *halConfigFinder) GetAccounts(provider string) (map[string]interface{}, error) {
-	accounts, err := f.SpinConfig.GetHalConfigObjectArray(f.Context, fmt.Sprintf("providers.%s.accounts", provider))
-	if err != nil {
-		return nil, err
-	}
+	// ignore error reading accounts from halconfig, there may be no accounts configured
+	accounts, _ := f.SpinConfig.GetHalConfigObjectArray(f.Context, fmt.Sprintf("providers.%s.accounts", provider))
 	result := map[string]interface{}{}
 	for _, a := range accounts {
-		c := a.(map[interface{}]interface{})
+		c := a.(map[string]interface{})
 		name := c["name"].(string)
 		result[name] = c
 	}

@@ -19,12 +19,12 @@ type kubernetesAccount struct {
 }
 
 func (a *kubernetesAccount) GetName() string {
-	p := a.Config.(map[interface{}]interface{})
+	p := a.Config.(map[string]interface{})
 	return p["name"].(string)
 }
 
 func (a *kubernetesAccount) GetHash() string {
-	p := a.Config.(map[interface{}]interface{})
+	p := a.Config.(map[string]interface{})
 	return p["name"].(string)
 }
 
