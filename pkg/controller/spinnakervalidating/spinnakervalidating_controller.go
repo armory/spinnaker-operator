@@ -25,7 +25,8 @@ import (
 
 // spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
-	client client.Client
+	client  client.Client
+	decoder *admission.Decoder
 }
 
 // NewSpinnakerService instantiates the type we're going to validate
@@ -189,6 +190,12 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 // InjectClient injects the client.
 func (v *spinnakerValidatingController) InjectClient(c client.Client) error {
 	v.client = c
+	return nil
+}
+
+// InjectDecoder injects the decoder.
+func (v *spinnakerValidatingController) InjectDecoder(d *admission.Decoder) error {
+	v.decoder = d
 	return nil
 }
 

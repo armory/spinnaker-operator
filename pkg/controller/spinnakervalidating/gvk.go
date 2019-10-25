@@ -2,7 +2,6 @@ package spinnakervalidating
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,7 +18,7 @@ func isSpinnakerRequest(req admission.Request) bool {
 func (v *spinnakerValidatingController) getSpinnakerService(req admission.Request) (v1alpha2.SpinnakerServiceInterface, error) {
 	if isSpinnakerRequest(req) {
 		svc := SpinnakerServiceBuilder.New()
-		if err := json.Unmarshal(req.AdmissionRequest.Object.Raw, svc); err != nil {
+		if err := v.decoder.Decode(req, svc); err != nil {
 			return nil, err
 		}
 		return svc, nil
