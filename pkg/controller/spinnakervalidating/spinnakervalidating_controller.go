@@ -62,7 +62,7 @@ func Add(m manager.Manager) error {
 	hookServer.CertDir = c.certDir
 	hookServer.Port = port
 	gv := SpinnakerServiceBuilder.GetGroupVersion()
-	path := "/validate-v1alpha2-spinnakerservice"
+	path := fmt.Sprintf("/validate-%s-spinnakerservice", gv.Version)
 	hookConfigName := fmt.Sprintf("spinnakervalidatingwebhook.%s", gv.Group)
 	hookServer.Register(path, &webhook.Admission{Handler: &spinnakerValidatingController{}})
 
