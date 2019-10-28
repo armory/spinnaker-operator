@@ -58,32 +58,32 @@ $ kubectl apply -n <namespace> -f deploy/operator/cluster
 
 ### Spinnaker Installation
 
-Once you've installed the operator, you can install Spinnaker by making a configuration (`configMap`). Check out examples in `deploy/spinnaker/examples`. If you prefer to use `kustomize`, we've added some kustomization in `deploy/spinnaker/kustomize` (WIP)
+Once you've installed the operator, you can install Spinnaker by making a configuration (`configMap`). Check out examples in `deploy/spinnaker/SpinnakerService.yml`. If you prefer to use `kustomize`, we've added some kustomization in `deploy/spinnaker/` (WIP)
 
 
 #### Example 1: Installing version 1.15.1
 
-**Important**: In `deploy/spinnaker/examples/basic/spin-config.yaml`, change the `config.persistentStorage` section to point to an s3 bucket you own or use a different persistent storage.
+**Important**: In `deploy/spinnaker/SpinnakerService.yml`, change the `config.persistentStorage` section to point to an s3 bucket you own or use a different persistent storage.
 
 
 ```bash
-$ kubectl -n <namespace> apply -f deploy/spinnaker/examples/basic
+$ kubectl -n <namespace> apply -f deploy/spinnaker/SpinnakerService.yml
 ```
 
 This configuration does not contain any connected accounts, just a persistent storage.
 
 #### Example 2: Using Kustomize (TODO)
 
-Set your own values in `deploy/spinnaker/kustomize/kustomization.yaml`, then:
+Set your own values in `deploy/spinnaker/kustomization.yml`, then:
 
 
 ```bash
-$ kustomize build deploy/spinnaker/kustomize | kubectl -n <namespace> apply -f -
+$ kustomize build deploy/spinnaker/ | kubectl -n <namespace> apply -f -
 ```
 
 Or if using `kubectl` version 1.14+:
 ```bash
-$ kubectl -n <namespace> apply -f deploy/spinnaker/kustomize
+$ kubectl -n <namespace> apply -f deploy/spinnaker/
 ```
 
 
