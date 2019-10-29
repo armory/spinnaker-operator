@@ -19,6 +19,11 @@ func (s *SpinnakerConfig) GetHalConfigPropString(ctx context.Context, prop strin
 	return inspect.GetObjectPropString(ctx, s.Config, prop)
 }
 
+// GetHalConfigObjectArray reads an untyped array
+func (s *SpinnakerConfig) GetHalConfigObjectArray(ctx context.Context, prop string) ([]interface{}, error) {
+	return inspect.GetObjectArray(s.Config, prop)
+}
+
 // SetHalConfigProp sets a property in the config
 func (s *SpinnakerConfig) SetHalConfigProp(prop string, value interface{}) error {
 	return inspect.SetObjectProp(s.Config, prop, value)

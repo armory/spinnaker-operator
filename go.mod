@@ -28,7 +28,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
 	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
-	golang.org/x/tools v0.0.0-20190912185636-87d9f09c5d89 // indirect
+	golang.org/x/tools v0.0.0-20190912185636-87d9f09c5d89
 	google.golang.org/appengine v1.6.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.2
@@ -40,6 +40,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20190401085232-94e1e7b7574c
 	sigs.k8s.io/controller-runtime v0.2.0
 	sigs.k8s.io/controller-tools v0.2.1 // indirect
+	sigs.k8s.io/yaml v1.1.0
 )
 
 // Pinned to kubernetes-1.14.1
