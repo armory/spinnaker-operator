@@ -9,12 +9,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func FindSpinnakerService(c client.Client, ns string) (v1alpha2.SpinnakerServiceInterface, error) {
-	l := &v1alpha2.SpinnakerServiceList{}
+func FindSpinnakerService(c client.Client, ns string, builder v1alpha2.SpinnakerServiceBuilderInterface) (v1alpha2.SpinnakerServiceInterface, error) {
+	l := builder.NewList()
 	if err := c.List(context.TODO(), l, client.InNamespace(ns)); err != nil {
 		return nil, err
 	}
-	return &l.Items[0], nil
+	items := l.GetItems()
+	if len(items) > 0 {
+		return items[0], nil
+	}
+	return nil, nil
 }
 
 func FindDeployment(c client.Client, spinsvc v1alpha2.SpinnakerServiceInterface, service string) (*v12.Deployment, error) {

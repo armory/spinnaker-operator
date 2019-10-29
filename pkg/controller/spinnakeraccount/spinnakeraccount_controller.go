@@ -2,7 +2,7 @@ package spinnakeraccount
 
 import (
 	"context"
-	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/find"
 	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
@@ -19,6 +19,8 @@ import (
 )
 
 var log = logf.Log.WithName("spinnakerservice")
+
+var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -88,53 +90,53 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	// Check if we need to redeploy
 	reqLogger.Info("Checking Spinnaker accounts")
 
-	// Check if config has changed
-	account := instance.DeepCopy()
-	if err = r.validateAccount(account); err != nil {
-		reqLogger.Error(err, fmt.Sprintf("account %s is invalid", account.Name))
-		account.Status.Valid = false
-		account.Status.InvalidReason = err.Error()
-		err = r.client.Status().Update(ctx, account)
+	aType, err := accounts.GetType(instance.Spec.Type)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
-	account.Status.Valid = true
-	account.Status.InvalidReason = ""
-	//account.Status.LastValidatedAt = time.ProtoTime()
-	err = r.deploy(account)
+	cpInstance := instance.DeepCopy()
+	err = r.deploy(cpInstance, aType)
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileSpinnakerAccount) validateAccount(account *v1alpha2.SpinnakerAccount) error {
-	// We should validate
-	return nil
-}
-
-func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount) error {
-	ss, err := find.FindSpinnakerService(r.client, account.Namespace)
+func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, accountType settings.SpinnakerAccountType) error {
+	spinsvc, err := find.FindSpinnakerService(r.client, account.Namespace, SpinnakerServiceBuilder)
 	if err != nil {
 		return err
+	}
+
+	// No service to deploy to
+	if spinsvc == nil {
+		log.Info("no SpinnakerService to deploy account to")
+		return nil
 	}
 
 	// Check we can inject dynamic accounts in the SpinnakerService
-	if !ss.GetAccountsConfig().Enabled || !ss.GetAccountsConfig().Dynamic {
-		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", ss)
+	if !spinsvc.GetAccountsConfig().Enabled || !spinsvc.GetAccountsConfig().Dynamic {
+		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", spinsvc)
 	}
 
-	svcs := settings.GetAffectedServices(*account)
-	sets, err := settings.PrepareSettings(r.client, account.Namespace, svcs)
-	if err != nil {
+	// Get all Spinnaker accounts
+	allAccounts := &v1alpha2.SpinnakerAccountList{}
+	if err := r.client.List(context.TODO(), allAccounts, client.InNamespace(account.Namespace)); err != nil {
 		return err
 	}
-	for _, s := range sets {
-		dep, err := find.FindDeployment(r.client, ss, s.Service)
+
+	// Go through all affected services and update dynamic config secret
+	for _, svc := range accountType.GetServices() {
+		ss, err := accounts.PrepareSettings(svc, allAccounts)
 		if err != nil {
 			return err
 		}
-		sec, err := find.FindSecretInDeployment(r.client, dep, s.Service, "/opt/spinnaker/config")
+		dep, err := find.FindDeployment(r.client, spinsvc, svc)
 		if err != nil {
 			return err
 		}
-		if err = settings.UpdateSecret(sec, s, "dynamic"); err != nil {
+		sec, err := find.FindSecretInDeployment(r.client, dep, svc, "/opt/spinnaker/config")
+		if err != nil {
+			return err
+		}
+		if err = accounts.UpdateSecret(sec, svc, ss, "dynamic"); err != nil {
 			return err
 		}
 
