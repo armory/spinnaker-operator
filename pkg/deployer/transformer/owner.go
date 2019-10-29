@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"context"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,13 +12,13 @@ import (
 
 type ownerTransformer struct {
 	*DefaultTransformer
-	svc spinnakerv1alpha1.SpinnakerServiceInterface
+	svc spinnakerv1alpha2.SpinnakerServiceInterface
 	log logr.Logger
 }
 
 type ownerTransformerGenerator struct{}
 
-func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+func (g *ownerTransformerGenerator) NewTransformer(svc spinnakerv1alpha2.SpinnakerServiceInterface,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
 	tr := ownerTransformer{svc: svc, log: log, DefaultTransformer: base}

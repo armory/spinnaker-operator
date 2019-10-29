@@ -3,13 +3,13 @@ package changedetector
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ChangeDetector interface {
-	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface) (bool, error)
+	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error)
 }
 
 type Generator interface {
@@ -45,7 +45,7 @@ func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Clien
 }
 
 // IsSpinnakerUpToDate returns true if all children change detectors return true
-func (ch *compositeChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface) (bool, error) {
+func (ch *compositeChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	rLogger := ch.log.WithValues("Service", svc.GetName())
 	for _, changeDetector := range ch.changeDetectors {
 		rLogger.Info(fmt.Sprintf("Running %T", changeDetector))

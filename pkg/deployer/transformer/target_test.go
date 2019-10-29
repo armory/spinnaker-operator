@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSetTarget(t *testing.T) {
-	svc := spinnakerv1alpha1.SpinnakerService{
+	svc := spinnakerv1alpha2.SpinnakerService{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "ns2"},
-		Spec: spinnakerv1alpha1.SpinnakerServiceSpec{
-			SpinnakerConfig: spinnakerv1alpha1.SpinnakerConfig{
-				Config: spinnakerv1alpha1.FreeForm{
+		Spec: spinnakerv1alpha2.SpinnakerServiceSpec{
+			SpinnakerConfig: spinnakerv1alpha2.SpinnakerConfig{
+				Config: spinnakerv1alpha2.FreeForm{
 					"deploymentEnvironment": map[string]string{
 						"location": "ns1",
 					},

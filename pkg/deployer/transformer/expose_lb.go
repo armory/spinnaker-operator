@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"context"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,14 +18,14 @@ import (
 // exposeLbTr changes hal configurations and manifest files to expose spinnaker using service load balancers
 type exposeLbTransformer struct {
 	*DefaultTransformer
-	svc    spinnakerv1alpha1.SpinnakerServiceInterface
+	svc    spinnakerv1alpha2.SpinnakerServiceInterface
 	log    logr.Logger
 	client client.Client
 }
 
 type exposeLbTransformerGenerator struct{}
 
-func (g *exposeLbTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+func (g *exposeLbTransformerGenerator) NewTransformer(svc spinnakerv1alpha2.SpinnakerServiceInterface,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
 	tr := exposeLbTransformer{svc: svc, log: log, client: client, DefaultTransformer: base}

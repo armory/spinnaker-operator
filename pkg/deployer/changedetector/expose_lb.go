@@ -3,7 +3,7 @@ package changedetector
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +25,7 @@ func (g *exposeLbChangeDetectorGenerator) NewChangeDetector(client client.Client
 }
 
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services
-func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface) (bool, error) {
+func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	exp := svc.GetExpose()
 	switch strings.ToLower(exp.Type) {
 	case "":
@@ -53,7 +53,7 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc s
 	}
 }
 
-func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, serviceName string, hcSSLEnabled bool) (bool, error) {
+func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface, serviceName string, hcSSLEnabled bool) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	ns := spinSvc.GetNamespace()
 	svc, err := util.GetService(serviceName, ns, ch.client)
@@ -105,7 +105,7 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, s
 	return true, nil
 }
 
-func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, svc *corev1.Service) (bool, error) {
+func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface, svc *corev1.Service) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	formattedServiceName := serviceName[len("spin-"):]
 	exp := spinSvc.GetExpose()
@@ -125,7 +125,7 @@ func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, 
 	return true, nil
 }
 
-func (ch *exposeLbChangeDetector) exposePortUpToDate(ctx context.Context, serviceName string, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, svc *corev1.Service) (bool, error) {
+func (ch *exposeLbChangeDetector) exposePortUpToDate(ctx context.Context, serviceName string, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface, svc *corev1.Service) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	if len(svc.Spec.Ports) < 1 {
 		rLogger.Info(fmt.Sprintf("No exposed port for %s found", serviceName))
