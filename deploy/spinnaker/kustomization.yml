@@ -1,8 +1,0 @@
-resources:
-  - SpinnakerService.yml
-
-patchesStrategicMerge:
-- config-patch.yml
-- profiles-patch.yml
-- files-patch.yml
-- service-settings-patch.yml
