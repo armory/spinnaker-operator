@@ -33,14 +33,14 @@ func FromCRD(account *v1alpha2.SpinnakerAccount) (settings.Account, error) {
 	return nil, fmt.Errorf("no account of type %s registered", account.Spec.Type)
 }
 
-func FromSettings(accountType v1alpha2.AccountType, settings map[string]interface{}) (settings.Account, error) {
+func FromSpinnakerConfig(accountType v1alpha2.AccountType, settings map[string]interface{}) (settings.Account, error) {
 	if t, ok := Types[accountType]; ok {
 		return t.FromSpinnakerConfig(settings)
 	}
 	return nil, fmt.Errorf("no account of type %s registered", accountType)
 }
 
-func FromSettingsSlice(accountType v1alpha2.AccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]settings.Account, error) {
+func FromSpinnakerConfigSlice(accountType v1alpha2.AccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]settings.Account, error) {
 	if t, ok := Types[accountType]; ok {
 		ar := make([]settings.Account, 0)
 		for _, s := range settingsSlice {

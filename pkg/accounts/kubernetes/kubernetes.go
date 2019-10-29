@@ -4,11 +4,12 @@ import (
 	"errors"
 	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type KubernetesAccountType struct{}
+type KubernetesAccountType struct {
+	*settings.BaseAccountType
+}
 
 func (k *KubernetesAccountType) GetType() v1alpha2.AccountType {
 	return v1alpha2.KubernetesAccountType
@@ -22,32 +23,23 @@ func (k *KubernetesAccountType) GetServices() []string {
 	return []string{"clouddriver"}
 }
 
-func (k *KubernetesAccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (settings.Account, error) {
-	a := &KubernetesAccount{}
-	a.Name = account.GetName()
-	if err := inspect.Convert(account.Spec.Env, &a.Env); err != nil {
-		return a, err
-	}
-	if err := inspect.Convert(account.Spec.Auth, &a.Auth); err != nil {
-		return a, err
-	}
-	a.Settings = account.Spec.Settings
-	if err := a.validateFormat(); err != nil {
-		return a, err
-	}
-	return a, nil
-}
-
-func (k *KubernetesAccountType) FromSpinnakerConfig(settings map[string]interface{}) (settings.Account, error) {
-	a := &KubernetesAccount{
+func (k *KubernetesAccountType) newAccount() *KubernetesAccount {
+	return &KubernetesAccount{
 		Auth:     KubernetesAuth{},
 		Env:      KubernetesEnv{},
 		Settings: v1alpha2.FreeForm{},
 	}
-	if err := inspect.Dispatch(settings, a, &a.Auth, &a.Env, &a.Settings); err != nil {
-		return nil, err
-	}
-	return a, nil
+}
+
+func (k *KubernetesAccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (settings.Account, error) {
+	a := k.newAccount()
+	a.Name = account.Name
+	return k.BaseFromCRD(a, account)
+}
+
+func (k *KubernetesAccountType) FromSpinnakerConfig(settings map[string]interface{}) (settings.Account, error) {
+	a := k.NewAccount()
+	return k.BaseFromSpinnakerConfig(a, settings)
 }
 
 type KubernetesAuth struct {
@@ -79,33 +71,35 @@ type CustomKubernetesResource struct {
 }
 
 type KubernetesAccount struct {
+	*settings.BaseAccount
 	Name     string            `json:"name,omitempty"`
 	Auth     KubernetesAuth    `json:"auth,omitempty"`
 	Env      KubernetesEnv     `json:"env,omitempty"`
 	Settings v1alpha2.FreeForm `json:"settings,omitempty"`
 }
 
+func (k *KubernetesAccount) ToSpinnakerSettings() (map[string]interface{}, error) {
+	return k.BaseToSpinnakerSettings(k)
+}
+
 func (k *KubernetesAccount) GetName() string {
 	return k.Name
 }
 
-func (k *KubernetesAccount) ToSpinnakerSettings() (map[string]interface{}, error) {
-	r := map[string]interface{}{
-		"name": k.Name,
-	}
-	// Merge settings, auth, and env
-	// Order matters
-	ias := []interface{}{k.Settings, k.Auth, k.Env}
-	for i := range ias {
-		m := make(map[string]interface{})
-		if err := inspect.Convert(ias[i], &m); err != nil {
-			return nil, err
-		}
-		for ky, v := range m {
-			r[ky] = v
-		}
-	}
-	return r, nil
+func (k *KubernetesAccount) SetName(n string) {
+	k.Name = n
+}
+
+func (k *KubernetesAccount) GetEnv() interface{} {
+	return &k.Env
+}
+
+func (k *KubernetesAccount) GetAuth() interface{} {
+	return &k.Auth
+}
+
+func (k *KubernetesAccount) GetSettings() map[string]interface{} {
+	return k.Settings
 }
 
 func (k *KubernetesAccount) validateFormat() error {

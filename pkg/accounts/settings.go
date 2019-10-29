@@ -45,6 +45,10 @@ func PrepareSettings(svc string, accountList *v1alpha2.SpinnakerAccountList) (Se
 	ss := ServiceSettings{}
 	// For each account type that may deploy to this service
 	for accountType := range accountsByType {
+		aType, err := GetType(accountType)
+		if err != nil {
+			return nil, err
+		}
 		// Add all settings to a slice
 		typeSettings := make([]map[string]interface{}, 0)
 		for i := range accountsByType[accountType] {
@@ -54,12 +58,9 @@ func PrepareSettings(svc string, accountList *v1alpha2.SpinnakerAccountList) (Se
 			}
 			typeSettings = append(typeSettings, m)
 		}
-		aType, err := GetType(accountType)
-		if err == nil {
-			// And that slice to the service settings under the type key (e.g. provider.kubernetes.accounts)
-			if err := inspect.SetObjectProp(ss, aType.GetAccountsKey(), typeSettings); err != nil {
-				return ss, err
-			}
+		// And that slice to the service settings under the type key (e.g. provider.kubernetes.accounts)
+		if err := inspect.SetObjectProp(ss, aType.GetAccountsKey(), typeSettings); err != nil {
+			return ss, err
 		}
 	}
 	return ss, nil
