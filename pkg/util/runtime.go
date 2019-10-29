@@ -2,11 +2,15 @@ package util
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
@@ -122,7 +126,7 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 }
 
 // GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
-func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
+func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface) int32 {
 	desiredPort := defaultPort
 	exp := spinSvc.GetExpose()
 	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {
@@ -147,4 +151,40 @@ func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defa
 		overrideBaseUrl, _ = spinSvc.GetSpinnakerConfig().GetHalConfigPropString(ctx, propName)
 	}
 	return GetPort(overrideBaseUrl, desiredPort)
+}
+
+func CreateOrUpdateService(svc *corev1.Service, rawClient *kubernetes.Clientset) error {
+	namespacedClient := rawClient.CoreV1().Services(svc.Namespace)
+	_, err := namespacedClient.Get(svc.Name, v1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		_, err := namespacedClient.Create(svc)
+		return err
+	}
+	data, err := json.Marshal(svc)
+	if err != nil {
+		return err
+	}
+	_, err = namespacedClient.Patch(svc.Name, types.MergePatchType, data)
+	return err
+}
+
+func CreateOrUpdateValidatingWebhookConfiguration(config *v1beta1.ValidatingWebhookConfiguration, rawClient *kubernetes.Clientset) error {
+	c := rawClient.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations()
+	_, err := c.Get(config.Name, v1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		_, err := c.Create(config)
+		return err
+	}
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	_, err = c.Patch(config.Name, types.MergePatchType, data)
+	return err
 }

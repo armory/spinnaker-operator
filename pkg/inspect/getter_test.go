@@ -30,3 +30,19 @@ func TestGetProp(t *testing.T) {
 		assert.Equal(t, true, b)
 	}
 }
+
+func TestGetArray(t *testing.T) {
+	m := struct {
+		Str []string
+		Int int
+	}{
+		[]string{"A", "B", "C"},
+		1,
+	}
+	v, err := GetObjectArray(m, "Str")
+	if assert.Nil(t, err) {
+		assert.Equal(t, 3, len(v))
+	}
+	_, err = GetObjectArray(m, "Int")
+	assert.NotNil(t, err)
+}

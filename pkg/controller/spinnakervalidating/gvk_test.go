@@ -11,7 +11,7 @@ import (
 func TestSpinnakerServiceGVK(t *testing.T) {
 	req := admission.Request{AdmissionRequest: admissionv1beta1.AdmissionRequest{
 		Kind: v1.GroupVersionKind{
-			Version: "v1alpha1",
+			Version: "v1alpha2",
 			Group:   "spinnaker.io",
 			Kind:    "SpinnakerService",
 		},

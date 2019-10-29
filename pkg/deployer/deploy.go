@@ -3,7 +3,7 @@ package deployer
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/deployer/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/deployer/transformer"
 	"github.com/armory/spinnaker-operator/pkg/generated"
@@ -18,7 +18,7 @@ import (
 )
 
 type manifestGenerator interface {
-	Generate(ctx context.Context, spinConfig *spinnakerv1alpha1.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
+	Generate(ctx context.Context, spinConfig *spinnakerv1alpha2.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
 }
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
@@ -45,7 +45,7 @@ func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, 
 	}
 }
 
-func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface) (bool, error) {
+func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
 	if err != nil {
 		return false, err
@@ -57,7 +57,7 @@ func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme) error {
+func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) error {
 	rLogger := d.log.WithValues("Service", svc.GetName())
 	rLogger.Info("Retrieving complete Spinnaker configuration")
 
@@ -110,7 +110,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerSe
 	return d.commitConfigToStatus(ctx, nSvc)
 }
 
-func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface) error {
+func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) error {
 	status := svc.GetStatus()
 	status.LastConfigurationTime = metav1.NewTime(time.Now())
 	return d.client.Status().Update(ctx, svc)

@@ -3,7 +3,7 @@ package changedetector
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
@@ -24,7 +24,7 @@ func (g *x509ChangeDetectorGenerator) NewChangeDetector(client client.Client, lo
 }
 
 // IsSpinnakerUpToDate returns true if there is a x509 configuration with a matching service
-func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) (bool, error) {
+func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	exp := spinSvc.GetExpose()
 	if exp.Type == "" {
@@ -79,7 +79,7 @@ func (ch *x509ChangeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
 	return 0, 0
 }
 
-func (ch *x509ChangeDetector) getPortOverride(exp spinnakerv1alpha1.ExposeConfig) int32 {
+func (ch *x509ChangeDetector) getPortOverride(exp spinnakerv1alpha2.ExposeConfig) int32 {
 	if c, ok := exp.Service.Overrides["gate-x509"]; ok {
 		return c.PublicPort
 	}

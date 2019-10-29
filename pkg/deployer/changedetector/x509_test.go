@@ -3,17 +3,16 @@ package changedetector
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"testing"
 )
 
 func TestIsSpinnakerUpToDate_Nox509ServiceYet(t *testing.T) {
-	fakeClient := fake.NewFakeClient()
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = "Service"
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t)
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -22,11 +21,9 @@ func TestIsSpinnakerUpToDate_Nox509ServiceYet(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_x509TargetPortDifferent(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 9999)
-	fakeClient := fake.NewFakeClient(x509Svc)
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = "Service"
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t,
+		test.BuildSvc("spin-gate-x509", "LoadBalancer", 9999, t))
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
 	spinSvc.Spec.Expose.Service.PublicPort = 8085
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
@@ -36,12 +33,9 @@ func TestIsSpinnakerUpToDate_x509TargetPortDifferent(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_x509PublicPortDifferent(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
-	fakeClient := fake.NewFakeClient(x509Svc)
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = "Service"
-	spinSvc.Spec.Expose.Service.PublicPort = 80
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t,
+		test.BuildSvc("spin-gate-x509", "LoadBalancer", 8085, t))
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -50,11 +44,9 @@ func TestIsSpinnakerUpToDate_x509PublicPortDifferent(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_x509PublicPortOverrideDifferent(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
-	fakeClient := fake.NewFakeClient(x509Svc)
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = "Service"
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t,
+		test.BuildSvc("spin-gate-x509", "LoadBalancer", 8085, t))
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
 	spinSvc.Spec.Expose.Service.PublicPort = 8085
 	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 80}
 
@@ -66,12 +58,10 @@ func TestIsSpinnakerUpToDate_x509PublicPortOverrideDifferent(t *testing.T) {
 
 // Service was running with custom port, port config is removed, service needs to fallback to default (80)
 func TestIsSpinnakerUpToDate_x509PortConfigRemoved(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
+	x509Svc := test.BuildSvc("spin-gate-x509", "LoadBalancer", 8085, t)
 	x509Svc.Spec.Ports[0].Port = 1111
-	fakeClient := fake.NewFakeClient(x509Svc)
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = "Service"
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t, x509Svc)
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
 	spinSvc.Spec.Expose.Service.PublicPort = 0
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
@@ -81,13 +71,11 @@ func TestIsSpinnakerUpToDate_x509PortConfigRemoved(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_UpToDate(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 8085)
+	x509Svc := test.BuildSvc("spin-gate-x509", "LoadBalancer", 80, t)
 	x509Svc.Spec.Ports[0].Name = util.GateX509PortName
-	x509Svc.Spec.Ports[0].Port = 80
-	fakeClient := fake.NewFakeClient(x509Svc)
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = "Service"
+	x509Svc.Spec.Ports[0].TargetPort = intstr.IntOrString{Type: intstr.Int, IntVal: 8085}
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t, x509Svc)
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
 	spinSvc.Spec.Expose.Service.PublicPort = 7777
 	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 80}
 
@@ -98,12 +86,9 @@ func TestIsSpinnakerUpToDate_UpToDate(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_RemoveService(t *testing.T) {
-	x509Svc := th.buildSvc("spin-gate-x509", "LoadBalancer", 80)
-	x509Svc.Spec.Ports[0].Port = 8085
-	fakeClient := fake.NewFakeClient(x509Svc)
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = "Service"
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t,
+		test.BuildSvc("spin-gate-x509", "LoadBalancer", 8085, t))
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
 	spinSvc.Spec.SpinnakerConfig.Profiles = map[string]v1alpha2.FreeForm{}
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
@@ -113,10 +98,8 @@ func TestIsSpinnakerUpToDate_RemoveService(t *testing.T) {
 }
 
 func TestIsSpinnakerUpToDate_NoExposeConfig(t *testing.T) {
-	fakeClient := fake.NewFakeClient()
-	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, fakeClient, t)
-	spinSvc := th.buildSpinSvc(t)
-	spinSvc.Spec.Expose.Type = ""
+	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t)
+	spinSvc := test.ManifestToSpinService("testdata/spinsvc_minimal.yml", t)
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 

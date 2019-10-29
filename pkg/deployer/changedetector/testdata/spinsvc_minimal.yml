@@ -2,6 +2,7 @@ apiVersion: spinnaker.io/v1alpha2
 kind: SpinnakerService
 metadata:
   name: spinnaker
+  namespace: ns1
 spec:
   spinnakerConfig:
     config:
@@ -9,11 +10,9 @@ spec:
       persistentStorage:
         persistentStoreType: s3
         s3:
-          bucket: mybucket
+          bucket: my-bucket
+          region: us-west-2
           rootFolder: front50
-  expose:
-    type: service
-    service:
-      type: LoadBalancer
-      annotations:
-        "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"
+status:
+  apiUrl: http://acme.com
+  uiUrl: http://acme.com
