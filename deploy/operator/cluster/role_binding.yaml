@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: spinnaker-operator
-  namespace: operator
+  namespace: spinnaker-operator   # edit if you want the operator to live somewhere besides here
 roleRef:
   kind: ClusterRole
   name: spinnaker-operator-role

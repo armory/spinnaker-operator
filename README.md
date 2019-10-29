@@ -49,11 +49,12 @@ $ kubectl apply -n <namespace> -f deploy/operator/basic
 
 #### Cluster install
 To install the operator:
-1. Edit the namespace in `deploy/operator/cluster/role_binding.yml` to be the namespace where you want the operator to live.
-2. Run:
+1. Decide which namespace the operator should live in. We suggest `spinnaker-operator`, since it could deploy multiple Spinnakers.
+2. Edit the namespace in `deploy/operator/cluster/role_binding.yml` to be the namespace where you want the operator to live.
+3. Run:
 
 ```bash
-$ kubectl apply -n <namespace> -f deploy/operator/cluster
+$ kubectl apply -n spinnaker-operator -f deploy/operator/cluster
 ```
 
 ### Spinnaker Installation
