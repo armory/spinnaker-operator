@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"context"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -16,7 +16,7 @@ import (
 type x509Transformer struct {
 	*DefaultTransformer
 	exposeLbTr *exposeLbTransformer
-	svc        spinnakerv1alpha1.SpinnakerServiceInterface
+	svc        spinnakerv1alpha2.SpinnakerServiceInterface
 	client     client.Client
 	log        logr.Logger
 }
@@ -24,7 +24,7 @@ type x509Transformer struct {
 type x509TransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *x509TransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+func (g *x509TransformerGenerator) NewTransformer(svc spinnakerv1alpha2.SpinnakerServiceInterface,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
 	exGen := exposeLbTransformerGenerator{}

@@ -3,7 +3,7 @@ package util
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -122,7 +122,7 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 }
 
 // GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
-func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface) int32 {
+func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface) int32 {
 	desiredPort := defaultPort
 	exp := spinSvc.GetExpose()
 	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {

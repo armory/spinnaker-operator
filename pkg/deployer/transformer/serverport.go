@@ -3,7 +3,7 @@ package transformer
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/go-logr/logr"
 	"k8s.io/api/apps/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,13 +14,13 @@ import (
 // transformer used to support changing listening port of a service with "server.port" configuration
 type serverPortTransformer struct {
 	*DefaultTransformer
-	svc spinnakerv1alpha1.SpinnakerServiceInterface
+	svc spinnakerv1alpha2.SpinnakerServiceInterface
 	log logr.Logger
 }
 
 type serverPortTransformerGenerator struct{}
 
-func (g *serverPortTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
+func (g *serverPortTransformerGenerator) NewTransformer(svc spinnakerv1alpha2.SpinnakerServiceInterface,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
 	tr := serverPortTransformer{svc: svc, log: log, DefaultTransformer: base}

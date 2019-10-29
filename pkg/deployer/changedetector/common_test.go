@@ -3,7 +3,7 @@ package changedetector
 import (
 	"encoding/json"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,8 +23,8 @@ func (h *testHelpers) setupChangeDetector(generator Generator, client client.Cli
 	return ch
 }
 
-func (h *testHelpers) buildSpinSvc(t *testing.T) *spinnakerv1alpha1.SpinnakerService {
-	ss := &spinnakerv1alpha1.SpinnakerService{}
+func (h *testHelpers) buildSpinSvc(t *testing.T) *spinnakerv1alpha2.SpinnakerService {
+	ss := &spinnakerv1alpha2.SpinnakerService{}
 	h.objectFromJson("spinsvc.json", ss, t)
 	return ss
 }

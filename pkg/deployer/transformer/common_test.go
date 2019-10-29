@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"encoding/json"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
@@ -21,29 +21,29 @@ type testHelpers struct{}
 
 var th = testHelpers{}
 
-func (h *testHelpers) setupTransformer(generator Generator, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService) {
+func (h *testHelpers) setupTransformer(generator Generator, t *testing.T) (Transformer, *spinnakerv1alpha2.SpinnakerService) {
 	fakeClient := fake.NewFakeClient()
 	return h.setupTransformerWithFakeClient(generator, fakeClient, t)
 }
 
-func (h *testHelpers) setupTransformerWithFakeClient(generator Generator, fakeClient client.Client, t *testing.T) (Transformer, *spinnakerv1alpha1.SpinnakerService) {
+func (h *testHelpers) setupTransformerWithFakeClient(generator Generator, fakeClient client.Client, t *testing.T) (Transformer, *spinnakerv1alpha2.SpinnakerService) {
 	spinSvc := h.setupSpinSvc()
 	h.setupSpinnakerConfig(t, spinSvc.GetSpinnakerConfig())
 	tr, _ := generator.NewTransformer(spinSvc, fakeClient, log.Log.WithName("spinnakerservice"))
 	return tr, spinSvc
 }
 
-func (h *testHelpers) setupSpinSvc() *spinnakerv1alpha1.SpinnakerService {
-	return &spinnakerv1alpha1.SpinnakerService{
-		Spec: spinnakerv1alpha1.SpinnakerServiceSpec{
-			SpinnakerConfig: spinnakerv1alpha1.SpinnakerConfig{
-				Config:   spinnakerv1alpha1.FreeForm{},
-				Profiles: map[string]spinnakerv1alpha1.FreeForm{},
+func (h *testHelpers) setupSpinSvc() *spinnakerv1alpha2.SpinnakerService {
+	return &spinnakerv1alpha2.SpinnakerService{
+		Spec: spinnakerv1alpha2.SpinnakerServiceSpec{
+			SpinnakerConfig: spinnakerv1alpha2.SpinnakerConfig{
+				Config:   spinnakerv1alpha2.FreeForm{},
+				Profiles: map[string]spinnakerv1alpha2.FreeForm{},
 			},
-			Expose: spinnakerv1alpha1.ExposeConfig{
+			Expose: spinnakerv1alpha2.ExposeConfig{
 				Type: "",
-				Service: spinnakerv1alpha1.ExposeConfigService{
-					Overrides: map[string]spinnakerv1alpha1.ExposeConfigServiceOverrides{},
+				Service: spinnakerv1alpha2.ExposeConfigService{
+					Overrides: map[string]spinnakerv1alpha2.ExposeConfigServiceOverrides{},
 				},
 			},
 		},
@@ -67,7 +67,7 @@ func (h *testHelpers) loadJsonFile(fileName string, t *testing.T) string {
 	return string(bytes)
 }
 
-func (h *testHelpers) setupSpinnakerConfig(t *testing.T, spinsvc *spinnakerv1alpha1.SpinnakerConfig) {
+func (h *testHelpers) setupSpinnakerConfig(t *testing.T, spinsvc *spinnakerv1alpha2.SpinnakerConfig) {
 	path := "testdata/halconfig.yml"
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -80,7 +80,7 @@ func (h *testHelpers) setupSpinnakerConfig(t *testing.T, spinsvc *spinnakerv1alp
 
 	path = "testdata/profile_gate.yml"
 	bytes, err = ioutil.ReadFile(path)
-	var profile spinnakerv1alpha1.FreeForm
+	var profile spinnakerv1alpha2.FreeForm
 	err = yaml.Unmarshal(bytes, &profile)
 	if err != nil {
 		t.Fatal(err)
