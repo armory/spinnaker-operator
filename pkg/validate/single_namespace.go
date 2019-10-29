@@ -14,10 +14,10 @@ func (v *singleNamespaceValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInt
 		// Make sure that'v the only SpinnakerService
 		ss := &v1alpha2.SpinnakerServiceList{}
 		if err := opts.Client.List(opts.Ctx, ss, client.InNamespace(spinSvc.GetNamespace())); err != nil {
-			return ValidationResult{Error: err, Fatal: true}
+			return NewResultFromError(err, true)
 		}
 		if len(ss.Items) > 0 {
-			return ValidationResult{Error: errors.New("SpinnakerService must be unique per namespace"), Fatal: true}
+			return NewResultFromError(errors.New("SpinnakerService must be unique per namespace"), true)
 		}
 	}
 	return ValidationResult{}

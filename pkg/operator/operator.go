@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -52,7 +53,14 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 
 	fs := flag.FlagSet{}
 	var disableAdmission bool
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	defaultCertsDir := filepath.Join(home, "spinnaker-operator-certs")
 	fs.BoolVar(&disableAdmission, "disable-admission-controller", false, "Set to disable admission controller")
+	fs.StringVar(&spinnakervalidating.CertsDir, "certs-dir", defaultCertsDir, "Directory where tls.crt, tls.key and ca.crt files are found. Default: $HOME/spinnaker-operator-certs")
 	pflag.CommandLine.AddGoFlagSet(&fs)
 
 	pflag.Parse()

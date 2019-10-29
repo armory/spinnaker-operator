@@ -39,7 +39,7 @@ func (v *kubernetesAccountValidator) GetType() string {
 func (v *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
 	as, err := v.getAccounts(spinSvc, options)
 	if err != nil {
-		return ValidationResult{Error: err, Fatal: true}
+		return NewResultFromError(err, true)
 	}
 	return v.validateAccountsInParallel(as, options, v.ValidateAccount)
 }

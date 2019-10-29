@@ -12,7 +12,7 @@ metadata:
     app.kubernetes.io/managed-by: halyard
     app.kubernetes.io/name: gate
     app.kubernetes.io/part-of: spinnaker
-    app.kubernetes.io/version: 2.15.1-rc406
+    app.kubernetes.io/version: 1.15.1
     cluster: spin-gate
   name: spin-gate
   namespace: german

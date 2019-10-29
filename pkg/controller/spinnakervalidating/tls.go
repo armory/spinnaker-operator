@@ -36,17 +36,14 @@ type certContext struct {
 	certDir     string
 }
 
+var CertsDir string
+
 func getCertContext(operatorNamespace string, operatorServiceName string) (*certContext, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	certDir := filepath.Join(home, "spinnaker-operator-certs")
-	err = os.Mkdir(certDir, 0700)
+	err := os.Mkdir(CertsDir, 0700)
 	if err != nil && !os.IsExist(err) {
 		return nil, err
 	}
-	_, err = os.Stat(filepath.Join(certDir, caName))
+	_, err = os.Stat(filepath.Join(CertsDir, caName))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return createCerts(operatorNamespace, operatorServiceName)
@@ -54,7 +51,7 @@ func getCertContext(operatorNamespace string, operatorServiceName string) (*cert
 			return nil, fmt.Errorf("error trying to load %s: %s", caName, err.Error())
 		}
 	}
-	_, err = os.Stat(filepath.Join(certDir, certName))
+	_, err = os.Stat(filepath.Join(CertsDir, certName))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return createCerts(operatorNamespace, operatorServiceName)
@@ -62,7 +59,7 @@ func getCertContext(operatorNamespace string, operatorServiceName string) (*cert
 			return nil, fmt.Errorf("error trying to load %s: %s", certName, err.Error())
 		}
 	}
-	_, err = os.Stat(filepath.Join(certDir, keyName))
+	_, err = os.Stat(filepath.Join(CertsDir, keyName))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return createCerts(operatorNamespace, operatorServiceName)
@@ -70,19 +67,10 @@ func getCertContext(operatorNamespace string, operatorServiceName string) (*cert
 			return nil, fmt.Errorf("error trying to load %s: %s", keyName, err.Error())
 		}
 	}
-	return loadCerts(certDir)
+	return loadCerts(CertsDir)
 }
 
 func createCerts(operatorNamespace string, operatorServiceName string) (*certContext, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	certDir := filepath.Join(home, "spinnaker-operator-certs")
-	err = os.Mkdir(certDir, 0700)
-	if !os.IsExist(err) {
-		return nil, err
-	}
 	signingKey, err := newPrivateKey()
 	if err != nil {
 		return nil, err
@@ -91,7 +79,7 @@ func createCerts(operatorNamespace string, operatorServiceName string) (*certCon
 	if err != nil {
 		return nil, err
 	}
-	if err := ioutil.WriteFile(filepath.Join(certDir, caName), encodeCertPEM(signingCert), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(CertsDir, caName), encodeCertPEM(signingCert), 0644); err != nil {
 		return nil, err
 	}
 	key, err := newPrivateKey()
@@ -108,21 +96,21 @@ func createCerts(operatorNamespace string, operatorServiceName string) (*certCon
 	if err != nil {
 		return nil, err
 	}
-	if err = ioutil.WriteFile(filepath.Join(certDir, certName), encodeCertPEM(signedCert), 0600); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(CertsDir, certName), encodeCertPEM(signedCert), 0600); err != nil {
 		return nil, err
 	}
 	privateKeyPEM, err := keyutil.MarshalPrivateKeyToPEM(key)
 	if err != nil {
 		return nil, err
 	}
-	if err = ioutil.WriteFile(filepath.Join(certDir, keyName), privateKeyPEM, 0644); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(CertsDir, keyName), privateKeyPEM, 0644); err != nil {
 		return nil, err
 	}
 	return &certContext{
 		cert:        encodeCertPEM(signedCert),
 		key:         privateKeyPEM,
 		signingCert: encodeCertPEM(signingCert),
-		certDir:     certDir,
+		certDir:     CertsDir,
 	}, nil
 }
 

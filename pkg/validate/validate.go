@@ -39,8 +39,8 @@ type AccountValidator interface {
 }
 
 type ValidationResult struct {
-	Error error
-	Fatal bool
+	Errors []error
+	Fatal  bool
 }
 
 type Options struct {
@@ -56,18 +56,17 @@ type Account interface {
 	GetHash() string
 }
 
-func ValidateAll(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) []ValidationResult {
-	var results []ValidationResult
+func ValidateAll(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
+	var result ValidationResult
 	for _, v := range allValidatorsInSequence {
 		options.Log.Info(fmt.Sprintf("Running validator %T", v))
-		r := v.Validate(spinSvc, options)
-		results = append(results, r)
-		if r.Error != nil && r.Fatal {
+		result.Merge(v.Validate(spinSvc, options))
+		if result.HasFatalErrors() {
 			options.Log.Info(fmt.Sprintf("Validator %T detected a fatal error, aborting", v))
-			return results
+			return result
 		}
 	}
-	return results
+	return result
 }
 
 func ValidateAccount(account Account, options Options) ValidationResult {
@@ -79,9 +78,39 @@ func ValidateAccount(account Account, options Options) ValidationResult {
 	}
 	if av == nil {
 		return ValidationResult{
-			Error: fmt.Errorf("account type %s doesn't have a registered AccountValidator", account.GetType()),
-			Fatal: true,
+			Errors: []error{fmt.Errorf("account type %s doesn't have a registered AccountValidator", account.GetType())},
+			Fatal:  true,
 		}
 	}
 	return av.ValidateAccount(account, options)
+}
+
+func (r *ValidationResult) Merge(other ValidationResult) {
+	for _, e := range other.Errors {
+		r.Errors = append(r.Errors, e)
+	}
+	r.Fatal = r.Fatal || other.Fatal
+}
+
+func (r *ValidationResult) HasFatalErrors() bool {
+	return r.HasErrors() && r.Fatal
+}
+
+func (r *ValidationResult) HasErrors() bool {
+	return len(r.Errors) > 0
+}
+
+func (r *ValidationResult) GetErrorMessage() string {
+	if !r.HasErrors() {
+		return ""
+	}
+	errorMsg := "\nSpinnakerService validation failed:\n"
+	for _, e := range r.Errors {
+		errorMsg = fmt.Sprintf("%s%s\n", errorMsg, e.Error())
+	}
+	return errorMsg
+}
+
+func NewResultFromError(e error, fatal bool) ValidationResult {
+	return ValidationResult{Errors: []error{e}, Fatal: fatal}
 }

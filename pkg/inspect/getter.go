@@ -48,6 +48,9 @@ func GetObjectArray(obj interface{}, prop string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
+		return nil, fmt.Errorf("property %s does not resolve to an array", prop)
+	}
 	var result []interface{}
 	for i := 0; i < v.Len(); i++ {
 		elem := v.Index(i)
