@@ -1,5 +1,5 @@
 {
-  "apiVersion": "spinnaker.io/v1alpha1",
+  "apiVersion": "spinnaker.io/v1alpha2",
   "kind": "SpinnakerService",
   "metadata": {
     "name": "spinnaker",

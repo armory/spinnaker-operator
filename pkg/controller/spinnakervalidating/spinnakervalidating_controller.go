@@ -37,7 +37,7 @@ func Add(m manager.Manager) error {
 	}
 
 	hookServer := m.GetWebhookServer()
-	hookServer.Register("/validate-v1alpha1-spinnakerservice", &webhook.Admission{Handler: &spinnakerValidatingController{}})
+	hookServer.Register("/validate-v1alpha2-spinnakerservice", &webhook.Admission{Handler: &spinnakerValidatingController{}})
 	return nil
 }
 

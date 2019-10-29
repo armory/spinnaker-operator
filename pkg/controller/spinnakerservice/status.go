@@ -5,7 +5,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"strings"
 
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,7 +25,7 @@ func newStatusChecker(client client.Client) statusChecker {
 	return statusChecker{client: client}
 }
 
-func (s *statusChecker) checks(instance spinnakerv1alpha1.SpinnakerServiceInterface) error {
+func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterface) error {
 	// Get current deployment owned by the service
 	list := &appsv1.DeploymentList{}
 	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/managed-by": "spinnaker-operator"})
@@ -33,18 +33,18 @@ func (s *statusChecker) checks(instance spinnakerv1alpha1.SpinnakerServiceInterf
 		return err
 	}
 
-	svcs := make([]spinnakerv1alpha1.SpinnakerDeploymentStatus, 0)
+	svcs := make([]spinnakerv1alpha2.SpinnakerDeploymentStatus, 0)
 	svc := instance.DeepCopyInterface()
 	status := svc.GetStatus()
 	if len(list.Items) == 0 {
 		status.Status = Na
-		status.Services = []spinnakerv1alpha1.SpinnakerDeploymentStatus{}
+		status.Services = []spinnakerv1alpha2.SpinnakerDeploymentStatus{}
 	} else {
 		status.Status = Ok
 		for i := range list.Items {
 			it := list.Items[i]
 
-			st := spinnakerv1alpha1.SpinnakerDeploymentStatus{
+			st := spinnakerv1alpha2.SpinnakerDeploymentStatus{
 				Name:          it.ObjectMeta.Name,
 				Replicas:      it.Status.Replicas,
 				ReadyReplicas: it.Status.ReadyReplicas,

@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	deploy "github.com/armory/spinnaker-operator/pkg/deployer"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	extv1 "k8s.io/api/extensions/v1beta1"
@@ -23,7 +23,7 @@ import (
 
 var log = logf.Log.WithName("spinnakerservice")
 
-var SpinnakerServiceBuilder spinnakerv1alpha1.SpinnakerServiceBuilderInterface
+var SpinnakerServiceBuilder spinnakerv1alpha2.SpinnakerServiceBuilderInterface
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -32,8 +32,8 @@ func Add(mgr manager.Manager) error {
 }
 
 type deployer interface {
-	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface) (bool, error)
-	Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme) error
+	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error)
+	Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) error
 }
 
 // newReconciler returns a new reconcile.Reconciler
