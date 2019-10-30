@@ -27,7 +27,7 @@ First we'll install the `SpinnakerService` CRD:
 ```bash
 $ mkdir -p spinnaker-operator && cd spinnaker-operator
 $ tar -xvf operator-manifests.tgz .
-$ kubectl apply -f deploy/crds/spinnaker_v1alpha1_spinnakerservice_crd.yaml
+$ kubectl apply -f deploy/crds/
 ```
 
 There are two modes for the operator:
