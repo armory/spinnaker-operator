@@ -7,6 +7,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/controller"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakervalidating"
+	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -60,7 +61,7 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 	}
 	defaultCertsDir := filepath.Join(home, "spinnaker-operator-certs")
 	fs.BoolVar(&disableAdmission, "disable-admission-controller", false, "Set to disable admission controller")
-	fs.StringVar(&spinnakervalidating.CertsDir, "certs-dir", defaultCertsDir, "Directory where tls.crt, tls.key and ca.crt files are found. Default: $HOME/spinnaker-operator-certs")
+	fs.StringVar(&webhook.CertsDir, "certs-dir", defaultCertsDir, "Directory where tls.crt, tls.key and ca.crt files are found. Default: $HOME/spinnaker-operator-certs")
 	pflag.CommandLine.AddGoFlagSet(&fs)
 
 	pflag.Parse()
