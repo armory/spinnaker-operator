@@ -28,7 +28,7 @@ func GetType(tp v1alpha2.AccountType) (account.SpinnakerAccountType, error) {
 	return nil, fmt.Errorf("no account of type %s registered", tp)
 }
 
-func AllValidAccounts(c client.Client, ns string) ([]account.Account, error) {
+func AllValidCRDAccounts(c client.Client, ns string) ([]account.Account, error) {
 	spinAccounts := &v1alpha2.SpinnakerAccountList{}
 	if err := c.List(context.TODO(), spinAccounts, client.InNamespace(ns)); err != nil {
 		return nil, err
