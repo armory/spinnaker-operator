@@ -3,12 +3,10 @@ package changedetector
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 )
@@ -26,14 +24,14 @@ func (g *x509ChangeDetectorGenerator) NewChangeDetector(client client.Client, lo
 }
 
 // IsSpinnakerUpToDate returns true if there is a x509 configuration with a matching service
-func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	exp := spinSvc.GetExpose()
 	if exp.Type == "" {
 		return true, nil
 	}
 	// ignore error as default.apiPort may not exist
-	apiPort, _ := hc.GetServiceConfigPropString(ctx, "gate", "default.apiPort")
+	apiPort, _ := spinSvc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "default.apiPort")
 	svc, err := util.GetService(util.GateX509ServiceName, spinSvc.GetNamespace(), ch.client)
 	if err != nil {
 		rLogger.Info(fmt.Sprintf("Error retrieving service %s: %s", util.GateX509ServiceName, err.Error()))
@@ -63,7 +61,7 @@ func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc s
 		return false, nil
 	}
 	// Public port is different?
-	desiredPort := util.GetDesiredExposePort(ctx, "gate-x509", int32(443), hc, spinSvc)
+	desiredPort := util.GetDesiredExposePort(ctx, "gate-x509", int32(443), spinSvc)
 	if desiredPort != publicPort {
 		rLogger.Info(fmt.Sprintf("Public port for service %s expected: %d, actual: %d", util.GateX509ServiceName, desiredPort, publicPort))
 		return false, nil
@@ -81,7 +79,7 @@ func (ch *x509ChangeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
 	return 0, 0
 }
 
-func (ch *x509ChangeDetector) getPortOverride(exp spinnakerv1alpha1.ExposeConfig) int32 {
+func (ch *x509ChangeDetector) getPortOverride(exp spinnakerv1alpha2.ExposeConfig) int32 {
 	if c, ok := exp.Service.Overrides["gate-x509"]; ok {
 		return c.PublicPort
 	}

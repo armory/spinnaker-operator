@@ -2,32 +2,42 @@ package spinnakervalidating
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	"k8s.io/api/admissionregistration/v1beta1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	"net/http"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/builder"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"strings"
+)
+
+const (
+	servicePort = 9876
 )
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
 
-// spinnakerValidatingController annotates Pods
+// spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
 	client  client.Client
-	decoder types.Decoder
+	decoder *admission.Decoder
 }
 
 // NewSpinnakerService instantiates the type we're going to validate
-var SpinnakerServiceBuilder v1alpha1.SpinnakerServiceBuilderInterface
+var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
 
 // Implement admission.Handler so the controller can handle admission request.
 var _ admission.Handler = &spinnakerValidatingController{}
@@ -35,54 +45,130 @@ var log = logf.Log.WithName("spinvalidate")
 
 // Add adds the validating admission controller
 func Add(m manager.Manager) error {
+	// Determine environment
+	ns, name, err := getOperatorNameAndNamespace()
+	if err != nil {
+		return err
+	}
+
+	// Create Kubernetes service for listening to requests from API server
+	rawClient := kubernetes.NewForConfigOrDie(m.GetConfig())
+	err = deployWebhookService(ns, name, servicePort, rawClient)
+	if err != nil {
+		return err
+	}
+
+	// Create or get certificates
+	c, err := getCertContext(ns, name)
+	if err != nil {
+		return err
+	}
+
+	// Register webhook server
+	hookServer := m.GetWebhookServer()
+	hookServer.CertDir = c.certDir
+	hookServer.Port = servicePort
+	spinSvc := SpinnakerServiceBuilder.New()
+	gvk, err := apiutil.GVKForObject(spinSvc, m.GetScheme())
+	if err != nil {
+		return err
+	}
+	path := generateValidatePath(gvk)
+	hookConfigName := fmt.Sprintf("spinnakervalidatingwebhook.%s", gvk.Group)
+	hookServer.Register(path, &webhook.Admission{Handler: &spinnakerValidatingController{}})
+
+	// Create validating webhook configuration for registering our webhook with the API server
+	w := getWebhookConfig(hookConfigName, name, ns, path, c)
+	return deployValidatingWebhookConfiguration(hookConfigName, ns, w, rawClient)
+}
+
+func getOperatorNameAndNamespace() (string, string, error) {
+	name, err := k8sutil.GetOperatorName()
+	if err != nil {
+		return "", "", err
+	}
 	ns, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
-		return err
+		envNs := os.Getenv("ADMISSION_PROXY_NAMESPACE")
+		if envNs == "" {
+			return "", "", fmt.Errorf("unable to determine operator namespace. Error: %s and ADMISSION_PROXY_NAMESPACE env var not set", err.Error())
+		}
+		ns = envNs
 	}
+	return ns, name, nil
+}
 
-	validatingWebhook, err := builder.NewWebhookBuilder().
-		Name("validating.k8s.io").
-		Validating().
-		Operations(admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update).
-		WithManager(m).
-		ForType(SpinnakerServiceBuilder.New()).
-		Handlers(&spinnakerValidatingController{}).
-		Build()
+func generateValidatePath(gvk schema.GroupVersionKind) string {
+	return "/validate-" + strings.Replace(gvk.Group, ".", "-", -1) + "-" +
+		gvk.Version + "-" + strings.ToLower(gvk.Kind)
+}
 
-	if err != nil {
-		return err
-	}
-
-	disableWebhookConfigInstaller := false
-
-	as, err := webhook.NewServer("spinnaker-admission-server", m, webhook.ServerOptions{
-		Port:                          9876,
-		CertDir:                       "/tmp/cert",
-		DisableWebhookConfigInstaller: &disableWebhookConfigInstaller,
-		BootstrapOptions: &webhook.BootstrapOptions{
-			Service: &webhook.Service{
-				Namespace: ns,
-				Name:      "spinnaker-admission-service",
-				// Selectors should select the pods that runs this webhook server.
-				Selectors: map[string]string{
-					"name": "spinnaker-operator",
+func deployWebhookService(ns string, name string, port int, rawClient *kubernetes.Clientset) error {
+	selectorLabels := map[string]string{"name": name}
+	service := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      name,
+			Labels:    selectorLabels,
+		},
+		Spec: v1.ServiceSpec{
+			Selector: selectorLabels,
+			Ports: []v1.ServicePort{
+				{
+					Protocol:   "TCP",
+					Port:       443,
+					TargetPort: intstr.FromInt(port),
 				},
 			},
 		},
-	})
-
-	if err != nil {
-		return err
 	}
-	return as.Register(validatingWebhook)
+	return util.CreateOrUpdateService(service, rawClient)
 }
 
-// spinnakerValidatingController adds an annotation to every incoming pods.
-func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Request) types.Response {
+func deployValidatingWebhookConfiguration(configName, ns string, webhook v1beta1.Webhook, rawClient *kubernetes.Clientset) error {
+	webhookConfig := &v1beta1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configName,
+			Namespace: ns,
+		},
+		Webhooks: []v1beta1.Webhook{webhook},
+	}
+	return util.CreateOrUpdateValidatingWebhookConfiguration(webhookConfig, rawClient)
+}
+
+func getWebhookConfig(configName, operatorName, ns, path string, c *certContext) v1beta1.Webhook {
+	gv := SpinnakerServiceBuilder.GetGroupVersion()
+	return v1beta1.Webhook{
+		Name: configName,
+		ClientConfig: v1beta1.WebhookClientConfig{
+			Service: &v1beta1.ServiceReference{
+				Namespace: ns,
+				Name:      operatorName,
+				Path:      &path,
+			},
+			CABundle: c.signingCert,
+		},
+		Rules: []v1beta1.RuleWithOperations{{
+			Operations: []v1beta1.OperationType{
+				v1beta1.Create,
+				v1beta1.Update,
+			},
+			Rule: v1beta1.Rule{
+				APIGroups:   []string{gv.Group},
+				APIVersions: []string{gv.Version},
+				Resources:   []string{"spinnakerservices"},
+			},
+		}},
+	}
+}
+
+// Handle is the entry point for spinnaker preflight validations
+func (v *spinnakerValidatingController) Handle(ctx context.Context, req admission.Request) admission.Response {
+	log.Info(fmt.Sprintf("Handling admission request for: %s", req.AdmissionRequest.Kind.Kind))
 	svc, err := v.getSpinnakerService(req)
 	if err != nil {
 		log.Error(err, "Unable to retrieve Spinnaker service from request")
-		return admission.ErrorResponse(http.StatusExpectationFailed, err)
+		return admission.Errored(http.StatusExpectationFailed, err)
 	}
 	if svc == nil {
 		log.Info("No SpinnakerService found in request")
@@ -92,18 +178,19 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req types.Re
 		Ctx:    ctx,
 		Client: v.client,
 		Req:    req,
+		Log:    log,
 	}
-	if err := validate.Validate(svc, opts); err != nil {
-		log.Error(err, "SpinnakerService validation failed", "metadata.name", svc)
-		return admission.ErrorResponse(http.StatusBadRequest, err)
+	log.Info("Starting validation")
+	validationResult := validate.ValidateAll(svc, opts)
+	if validationResult.HasErrors() {
+		errorMsg := validationResult.GetErrorMessage()
+		err := fmt.Errorf(errorMsg)
+		log.Error(err, errorMsg, "metadata.name", svc)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 	log.Info("SpinnakerService is valid", "metadata.name", svc)
 	return admission.ValidationResponse(true, "")
 }
-
-// spinnakerValidatingController implements inject.Client.
-// A client will be automatically injected.
-var _ inject.Client = &spinnakerValidatingController{}
 
 // InjectClient injects the client.
 func (v *spinnakerValidatingController) InjectClient(c client.Client) error {
@@ -111,12 +198,8 @@ func (v *spinnakerValidatingController) InjectClient(c client.Client) error {
 	return nil
 }
 
-// spinnakerValidatingController implements inject.Decoder.
-// A decoder will be automatically injected.
-var _ inject.Decoder = &spinnakerValidatingController{}
-
 // InjectDecoder injects the decoder.
-func (v *spinnakerValidatingController) InjectDecoder(d types.Decoder) error {
+func (v *spinnakerValidatingController) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
 	return nil
 }

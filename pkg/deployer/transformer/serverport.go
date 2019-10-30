@@ -3,8 +3,7 @@ package transformer
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/go-logr/logr"
 	"k8s.io/api/apps/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,17 +14,16 @@ import (
 // transformer used to support changing listening port of a service with "server.port" configuration
 type serverPortTransformer struct {
 	*DefaultTransformer
-	svc spinnakerv1alpha1.SpinnakerServiceInterface
+	svc spinnakerv1alpha2.SpinnakerServiceInterface
 	log logr.Logger
-	hc  *halconfig.SpinnakerConfig
 }
 
 type serverPortTransformerGenerator struct{}
 
-func (g *serverPortTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
-	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+func (g *serverPortTransformerGenerator) NewTransformer(svc spinnakerv1alpha2.SpinnakerServiceInterface,
+	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
-	tr := serverPortTransformer{svc: svc, hc: hc, log: log, DefaultTransformer: base}
+	tr := serverPortTransformer{svc: svc, log: log, DefaultTransformer: base}
 	base.ChildTransformer = &tr
 	return &tr, nil
 }
@@ -35,7 +33,7 @@ func (g *serverPortTransformerGenerator) GetName() string {
 }
 
 func (t *serverPortTransformer) transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1beta2.Deployment) error {
-	if targetPort, _ := t.hc.GetServiceConfigPropString(ctx, deploymentName, "server.port"); targetPort != "" {
+	if targetPort, _ := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, deploymentName, "server.port"); targetPort != "" {
 		intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
 		if err != nil {
 			return err

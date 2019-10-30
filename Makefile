@@ -28,6 +28,7 @@ SRC_DIRS        := cmd pkg
 COMMAND         := cmd/manager/main
 BUILD_DIR       := ${PWD}/bin/$(OS)_$(ARCH)
 BINARY 			:= ${BUILD_DIR}/spinnaker-operator
+KUBECONFIG		:= ${HOME}/.kube/config
 
 
 .PHONY: all
@@ -53,15 +54,9 @@ build-dirs:
 	@echo "Creating build directories ${BUILD_DIR}"
 	@mkdir -p $(BUILD_DIR)
 
-# Regenerates CRD yamls out of any changes in spinnakerservice_types.go
-.PHONY: generate
-generate: build-dirs
-	operator-sdk generate k8s
-	operator-sdk generate openapi
-
 .PHONY: build
 build: build-dirs Makefile
-	@echo "Building: $(BINARIES)"
+	@echo "Building: $(BINARY)"
 	@go build -mod=vendor -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
 
 .PHONY: build-docker
@@ -79,8 +74,14 @@ push:
 
 .PHONY: publish
 publish:
-	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:latest
-	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:latest
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
+
+.PHONY: publishRelease
+publishRelease:
+	@test -n "${RELEASE_VERSION}"
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(RELEASE_VERSION)
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(RELEASE_VERSION)
 
 .PHONY: version
 version:
@@ -101,11 +102,27 @@ run-dev:
 	    --kubeconfig=${KUBECONFIG} \
 	    --namespace=${NAMESPACE}
 
-# Depends on operator-sdk for now
-.PHONE: debug
+.PHONY: debug
 debug:
 	OPERATOR_NAME=local-operator \
     WATCH_NAMESPACE=operator \
 	dlv debug --headless  --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
-	--kubeconfig ~/.kube/config --disable-admission-controller
+	--kubeconfig ${KUBECONFIG} --disable-admission-controller
 
+.PHONY: k8s
+k8s:
+	@go run tools/generate.go k8s
+
+.PHONY: openapi
+openapi:
+	@go run tools/generate.go openapi
+
+.PHONY: reverse-proxy
+reverse-proxy:
+	kubectl --kubeconfig=${KUBECONFIG} create cm ssh-key --from-file=authorized_keys=${HOME}/.ssh/id_rsa.pub --dry-run -o yaml | kubectl apply -f -
+	kubectl --kubeconfig=${KUBECONFIG} apply -f build/deployment-reverseproxy.yml
+	sleep 5
+	kubectl --kubeconfig=${KUBECONFIG} port-forward deployment/spinnaker-operator-proxy 2222:22 & echo $$! > pf-pid
+	sleep 5
+	ssh -p 2222 -g -R 9876:localhost:9876 root@localhost
+	kill `cat pf-pid` && rm pf-pid

@@ -2,13 +2,11 @@ package spinnakerservice
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	deploy "github.com/armory/spinnaker-operator/pkg/deployer"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
-	corev1 "k8s.io/api/core/v1"
 	extv1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,14 +17,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 var log = logf.Log.WithName("spinnakerservice")
 
-var SpinnakerServiceBuilder spinnakerv1alpha1.SpinnakerServiceBuilderInterface
+var SpinnakerServiceBuilder spinnakerv1alpha2.SpinnakerServiceBuilderInterface
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -35,8 +32,8 @@ func Add(mgr manager.Manager) error {
 }
 
 type deployer interface {
-	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error)
-	Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, hc *halconfig.SpinnakerConfig) error
+	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error)
+	Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) error
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -47,7 +44,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileSpinnakerService{
 		client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
-		deployer: deploy.NewDeployer(h, mgr.GetClient(), rawClient, log, mgr.GetRecorder("spinnaker-controller")),
+		deployer: deploy.NewDeployer(h, mgr.GetClient(), rawClient, log, mgr.GetEventRecorderFor("spinnaker-controller")),
 	}
 }
 
@@ -66,31 +63,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for potential object owned by SpinnakerService
-	err = c.Watch(&source.Kind{Type: &extv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+	return c.Watch(&source.Kind{Type: &extv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    SpinnakerServiceBuilder.New(),
 	})
-
-	if err != nil {
-		return err
-	}
-
-	// +kubebuilder:rbac:groups="",resources=pods,verbs=get;watch;list
-	namespace, _ := k8sutil.GetWatchNamespace()
-	cw := configWatcher{
-		client:    mgr.GetClient(),
-		namespace: namespace,
-	}
-	err = c.Watch(
-		&source.Kind{Type: &corev1.ConfigMap{}},
-		&handler.EnqueueRequestsFromMapFunc{
-			ToRequests: &cw,
-		},
-		cw.Predicate())
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // blank assignment to verify that ReconcileSpinnakerService implements reconcile.Reconciler
@@ -131,18 +107,14 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 
 	// Check if we need to redeploy
 	reqLogger.Info("Checking current deployment status")
-	configObject, spinConfig, err := spinnakerv1alpha1.GetConfig(instance, r.client)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 	// Check if config has changed
-	upToDate, err := r.deployer.IsSpinnakerUpToDate(ctx, instance, configObject, spinConfig)
+	upToDate, err := r.deployer.IsSpinnakerUpToDate(ctx, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if !upToDate {
 		reqLogger.Info("Deploying Spinnaker")
-		err := r.deployer.Deploy(ctx, instance, r.scheme, configObject, spinConfig)
+		err := r.deployer.Deploy(ctx, instance, r.scheme)
 		if err != nil {
 			return reconcile.Result{}, err
 		}

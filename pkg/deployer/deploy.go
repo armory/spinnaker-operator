@@ -3,11 +3,10 @@ package deployer
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/deployer/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/deployer/transformer"
 	"github.com/armory/spinnaker-operator/pkg/generated"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +18,7 @@ import (
 )
 
 type manifestGenerator interface {
-	Generate(ctx context.Context, spinConfig *halconfig.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
+	Generate(ctx context.Context, spinConfig *spinnakerv1alpha2.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
 }
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
@@ -46,23 +45,23 @@ func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, 
 	}
 }
 
-func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object, hc *halconfig.SpinnakerConfig) (bool, error) {
+func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
 	if err != nil {
 		return false, err
 	}
-	return ch.IsSpinnakerUpToDate(ctx, svc, config, hc)
+	return ch.IsSpinnakerUpToDate(ctx, svc)
 }
 
 // Deploy takes a SpinnakerService definition and transforms it into manifests to create.
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, scheme *runtime.Scheme, config runtime.Object, c *halconfig.SpinnakerConfig) error {
+func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) error {
 	rLogger := d.log.WithValues("Service", svc.GetName())
 	rLogger.Info("Retrieving complete Spinnaker configuration")
 
-	v, err := c.GetHalConfigPropString(ctx, "version")
+	v, err := svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
 	}
@@ -74,7 +73,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerSe
 	rLogger.Info("Applying options to Spinnaker config")
 	nSvc := svc.DeepCopyInterface()
 	for _, t := range d.transformerGenerators {
-		tr, err := t.NewTransformer(nSvc, c, d.client, d.log)
+		tr, err := t.NewTransformer(nSvc, d.client, d.log)
 		if err != nil {
 			return err
 		}
@@ -85,7 +84,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerSe
 	}
 
 	rLogger.Info("Generating manifests with Halyard")
-	l, err := d.m.Generate(ctx, c)
+	l, err := d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
 	if err != nil {
 		return err
 	}
@@ -108,33 +107,11 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha1.SpinnakerSe
 	st := nSvc.GetStatus()
 	st.Version = v
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
-	return d.commitConfigToStatus(ctx, nSvc, config)
+	return d.commitConfigToStatus(ctx, nSvc)
 }
 
-func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha1.SpinnakerServiceInterface, config runtime.Object) error {
-	cm, ok := config.(*corev1.ConfigMap)
+func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) error {
 	status := svc.GetStatus()
-	if ok {
-		status.HalConfig = spinnakerv1alpha1.SpinnakerFileSourceStatus{
-			ConfigMap: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
-				Name:            cm.ObjectMeta.Name,
-				Namespace:       cm.ObjectMeta.Namespace,
-				ResourceVersion: cm.ObjectMeta.ResourceVersion,
-			},
-		}
-	}
-	sec, ok := config.(*corev1.Secret)
-	if ok {
-		status.HalConfig = spinnakerv1alpha1.SpinnakerFileSourceStatus{
-			Secret: &spinnakerv1alpha1.SpinnakerFileSourceReferenceStatus{
-				Name:            sec.ObjectMeta.Name,
-				Namespace:       sec.ObjectMeta.Namespace,
-				ResourceVersion: sec.ObjectMeta.ResourceVersion,
-			},
-		}
-	}
 	status.LastConfigurationTime = metav1.NewTime(time.Now())
-	// Following doesn't work (EKS) - looks like PUTting to the subresource (status) gives a 404
-	// TODO Investigate issue on earlier Kubernetes version, works fine in 1.13
 	return d.client.Status().Update(ctx, svc)
 }

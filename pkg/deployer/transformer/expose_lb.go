@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	"context"
-	spinnakerv1alpha1 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha1"
-	"github.com/armory/spinnaker-operator/pkg/halconfig"
+	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,18 +18,17 @@ import (
 // exposeLbTr changes hal configurations and manifest files to expose spinnaker using service load balancers
 type exposeLbTransformer struct {
 	*DefaultTransformer
-	svc    spinnakerv1alpha1.SpinnakerServiceInterface
+	svc    spinnakerv1alpha2.SpinnakerServiceInterface
 	log    logr.Logger
 	client client.Client
-	hc     *halconfig.SpinnakerConfig
 }
 
 type exposeLbTransformerGenerator struct{}
 
-func (g *exposeLbTransformerGenerator) NewTransformer(svc spinnakerv1alpha1.SpinnakerServiceInterface,
-	hc *halconfig.SpinnakerConfig, client client.Client, log logr.Logger) (Transformer, error) {
+func (g *exposeLbTransformerGenerator) NewTransformer(svc spinnakerv1alpha2.SpinnakerServiceInterface,
+	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
-	tr := exposeLbTransformer{svc: svc, hc: hc, log: log, client: client, DefaultTransformer: base}
+	tr := exposeLbTransformer{svc: svc, log: log, client: client, DefaultTransformer: base}
 	base.ChildTransformer = &tr
 	return &tr, nil
 }
@@ -65,7 +63,7 @@ func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(ctx context.Context, s
 	}
 	if !isFromOverrideBaseUrl {
 		t.log.Info(fmt.Sprintf("Setting %s overrideBaseUrl to: %s", serviceName, statusUrl))
-		if err = t.hc.SetHalConfigProp(overrideUrlName, statusUrl); err != nil {
+		if err = t.svc.GetSpinnakerConfig().SetHalConfigProp(overrideUrlName, statusUrl); err != nil {
 			return err
 		}
 	}
@@ -75,7 +73,7 @@ func (t *exposeLbTransformer) setStatusAndOverrideBaseUrl(ctx context.Context, s
 // findStatusUrl returns the overrideBaseUrl or load balancer url, indicating if it came from overrideBaseUrl
 func (t *exposeLbTransformer) findStatusUrl(ctx context.Context, serviceName string, overrideUrlName string) (string, bool, error) {
 	// ignore error, overrideBaseUrl may not be set in hal config
-	statusUrl, _ := t.hc.GetHalConfigPropString(ctx, overrideUrlName)
+	statusUrl, _ := t.svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, overrideUrlName)
 	if statusUrl != "" {
 		return statusUrl, true, nil
 	}
@@ -87,11 +85,11 @@ func (t *exposeLbTransformer) findStatusUrl(ctx context.Context, serviceName str
 		isSSLEnabled := false
 		var err error
 		if serviceName == util.GateServiceName {
-			if isSSLEnabled, err = t.hc.GetHalConfigPropBool(util.GateSSLEnabledProp, false); err != nil {
+			if isSSLEnabled, err = t.svc.GetSpinnakerConfig().GetHalConfigPropBool(util.GateSSLEnabledProp, false); err != nil {
 				isSSLEnabled = false
 			}
 		} else if serviceName == util.DeckServiceName {
-			if isSSLEnabled, err = t.hc.GetHalConfigPropBool(util.DeckSSLEnabledProp, false); err != nil {
+			if isSSLEnabled, err = t.svc.GetSpinnakerConfig().GetHalConfigPropBool(util.DeckSSLEnabledProp, false); err != nil {
 				isSSLEnabled = false
 			}
 		}
@@ -112,7 +110,7 @@ func (t *exposeLbTransformer) generateOverrideUrl(ctx context.Context, serviceNa
 	if err != nil {
 		return "", err
 	}
-	desiredPort := util.GetDesiredExposePort(ctx, serviceName[len("spin-"):], int32(80), t.hc, t.svc)
+	desiredPort := util.GetDesiredExposePort(ctx, serviceName[len("spin-"):], int32(80), t.svc)
 	return util.BuildUrl(parsedLbUrl.Scheme, parsedLbUrl.Hostname(), desiredPort), nil
 }
 
@@ -121,7 +119,7 @@ func (t *exposeLbTransformer) transformServiceManifest(ctx context.Context, svcN
 		return nil
 	}
 	overrideUrlKeyName := ""
-	defaultPort := util.GetDesiredExposePort(ctx, svcName, int32(80), t.hc, t.svc)
+	defaultPort := util.GetDesiredExposePort(ctx, svcName, int32(80), t.svc)
 	if svcName == "gate" {
 		overrideUrlKeyName = util.GateOverrideBaseUrlProp
 	} else if svcName == "deck" {
@@ -153,12 +151,12 @@ func (t *exposeLbTransformer) applyExposeServiceConfig(svc *corev1.Service, serv
 
 func (t *exposeLbTransformer) applyPortChanges(ctx context.Context, portName string, portDefault int32, overrideUrlName string, svc *corev1.Service) error {
 	if len(svc.Spec.Ports) > 0 {
-		overrideUrl, _ := t.hc.GetHalConfigPropString(ctx, overrideUrlName)
+		overrideUrl, _ := t.svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, overrideUrlName)
 		svc.Spec.Ports[0].Port = util.GetPort(overrideUrl, portDefault)
 		svc.Spec.Ports[0].Name = portName
 		if strings.Contains(portName, "gate") {
 			// ignore error, property may be missing
-			if targetPort, _ := t.hc.GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
+			if targetPort, _ := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
 				intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
 				if err != nil {
 					return err
