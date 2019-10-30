@@ -7,7 +7,7 @@ import (
 )
 
 type kubernetesAccountValidator struct {
-	account *KubernetesAccount
+	account *Account
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context) error {

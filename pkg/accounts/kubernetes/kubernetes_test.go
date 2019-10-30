@@ -22,7 +22,7 @@ func TestFromCRD(t *testing.T) {
 			Settings: v1alpha2.FreeForm{},
 		},
 	}
-	kType := &KubernetesAccountType{}
+	kType := &AccountType{}
 	a, err := kType.FromCRD(&acc1)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "account1", a.GetName())
@@ -30,13 +30,13 @@ func TestFromCRD(t *testing.T) {
 }
 
 func TestToSpinnakerSettings(t *testing.T) {
-	a := KubernetesAccount{
+	a := Account{
 		Name: "account1",
-		Auth: KubernetesAuth{
+		Auth: Auth{
 			KubeconfigFile: "/tmp/kube-1.yml",
 			Context:        "context",
 		},
-		Env: KubernetesEnv{
+		Env: Env{
 			Namespaces: []string{"ns1", "ns2"},
 		},
 		Settings: v1alpha2.FreeForm{

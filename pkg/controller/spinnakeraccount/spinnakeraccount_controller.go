@@ -3,8 +3,8 @@ package spinnakeraccount
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
+	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/accounts/find"
-	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -99,7 +99,7 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, accountType settings.SpinnakerAccountType) error {
+func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, accountType account.SpinnakerAccountType) error {
 	spinsvc, err := find.FindSpinnakerService(r.client, account.Namespace, SpinnakerServiceBuilder)
 	if err != nil {
 		return err

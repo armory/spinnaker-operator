@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	accounts "github.com/armory/spinnaker-operator/pkg/accounts"
-	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
+	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, option
 	return validators, nil
 }
 
-func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType settings.SpinnakerAccountType, options Options) ([]settings.Account, error) {
+func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType, options Options) ([]account.Account, error) {
 	// Get accounts from profile
 	acc, err := getAccountsFromProfile(spinSvc, accountType)
 	if err != nil {
@@ -54,10 +54,10 @@ func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType sett
 }
 
 type accountValidator struct {
-	v settings.AccountValidator
+	v account.AccountValidator
 }
 
-func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountType settings.SpinnakerAccountType) ([]settings.Account, error) {
+func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	for _, svc := range accountType.GetServices() {
 		p, ok := spinSvc.GetSpinnakerConfig().Profiles[svc]
 		if !ok {
@@ -72,7 +72,7 @@ func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountT
 	return nil, nil
 }
 
-func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountType settings.SpinnakerAccountType) ([]settings.Account, error) {
+func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	cfg := spinSvc.GetSpinnakerConfig()
 	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetAccountsKey())
 	if err != nil {
