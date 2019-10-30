@@ -3,7 +3,6 @@ package accounts
 import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/ghodss/yaml"
 	v1 "k8s.io/api/core/v1"
@@ -21,46 +20,32 @@ func foundIn(obj string, list []string) bool {
 }
 
 // PrepareSettings gathers all accounts for the given services in the given namespace
-func PrepareSettings(svc string, accountList *v1alpha2.SpinnakerAccountList) (ServiceSettings, error) {
-	// Track all accounts by type
-	var accountsByType = make(map[v1alpha2.AccountType][]settings.Account)
-
-	for i := range accountList.Items {
-		account := accountList.Items[i]
-		if !account.Spec.Enabled {
-			continue
-		}
-		accountType, err := GetType(account.Spec.Type)
-		if err != nil {
-			continue
-		}
-		if !foundIn(svc, accountType.GetServices()) {
-			continue
-		}
-		if acc, err := FromCRD(&account); err == nil {
-			accountsByType[account.Spec.Type] = append(accountsByType[account.Spec.Type], acc)
-		}
-	}
-
+func PrepareSettings(svc string, accountList []settings.Account) (ServiceSettings, error) {
 	ss := ServiceSettings{}
 	// For each account type that may deploy to this service
-	for accountType := range accountsByType {
+	for accountType := range Types {
 		aType, err := GetType(accountType)
 		if err != nil {
 			return nil, err
 		}
-		// Add all settings to a slice
-		typeSettings := make([]map[string]interface{}, 0)
-		for i := range accountsByType[accountType] {
-			m, err := accountsByType[accountType][i].ToSpinnakerSettings()
-			if err != nil {
-				return ss, err
+		if !foundIn(svc, aType.GetServices()) {
+			continue
+		}
+		aSettings := make([]map[string]interface{}, 0)
+		for _, a := range accountList {
+			if a.GetType() == accountType {
+				m, err := a.ToSpinnakerSettings()
+				if err != nil {
+					return nil, err
+				}
+				aSettings = append(aSettings, m)
 			}
-			typeSettings = append(typeSettings, m)
 		}
 		// And that slice to the service settings under the type key (e.g. provider.kubernetes.accounts)
-		if err := inspect.SetObjectProp(ss, aType.GetAccountsKey(), typeSettings); err != nil {
-			return ss, err
+		if len(aSettings) > 0 {
+			if err := inspect.SetObjectProp(ss, aType.GetAccountsKey(), aSettings); err != nil {
+				return ss, err
+			}
 		}
 	}
 	return ss, nil

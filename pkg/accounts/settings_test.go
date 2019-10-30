@@ -2,46 +2,32 @@ package accounts
 
 import (
 	"context"
+	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
+	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
 func TestPrepareSettings(t *testing.T) {
-	acc1 := v1alpha2.SpinnakerAccount{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "account1",
+	acc1 := &kubernetes.KubernetesAccount{
+		Name: "account1",
+		Auth: kubernetes.KubernetesAuth{
+			KubeconfigFile: "/tmp/kubeconfig-1.yml",
 		},
-		Spec: v1alpha2.SpinnakerAccountSpec{
-			Type:    v1alpha2.KubernetesAccountType,
-			Enabled: true,
-			Auth: v1alpha2.FreeForm{
-				"kubeconfigFile": "/tmp/kubeconfig-1.yml",
-			},
-			Env:      v1alpha2.FreeForm{},
-			Settings: v1alpha2.FreeForm{},
-		},
+		Env:      kubernetes.KubernetesEnv{},
+		Settings: v1alpha2.FreeForm{},
 	}
-	acc2 := v1alpha2.SpinnakerAccount{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "account2",
+	acc2 := &kubernetes.KubernetesAccount{
+		Name: "account2",
+		Auth: kubernetes.KubernetesAuth{
+			KubeconfigFile: "/tmp/kubeconfig-2.yml",
 		},
-		Spec: v1alpha2.SpinnakerAccountSpec{
-			Type:    v1alpha2.KubernetesAccountType,
-			Enabled: true,
-			Auth: v1alpha2.FreeForm{
-				"kubeconfigFile": "/tmp/kubeconfig-2.yml",
-			},
-			Env:      v1alpha2.FreeForm{},
-			Settings: v1alpha2.FreeForm{},
-		},
+		Env:      kubernetes.KubernetesEnv{},
+		Settings: v1alpha2.FreeForm{},
 	}
-
-	accountList := &v1alpha2.SpinnakerAccountList{
-		Items: []v1alpha2.SpinnakerAccount{acc1, acc2},
-	}
+	accountList := []settings.Account{acc1, acc2}
 
 	ss, err := PrepareSettings("clouddriver", accountList)
 	if assert.Nil(t, err) {

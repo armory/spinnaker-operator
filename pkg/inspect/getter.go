@@ -43,7 +43,7 @@ func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (str
 	return "", fmt.Errorf("%s is not a string, found %s", prop, c.Kind().String())
 }
 
-func GetObjectArray(obj interface{}, prop string) ([]interface{}, error) {
+func GetObjectArray(obj interface{}, prop string) ([]map[string]interface{}, error) {
 	v, err := getObjectProp(obj, prop)
 	if err != nil {
 		return nil, err
@@ -51,10 +51,28 @@ func GetObjectArray(obj interface{}, prop string) ([]interface{}, error) {
 	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
 		return nil, fmt.Errorf("property %s does not resolve to an array", prop)
 	}
-	var result []interface{}
+	var result []map[string]interface{}
 	for i := 0; i < v.Len(); i++ {
 		elem := v.Index(i)
-		result = append(result, elem.Interface())
+
+		if elem.Kind() == reflect.Interface {
+			elem = elem.Elem()
+		}
+
+		if elem.Kind() != reflect.Map {
+			return nil, fmt.Errorf("unable to find map at %s", prop)
+		}
+		m := make(map[string]interface{})
+		for _, k := range elem.MapKeys() {
+			if k.Kind() == reflect.Interface {
+				k = k.Elem()
+			}
+			if k.Kind() != reflect.String {
+				return nil, fmt.Errorf("non string key found at %s.%s", prop, v.String())
+			}
+			m[k.String()] = elem.MapIndex(k).Interface()
+		}
+		result = append(result, m)
 	}
 	return result, nil
 }

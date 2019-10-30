@@ -1,10 +1,12 @@
 package accounts
 
 import (
+	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
 	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var Types = map[v1alpha2.AccountType]settings.SpinnakerAccountType{}
@@ -26,34 +28,41 @@ func GetType(tp v1alpha2.AccountType) (settings.SpinnakerAccountType, error) {
 	return nil, fmt.Errorf("no account of type %s registered", tp)
 }
 
-func FromCRD(account *v1alpha2.SpinnakerAccount) (settings.Account, error) {
-	if t, ok := Types[account.Spec.Type]; ok {
-		return t.FromCRD(account)
+func AllValidAccounts(c client.Client, ns string) ([]settings.Account, error) {
+	spinAccounts := &v1alpha2.SpinnakerAccountList{}
+	if err := c.List(context.TODO(), spinAccounts, client.InNamespace(ns)); err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("no account of type %s registered", account.Spec.Type)
-}
 
-func FromSpinnakerConfig(accountType v1alpha2.AccountType, settings map[string]interface{}) (settings.Account, error) {
-	if t, ok := Types[accountType]; ok {
-		return t.FromSpinnakerConfig(settings)
-	}
-	return nil, fmt.Errorf("no account of type %s registered", accountType)
-}
-
-func FromSpinnakerConfigSlice(accountType v1alpha2.AccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]settings.Account, error) {
-	if t, ok := Types[accountType]; ok {
-		ar := make([]settings.Account, 0)
-		for _, s := range settingsSlice {
-			a, err := t.FromSpinnakerConfig(s)
-			if err != nil {
-				if !ignoreInvalid {
-					return ar, err
-				}
-			} else {
-				ar = append(ar, a)
-			}
+	accounts := make([]settings.Account, 0)
+	for _, a := range spinAccounts.Items {
+		if !a.Spec.Enabled || !a.Status.Valid {
+			continue
 		}
-		return ar, nil
+		accountType, err := GetType(a.Spec.Type)
+		if err != nil {
+			continue
+		}
+		acc, err := accountType.FromCRD(&a)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, acc)
 	}
-	return nil, fmt.Errorf("no account of type %s registered", accountType)
+	return accounts, nil
+}
+
+func FromSpinnakerConfigSlice(accountType settings.SpinnakerAccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]settings.Account, error) {
+	ar := make([]settings.Account, 0)
+	for _, s := range settingsSlice {
+		a, err := accountType.FromSpinnakerConfig(s)
+		if err != nil {
+			if !ignoreInvalid {
+				return ar, err
+			}
+		} else {
+			ar = append(ar, a)
+		}
+	}
+	return ar, nil
 }

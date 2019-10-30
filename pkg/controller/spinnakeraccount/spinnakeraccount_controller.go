@@ -117,8 +117,8 @@ func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, a
 	}
 
 	// Get all Spinnaker accounts
-	allAccounts := &v1alpha2.SpinnakerAccountList{}
-	if err := r.client.List(context.TODO(), allAccounts, client.InNamespace(account.Namespace)); err != nil {
+	allAccounts, err := accounts.AllValidAccounts(r.client, account.Namespace)
+	if err != nil {
 		return err
 	}
 

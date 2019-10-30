@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type KubernetesAccountType struct {
@@ -38,8 +37,7 @@ func (k *KubernetesAccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (set
 }
 
 func (k *KubernetesAccountType) FromSpinnakerConfig(settings map[string]interface{}) (settings.Account, error) {
-	a := k.NewAccount()
-	return k.BaseFromSpinnakerConfig(a, settings)
+	return k.BaseFromSpinnakerConfig(k.NewAccount(), settings)
 }
 
 type KubernetesAuth struct {
@@ -82,6 +80,10 @@ func (k *KubernetesAccount) ToSpinnakerSettings() (map[string]interface{}, error
 	return k.BaseToSpinnakerSettings(k)
 }
 
+func (k *KubernetesAccount) GetType() v1alpha2.AccountType {
+	return v1alpha2.KubernetesAccountType
+}
+
 func (k *KubernetesAccount) GetName() string {
 	return k.Name
 }
@@ -109,6 +111,6 @@ func (k *KubernetesAccount) validateFormat() error {
 	return nil
 }
 
-func (k *KubernetesAccount) NewValidator(client client.Client) settings.AccountValidator {
-	return &kubernetesAccountValidator{client: client, account: k}
+func (k *KubernetesAccount) NewValidator() settings.AccountValidator {
+	return &kubernetesAccountValidator{account: k}
 }

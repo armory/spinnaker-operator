@@ -24,7 +24,8 @@ type SpinnakerAccountType interface {
 
 type Account interface {
 	GetName() string
-	NewValidator(client client.Client) AccountValidator
+	GetType() v1alpha2.AccountType
+	NewValidator() AccountValidator
 	ToSpinnakerSettings() (map[string]interface{}, error)
 	GetEnv() interface{}
 	GetAuth() interface{}
@@ -32,7 +33,7 @@ type Account interface {
 }
 
 type AccountValidator interface {
-	Validate(context context.Context, spinsvc v1alpha2.SpinnakerServiceInterface) error
+	Validate(v1alpha2.SpinnakerServiceInterface, client.Client, context.Context) error
 }
 
 func GetAccountHash(a Account) (string, error) {

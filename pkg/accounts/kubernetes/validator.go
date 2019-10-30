@@ -7,10 +7,9 @@ import (
 )
 
 type kubernetesAccountValidator struct {
-	client  client.Client
 	account *KubernetesAccount
 }
 
-func (k *kubernetesAccountValidator) Validate(context context.Context, spinsvc v1alpha2.SpinnakerServiceInterface) error {
+func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context) error {
 	return nil
 }
