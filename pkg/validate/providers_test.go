@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGetAccountsFromProfile(t *testing.T) {
+func TestGetAccountsFromConfig(t *testing.T) {
 	spinsvc := &v1alpha2.SpinnakerService{
 		Spec: v1alpha2.SpinnakerServiceSpec{
 			SpinnakerConfig: v1alpha2.SpinnakerConfig{
@@ -29,5 +29,21 @@ func TestGetAccountsFromProfile(t *testing.T) {
 	acc, err := getAccountsFromConfig(spinsvc, &kubernetes.AccountType{})
 	if assert.Nil(t, err) {
 		assert.Equal(t, 1, len(acc))
+	}
+}
+
+func TestNoAccounts(t *testing.T) {
+	spinsvc := &v1alpha2.SpinnakerService{
+		Spec: v1alpha2.SpinnakerServiceSpec{
+			SpinnakerConfig: v1alpha2.SpinnakerConfig{
+				Config: v1alpha2.FreeForm{
+					"name": "test",
+				},
+			},
+		},
+	}
+	acc, err := getAccountsFromConfig(spinsvc, &kubernetes.AccountType{})
+	if assert.Nil(t, err) {
+		assert.Equal(t, 0, len(acc))
 	}
 }

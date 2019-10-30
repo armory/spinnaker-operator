@@ -2,12 +2,10 @@ package validate
 
 import (
 	"context"
-	"fmt"
 	accounts "github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
-	"github.com/pkg/errors"
 )
 
 // GetAccountValidationsFor inspects all known providers, retrieves their accounts,
@@ -76,7 +74,8 @@ func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountTy
 	cfg := spinSvc.GetSpinnakerConfig()
 	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetAccountsKey())
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("unable to get accounts of type %s in config", accountType))
+		// Ignore, key or format don't match expectations
+		return nil, nil
 	}
 	return accounts.FromSpinnakerConfigSlice(accountType, arr, false)
 }
