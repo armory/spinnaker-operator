@@ -55,7 +55,7 @@ spec:
     #   - Use the | YAML symbol to indicate a block-style multiline string
     #   - We currently only support string files
     #   - NOTE: Kubernetes has a manifest size limitation of 1MB
-    files:
+    files: {}
   #      profiles__rosco__packer__example-packer-config.json: |
   #        {
   #          "packerSetting": "someValue"
@@ -79,7 +79,7 @@ spec:
         #service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:9999999:certificate/abc-123-abc
 
       # provide an override to the exposing KubernetesService
-      overrides:
+      overrides: {}
       # Provided below is the example config for the Gate-X509 configuration
 #        deck:
 #          annotations:
