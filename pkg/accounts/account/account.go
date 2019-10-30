@@ -1,4 +1,4 @@
-package settings
+package account
 
 import (
 	"context"
@@ -14,8 +14,10 @@ type SpinnakerAccountType interface {
 	FromSpinnakerConfig(map[string]interface{}) (Account, error)
 	// Affected services
 	GetServices() []string
-	// Key under which accounts are stored
+	// Key under which accounts are stored in service
 	GetAccountsKey() string
+	// Key under which accounts are stored in profile/config
+	GetConfigAccountsKey() string
 }
 
 type Account interface {
@@ -25,7 +27,7 @@ type Account interface {
 	ToSpinnakerSettings() (map[string]interface{}, error)
 	GetEnv() interface{}
 	GetAuth() interface{}
-	GetSettings() map[string]interface{}
+	GetSettings() *v1alpha2.FreeForm
 	GetHash() (string, error)
 }
 

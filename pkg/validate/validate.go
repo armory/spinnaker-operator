@@ -10,6 +10,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+// Validators registered here should be stateless
+var ParallelValidators = []SpinnakerValidator{
+	&versionValidator{},
+}
+
 type SpinnakerValidator interface {
 	Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult
 	// TODO: cancel
@@ -39,12 +44,21 @@ func ValidateAll(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) Va
 	if r.Fatal {
 		return r
 	}
-	vs, err := GetAccountValidationsFor(spinSvc, options)
+	vs, err := generateParallelValidators(spinSvc, options)
 	if err != nil {
-		return NewResultFromError(errors.Wrap(err, "unable to determine validations to run"), true)
+		return NewResultFromError(err, true)
 	}
 	v := ParallelValidator{runInParallel: vs}
 	return v.Validate(spinSvc, options)
+}
+
+func generateParallelValidators(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ([]SpinnakerValidator, error) {
+	vs, err := GetAccountValidationsFor(spinSvc, options)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to determine validations to run")
+	}
+	vs = append(vs, ParallelValidators...)
+	return vs, nil
 }
 
 func (r *ValidationResult) Merge(other ValidationResult) {

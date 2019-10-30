@@ -2,12 +2,10 @@ package validate
 
 import (
 	"context"
-	"fmt"
 	accounts "github.com/armory/spinnaker-operator/pkg/accounts"
-	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
+	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
-	"github.com/pkg/errors"
 )
 
 // GetAccountValidationsFor inspects all known providers, retrieves their accounts,
@@ -27,7 +25,7 @@ func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, option
 	return validators, nil
 }
 
-func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType settings.SpinnakerAccountType, options Options) ([]settings.Account, error) {
+func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType, options Options) ([]account.Account, error) {
 	// Get accounts from profile
 	acc, err := getAccountsFromProfile(spinSvc, accountType)
 	if err != nil {
@@ -42,7 +40,7 @@ func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType sett
 	}
 	// Get CRD accounts if enabled
 	if spinSvc.GetAccountsConfig().Enabled {
-		crdAccs, err := accounts.AllValidAccounts(options.Client, spinSvc.GetNamespace())
+		crdAccs, err := accounts.AllValidCRDAccounts(options.Client, spinSvc.GetNamespace())
 		if err != nil {
 			return nil, err
 		}
@@ -54,16 +52,16 @@ func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType sett
 }
 
 type accountValidator struct {
-	v settings.AccountValidator
+	v account.AccountValidator
 }
 
-func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountType settings.SpinnakerAccountType) ([]settings.Account, error) {
+func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	for _, svc := range accountType.GetServices() {
 		p, ok := spinSvc.GetSpinnakerConfig().Profiles[svc]
 		if !ok {
 			continue
 		}
-		arr, err := inspect.GetObjectArray(p, accountType.GetAccountsKey())
+		arr, err := inspect.GetObjectArray(p, accountType.GetConfigAccountsKey())
 		if err != nil {
 			continue
 		}
@@ -72,11 +70,12 @@ func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountT
 	return nil, nil
 }
 
-func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountType settings.SpinnakerAccountType) ([]settings.Account, error) {
+func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	cfg := spinSvc.GetSpinnakerConfig()
-	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetAccountsKey())
+	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetConfigAccountsKey())
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("unable to get accounts of type %s in config", accountType))
+		// Ignore, key or format don't match expectations
+		return nil, nil
 	}
 	return accounts.FromSpinnakerConfigSlice(accountType, arr, false)
 }

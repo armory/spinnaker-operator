@@ -2,11 +2,12 @@ package spinnakeraccount
 
 import (
 	"context"
+
 	"github.com/armory/spinnaker-operator/pkg/accounts"
-	"github.com/armory/spinnaker-operator/pkg/accounts/find"
-	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
+	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,8 +100,8 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, accountType settings.SpinnakerAccountType) error {
-	spinsvc, err := find.FindSpinnakerService(r.client, account.Namespace, SpinnakerServiceBuilder)
+func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, accountType account.SpinnakerAccountType) error {
+	spinsvc, err := util.FindSpinnakerService(r.client, account.Namespace, SpinnakerServiceBuilder)
 	if err != nil {
 		return err
 	}
@@ -117,7 +118,7 @@ func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, a
 	}
 
 	// Get all Spinnaker accounts
-	allAccounts, err := accounts.AllValidAccounts(r.client, account.Namespace)
+	allAccounts, err := accounts.AllValidCRDAccounts(r.client, account.Namespace)
 	if err != nil {
 		return err
 	}
@@ -128,15 +129,15 @@ func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, a
 		if err != nil {
 			return err
 		}
-		dep, err := find.FindDeployment(r.client, spinsvc, svc)
+		dep, err := util.FindDeployment(r.client, spinsvc, svc)
 		if err != nil {
 			return err
 		}
-		sec, err := find.FindSecretInDeployment(r.client, dep, svc, "/opt/spinnaker/config")
+		sec, err := util.FindSecretInDeployment(r.client, dep, svc, "/opt/spinnaker/config")
 		if err != nil {
 			return err
 		}
-		if err = find.UpdateSecret(sec, svc, ss, "dynamic"); err != nil {
+		if err = util.UpdateSecret(sec, svc, ss, "dynamic"); err != nil {
 			return err
 		}
 

@@ -1,4 +1,4 @@
-package find
+package util
 
 import (
 	"context"
@@ -40,19 +40,21 @@ func FindSecretInDeployment(c client.Client, dep *v12.Deployment, containerName,
 
 func getMountedSecretNameInDeployment(dep *v12.Deployment, containerName, path string) string {
 	for _, c := range dep.Spec.Template.Spec.Containers {
-		if c.Name == containerName {
-			// Look for the volume mount here
-			for _, vm := range c.VolumeMounts {
-				if vm.MountPath == path {
-					// Look for the secret
-					for _, v := range dep.Spec.Template.Spec.Volumes {
-						if v.Name == vm.Name {
-							if v.Secret != nil {
-								return v.Secret.SecretName
-							}
-							return ""
-						}
+		if c.Name != containerName {
+			continue
+		}
+		// Look for the volume mount here
+		for _, vm := range c.VolumeMounts {
+			if vm.MountPath != path {
+				continue
+			}
+			// Look for the secret
+			for _, v := range dep.Spec.Template.Spec.Volumes {
+				if v.Name == vm.Name {
+					if v.Secret != nil {
+						return v.Secret.SecretName
 					}
+					return ""
 				}
 			}
 		}
