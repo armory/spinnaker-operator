@@ -52,6 +52,7 @@ func AllValidAccounts(c client.Client, ns string) ([]settings.Account, error) {
 	return accounts, nil
 }
 
+// FromSpinnakerConfigSlice builds accounts from a given slice of settings
 func FromSpinnakerConfigSlice(accountType settings.SpinnakerAccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]settings.Account, error) {
 	ar := make([]settings.Account, 0)
 	for _, s := range settingsSlice {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/ghodss/yaml"
 	v12 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,4 +58,14 @@ func getMountedSecretNameInDeployment(dep *v12.Deployment, containerName, path s
 		}
 	}
 	return ""
+}
+
+func UpdateSecret(secret *v1.Secret, svc string, settings map[string]interface{}, profileName string) error {
+	k := fmt.Sprintf("%s-%s.yml", svc, profileName)
+	b, err := yaml.Marshal(settings)
+	if err != nil {
+		return err
+	}
+	secret.Data[k] = b
+	return nil
 }

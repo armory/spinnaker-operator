@@ -67,7 +67,7 @@ func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountT
 		if err != nil {
 			continue
 		}
-		return accounts.FromSpinnakerConfigSlice(accountType, arr, true)
+		return accounts.FromSpinnakerConfigSlice(accountType, arr, false)
 	}
 	return nil, nil
 }
@@ -78,7 +78,7 @@ func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountTy
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to get accounts of type %s in config", accountType))
 	}
-	return accounts.FromSpinnakerConfigSlice(accountType, arr, true)
+	return accounts.FromSpinnakerConfigSlice(accountType, arr, false)
 }
 
 func (a *accountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {

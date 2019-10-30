@@ -136,7 +136,7 @@ func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, a
 		if err != nil {
 			return err
 		}
-		if err = accounts.UpdateSecret(sec, svc, ss, "dynamic"); err != nil {
+		if err = find.UpdateSecret(sec, svc, ss, "dynamic"); err != nil {
 			return err
 		}
 

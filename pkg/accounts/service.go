@@ -1,14 +1,9 @@
 package accounts
 
 import (
-	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/settings"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
-	"github.com/ghodss/yaml"
-	v1 "k8s.io/api/core/v1"
 )
-
-type ServiceSettings map[string]interface{}
 
 func foundIn(obj string, list []string) bool {
 	for _, s := range list {
@@ -20,8 +15,8 @@ func foundIn(obj string, list []string) bool {
 }
 
 // PrepareSettings gathers all accounts for the given services in the given namespace
-func PrepareSettings(svc string, accountList []settings.Account) (ServiceSettings, error) {
-	ss := ServiceSettings{}
+func PrepareSettings(svc string, accountList []settings.Account) (map[string]interface{}, error) {
+	ss := make(map[string]interface{})
 	// For each account type that may deploy to this service
 	for accountType := range Types {
 		aType, err := GetType(accountType)
@@ -49,14 +44,4 @@ func PrepareSettings(svc string, accountList []settings.Account) (ServiceSetting
 		}
 	}
 	return ss, nil
-}
-
-func UpdateSecret(secret *v1.Secret, svc string, settings ServiceSettings, profileName string) error {
-	k := fmt.Sprintf("%s-%s.yml", svc, profileName)
-	b, err := yaml.Marshal(settings)
-	if err != nil {
-		return err
-	}
-	secret.Data[k] = b
-	return nil
 }
