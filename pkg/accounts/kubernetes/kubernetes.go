@@ -37,7 +37,7 @@ func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Accou
 }
 
 func (k *AccountType) FromSpinnakerConfig(settings map[string]interface{}) (account.Account, error) {
-	return k.BaseFromSpinnakerConfig(k.NewAccount(), settings)
+	return k.BaseFromSpinnakerConfig(k.newAccount(), settings)
 }
 
 type Auth struct {
@@ -100,8 +100,8 @@ func (k *Account) GetAuth() interface{} {
 	return &k.Auth
 }
 
-func (k *Account) GetSettings() map[string]interface{} {
-	return k.Settings
+func (k *Account) GetSettings() *v1alpha2.FreeForm {
+	return &k.Settings
 }
 
 func (k *Account) validateFormat() error {

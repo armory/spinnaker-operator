@@ -20,6 +20,9 @@ func Dispatch(settings map[string]interface{}, obj ...interface{}) error {
 	}
 
 	for i := range obj {
+		if obj[i] == nil {
+			continue
+		}
 		if err := json.Unmarshal(b, obj[i]); err != nil {
 			return err
 		}

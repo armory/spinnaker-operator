@@ -25,7 +25,7 @@ type Account interface {
 	ToSpinnakerSettings() (map[string]interface{}, error)
 	GetEnv() interface{}
 	GetAuth() interface{}
-	GetSettings() map[string]interface{}
+	GetSettings() *v1alpha2.FreeForm
 	GetHash() (string, error)
 }
 

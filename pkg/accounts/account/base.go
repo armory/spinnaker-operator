@@ -10,10 +10,6 @@ import (
 
 type BaseAccountType struct{}
 
-func (b *BaseAccountType) NewAccount() Account {
-	return nil
-}
-
 func (b *BaseAccountType) BaseFromCRD(a Account, account *v1alpha2.SpinnakerAccount) (Account, error) {
 	if err := inspect.Convert(account.Spec.Env, a.GetEnv()); err != nil {
 		return a, err
@@ -21,8 +17,9 @@ func (b *BaseAccountType) BaseFromCRD(a Account, account *v1alpha2.SpinnakerAcco
 	if err := inspect.Convert(account.Spec.Auth, a.GetAuth()); err != nil {
 		return a, err
 	}
+	// Settings values are copied directly
 	for k, v := range account.Spec.Settings {
-		a.GetSettings()[k] = v
+		(*a.GetSettings())[k] = v
 	}
 	return a, nil
 }
