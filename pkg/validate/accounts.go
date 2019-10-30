@@ -61,7 +61,7 @@ func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountT
 		if !ok {
 			continue
 		}
-		arr, err := inspect.GetObjectArray(p, accountType.GetAccountsKey())
+		arr, err := inspect.GetObjectArray(p, accountType.GetConfigAccountsKey())
 		if err != nil {
 			continue
 		}
@@ -72,7 +72,7 @@ func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountT
 
 func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	cfg := spinSvc.GetSpinnakerConfig()
-	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetAccountsKey())
+	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetConfigAccountsKey())
 	if err != nil {
 		// Ignore, key or format don't match expectations
 		return nil, nil

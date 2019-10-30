@@ -31,7 +31,7 @@ func TestPrepareSettings(t *testing.T) {
 
 	ss, err := PrepareSettings("clouddriver", accountList)
 	if assert.Nil(t, err) {
-		n, err := inspect.GetObjectPropString(context.TODO(), ss, "provider.kubernetes.accounts.0.name")
+		n, err := inspect.GetObjectPropString(context.TODO(), ss, "kubernetes.accounts.0.name")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "account1", n)
 		}

@@ -15,7 +15,11 @@ func (k *AccountType) GetType() v1alpha2.AccountType {
 }
 
 func (k *AccountType) GetAccountsKey() string {
-	return "provider.kubernetes.accounts"
+	return "kubernetes.accounts"
+}
+
+func (k *AccountType) GetConfigAccountsKey() string {
+	return "providers.kubernetes.accounts"
 }
 
 func (k *AccountType) GetServices() []string {
