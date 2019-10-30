@@ -12,6 +12,7 @@ import (
 type SpinnakerServiceSpec struct {
 	SpinnakerConfig SpinnakerConfig `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
 	Expose          ExposeConfig    `json:"expose,omitempty"`
+	Accounts        AccountConfig   `json:"accounts,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -24,6 +25,14 @@ type SpinnakerConfig struct {
 	Profiles map[string]FreeForm `json:"profiles,omitempty"`
 	// Main deployment configuration to be passed to Halyard
 	Config FreeForm `json:"config,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type AccountConfig struct {
+	// Enable the injection of SpinnakerAccount
+	Enabled bool `json:"enabled,omitempty"`
+	// Enable accounts to be added dynamically
+	Dynamic bool `json:"dynamic,omitempty"`
 }
 
 // GetHash returns a hash of the config used
@@ -104,6 +113,9 @@ type SpinnakerServiceStatus struct {
 	// Exposed Gate URL
 	// +optional
 	APIUrl string `json:"apiUrl"`
+	// Number of accounts
+	// +optional
+	AccountCount int `json:"accountCount,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

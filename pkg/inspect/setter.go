@@ -27,6 +27,42 @@ func SetObjectProp(obj map[string]interface{}, prop string, value interface{}) e
 	return nil
 }
 
+func UpsertInSlice(obj map[string]interface{}, prop string, value interface{}, f func(elem interface{}) bool) error {
+	addr := strings.Split(prop, ".")
+
+	c := reflect.ValueOf(obj)
+	c2 := c
+	for i, a := range addr {
+		var p reflect.Value
+		var err error
+		if i == len(addr)-1 {
+			p, err = inspectPropertyOrSet(c, a, make([]interface{}, 0), true)
+		} else {
+			p, err = inspectPropertyOrSet(c, a, make(map[string]interface{}), true)
+		}
+		if err != nil {
+			return err
+		}
+		c2 = c
+		c = p
+	}
+	if c.Kind() != reflect.Slice {
+		return fmt.Errorf("no array found at %s", prop)
+	}
+
+	for j := 0; j < c.Len(); j++ {
+		v := c.Index(j)
+		if f(c.Index(j).Interface()) {
+			v.Set(reflect.ValueOf(value))
+			return nil
+		}
+	}
+
+	sl := reflect.Append(c, reflect.ValueOf(value))
+	c2.SetMapIndex(reflect.ValueOf(addr[len(addr)-1]), sl)
+	return nil
+}
+
 func inspectPropertyOrSet(v reflect.Value, key string, value interface{}, onlyDefault bool) (reflect.Value, error) {
 	var i reflect.Value
 	switch v.Kind() {
