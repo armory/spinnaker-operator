@@ -23,14 +23,18 @@ node {
             def branchMatch = env.BRANCH_NAME =~ /^release-(0|[1-9]\d*)\.(0|[1-9]\d*)\.x$/
             if (branchMatch.find()) {
                 def releaseVersion = readFile "${env.WORKSPACE}/operator-version"
-                def versionMatch = releaseVersion =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(.+))?$+/
+
+                print "Found commited version file contents: ${releaseVersion}"
+
+                def versionMatch = releaseVersion =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(.+))?+/
                 if (!versionMatch.find()) {
                     error("Incorrect version ${releaseVersion} defined in ./operator-version")
                 }
                 if (versionMatch.group(1) != branchMatch.group(1) || versionMatch.group(2) != branchMatch.group(2)) {
                     error("Version ${releaseVersion} does not match branch it is being built on ${env.BRANCH_NAME}")
                 }
-                props.releaseVersion = releaseVersion
+
+                props.releaseVersion = releaseVersion.group() // just the found semver
                 stage("Publish Version ${releaseVersion}") {
                     sh "make push publishRelease RELEASE_VERSION=\"${releaseVersion}\""
                 }
