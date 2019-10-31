@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -134,8 +135,9 @@ type SpinnakerService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SpinnakerServiceSpec   `json:"spec,omitempty"`
-	Status SpinnakerServiceStatus `json:"status,omitempty"`
+	Spec       SpinnakerServiceSpec   `json:"spec,omitempty"`
+	Status     SpinnakerServiceStatus `json:"status,omitempty"`
+	Validation SpinnakerValidation    `json:"validation,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -145,6 +147,30 @@ type SpinnakerServiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SpinnakerService `json:"items"`
+}
+
+// ValidationSetting is the definition of the validation for a given setting
+type ValidationSetting struct {
+	Enabled          bool  `json:"enabled"`
+	FrequencySeconds int64 `json:"frequencySeconds"`
+	FailOnError      bool  `json:"failOnError"`
+}
+
+// SpinnakerValidation defines validation settings for the deployment
+type SpinnakerValidation struct {
+	ValidationSetting *ValidationSetting      `json:"validationSetting"`
+	FailFast          bool                    `json:"failFast"`
+	Providers         []ValidationSettingList `json:"providers"`
+	PersistentStoage  *ValidationSetting      `json:"persistentStorage"`
+	MetricStores      *ValidationSetting      `json:"metricStores"`
+	Notifications     *ValidationSetting      `json:"notifications"`
+	CI                []ValidationSettingList `json:"ci"`
+}
+
+// ValidationSettingList is a map of ValidationSettings and a top level validation setting
+type ValidationSettingList struct {
+	ValidationSetting *ValidationSetting           `json:"validationSetting,omitempty"`
+	Items             map[string]ValidationSetting `json:"items"`
 }
 
 func init() {
