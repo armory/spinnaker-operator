@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	webhook "github.com/armory/spinnaker-operator/pkg/controller/webhook"
+	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +37,7 @@ func Add(m manager.Manager) error {
 	if err != nil {
 		return err
 	}
-	webhook.Register(gvk, &spinnakerValidatingController{})
+	webhook.Register(gvk, "spinnakerservices", &spinnakerValidatingController{})
 	return nil
 }
 
@@ -53,10 +54,11 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		return admission.ValidationResponse(true, "")
 	}
 	opts := validate.Options{
-		Ctx:    ctx,
-		Client: v.client,
-		Req:    req,
-		Log:    log,
+		Ctx:     ctx,
+		Client:  v.client,
+		Req:     req,
+		Log:     log,
+		Halyard: halyard.NewService(),
 	}
 	log.Info("Starting validation")
 	validationResult := validate.ValidateAll(svc, opts)

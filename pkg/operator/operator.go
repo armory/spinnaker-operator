@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -142,9 +143,10 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 		}
 	}
 
-	gvks := []schema.GroupVersionKind{
-		spinnakerservice.SpinnakerServiceBuilder.New().GetObjectKind().GroupVersionKind(),
-		(&v1alpha2.SpinnakerAccount{}).GroupVersionKind(),
+	gvks, err := getGVKs(mgr)
+	if err != nil {
+		log.Error(err, "unable to get GroupVersionKind")
+		os.Exit(1)
 	}
 
 	// Generates operator specific metrics based on the GVKs.
@@ -171,4 +173,20 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
+}
+
+func getGVKs(m manager.Manager) ([]schema.GroupVersionKind, error) {
+	gvks := make([]schema.GroupVersionKind, 0)
+	objs := []kruntime.Object{
+		spinnakerservice.SpinnakerServiceBuilder.New(),
+		&v1alpha2.SpinnakerAccount{},
+	}
+	for _, obj := range objs {
+		gvk, err := apiutil.GVKForObject(obj, m.GetScheme())
+		if err != nil {
+			return nil, err
+		}
+		gvks = append(gvks, gvk)
+	}
+	return gvks, nil
 }

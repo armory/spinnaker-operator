@@ -6,6 +6,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	webhook "github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -25,8 +26,11 @@ var log = logf.Log.WithName("acctvalidate")
 
 // Add adds the validating admission controller
 func Add(m manager.Manager) error {
-	gvk := (&v1alpha2.SpinnakerAccount{}).GroupVersionKind()
-	webhook.Register(gvk, &accountValidatingController{})
+	gvk, err := apiutil.GVKForObject(&v1alpha2.SpinnakerAccount{}, m.GetScheme())
+	if err != nil {
+		return err
+	}
+	webhook.Register(gvk, "spinnakeraccounts", &accountValidatingController{})
 	return nil
 }
 
