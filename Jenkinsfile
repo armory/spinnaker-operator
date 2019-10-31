@@ -21,10 +21,10 @@ node {
             }
         } else {
             def branchMatch = env.BRANCH_NAME =~ /^release-(0|[1-9]\d*)\.(0|[1-9]\d*)\.x$/
-            if (branchMatch) {
+            if (branchMatch.find()) {
                 def releaseVersion = readFile "${env.WORKSPACE}/operator-version"
                 def versionMatch = releaseVersion =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(.+))?$+/
-                if (!versionMatch) {
+                if (!versionMatch.find()) {
                     error("Incorrect version ${releaseVersion} defined in ./operator-version")
                 }
                 if (versionMatch.group(1) != branchMatch.group(1) || versionMatch.group(2) != branchMatch.group(2)) {
