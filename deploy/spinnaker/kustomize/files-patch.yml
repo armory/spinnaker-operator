@@ -14,10 +14,11 @@ spec:
     #   - We currently only support string files
     #   - NOTE: Kubernetes has a manifest size limitation of 1MB
     files:
-#      profiles__rosco__packer__example-packer-config.json: |
-#        {
-#          "packerSetting": "someValue"
-#        }
-#      profiles__rosco__packer__my_custom_script.sh: |
-#        #!/bin/bash -e
-#        echo "hello world!"
+      # ~/.hal/default/profiles/rosco/packer/example-packer-config.json
+      profiles__rosco__packer__example-packer-config.json: |
+        {"packerSetting": "someValue"}
+
+      # ~/.hal/default/profiles/rosco/packer/my_custom_script.sh
+      profiles__rosco__packer__my_custom_script.sh: |
+        #!/bin/bash -e
+        echo "hello world!"

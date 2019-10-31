@@ -9,12 +9,23 @@ spec:
     # see https://www.spinnaker.io/reference/halyard/custom/#tweakable-service-settings for available settings
     service-settings:
       clouddriver: {}
+
       deck: {}
-      echo: {}
+
+      echo:
+        env:
+          JAVA_OPTS: "-Xms256m -Xmx512m"
+
       fiat: {}
+
       front50: {}
+
       gate: {}
+
       igor: {}
+
       kayenta: {}
+
       orca: {}
+
       rosco: {}
