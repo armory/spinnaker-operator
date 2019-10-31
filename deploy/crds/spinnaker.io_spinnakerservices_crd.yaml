@@ -59,6 +59,15 @@ spec:
         spec:
           description: SpinnakerServiceSpec defines the desired state of SpinnakerService
           properties:
+            accounts:
+              properties:
+                dynamic:
+                  description: Enable accounts to be added dynamically
+                  type: boolean
+                enabled:
+                  description: Enable the injection of SpinnakerAccount
+                  type: boolean
+              type: object
             expose:
               description: ExposeConfig represents the configuration for exposing
                 Spinnaker
@@ -118,6 +127,9 @@ spec:
         status:
           description: SpinnakerServiceStatus defines the observed state of SpinnakerService
           properties:
+            accountCount:
+              description: Number of accounts
+              type: integer
             apiUrl:
               description: Exposed Gate URL
               type: string

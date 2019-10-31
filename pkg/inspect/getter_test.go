@@ -32,16 +32,25 @@ func TestGetProp(t *testing.T) {
 }
 
 func TestGetArray(t *testing.T) {
+	l := []map[string]interface{}{
+		{
+			"A": "aaaa",
+		},
+		{
+			"B": "bbbb",
+		},
+	}
+
 	m := struct {
-		Str []string
+		Str []map[string]interface{}
 		Int int
 	}{
-		[]string{"A", "B", "C"},
-		1,
+		Str: l,
+		Int: 1,
 	}
 	v, err := GetObjectArray(m, "Str")
 	if assert.Nil(t, err) {
-		assert.Equal(t, 3, len(v))
+		assert.Equal(t, 2, len(v))
 	}
 	_, err = GetObjectArray(m, "Int")
 	assert.NotNil(t, err)

@@ -20,7 +20,7 @@ func (s *SpinnakerConfig) GetHalConfigPropString(ctx context.Context, prop strin
 }
 
 // GetHalConfigObjectArray reads an untyped array
-func (s *SpinnakerConfig) GetHalConfigObjectArray(ctx context.Context, prop string) ([]interface{}, error) {
+func (s *SpinnakerConfig) GetHalConfigObjectArray(ctx context.Context, prop string) ([]map[string]interface{}, error) {
 	return inspect.GetObjectArray(s.Config, prop)
 }
 
