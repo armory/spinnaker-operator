@@ -87,7 +87,7 @@ func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha2.Sp
 	//mp := spinConfig.Profiles.AsMap()
 	for k := range spinConfig.Profiles {
 		if k == "deck" {
-			if err = s.writeDeckProfile(spinConfig.Profiles[k]["content"], writer); err != nil {
+			if err = s.writeDeckProfile(spinConfig.Profiles[k]["settings-local.js"], writer); err != nil {
 				return nil, err
 			}
 			continue
