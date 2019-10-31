@@ -1,3 +1,21 @@
+@NonCPS
+def getReleaseVersion(branchName) {
+    def branchMatch = env.BRANCH_NAME =~ /^release-(0|[1-9]\d*)\.(0|[1-9]\d*)\.x$/
+    if (branchMatch.find()) {
+        def releaseVersion = readFile("operator-version").split("\\n")[0].trim()
+        print "Found committed version file contents: ${releaseVersion}"
+
+        def versionMatch = releaseVersion =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(.+))?+$/
+        if (!versionMatch.find()) {
+            error("Incorrect version ${releaseVersion} defined in ./operator-version")
+        }
+        if (versionMatch.group(1) != branchMatch.group(1) || versionMatch.group(2) != branchMatch.group(2)) {
+            error("Version ${releaseVersion} does not match branch it is being built on ${env.BRANCH_NAME}")
+        }
+        return branchMatch.group(0)
+    }
+}
+
 node {
     try {
         stage('Checking out code') {
@@ -20,16 +38,8 @@ node {
                 sh 'make push publish'
             }
         } else {
-            def branchMatch = env.BRANCH_NAME =~ /^release-(0|[1-9]\d*)\.(0|[1-9]\d*)\.x$/
-            if (branchMatch) {
-                def releaseVersion = readFile "${env.WORKSPACE}/operator-version"
-                def versionMatch = releaseVersion =~ /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(.+))?$+/
-                if (!versionMatch) {
-                    error("Incorrect version ${releaseVersion} defined in ./operator-version")
-                }
-                if (versionMatch.group(1) != branchMatch.group(1) || versionMatch.group(2) != branchMatch.group(2)) {
-                    error("Version ${releaseVersion} does not match branch it is being built on ${env.BRANCH_NAME}")
-                }
+            def releaseVersion = getReleaseVersion(env.BRANCH_NAME)
+            if (releaseVersion) {
                 props.releaseVersion = releaseVersion
                 stage("Publish Version ${releaseVersion}") {
                     sh "make push publishRelease RELEASE_VERSION=\"${releaseVersion}\""

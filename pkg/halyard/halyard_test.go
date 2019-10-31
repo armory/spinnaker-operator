@@ -78,7 +78,7 @@ version: 1.14.2`)
 					hc := makeBasicSpinnakerConfig()
 					hc.Profiles = map[string]v1alpha2.FreeForm{
 						"deck": {
-							"content": "windows.settings = 55;",
+							"settings-local.js": "windows.settings = 55;",
 						},
 					}
 					return hc

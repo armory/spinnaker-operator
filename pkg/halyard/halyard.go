@@ -93,7 +93,7 @@ func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1al
 	//mp := spinConfig.Profiles.AsMap()
 	for k := range spinConfig.Profiles {
 		if k == "deck" {
-			if err = s.writeDeckProfile(spinConfig.Profiles[k]["content"], writer); err != nil {
+			if err = s.writeDeckProfile(spinConfig.Profiles[k]["settings-local.js"], writer); err != nil {
 				return nil, err
 			}
 			continue
