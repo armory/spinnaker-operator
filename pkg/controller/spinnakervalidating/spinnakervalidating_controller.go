@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	webhook2 "github.com/armory/spinnaker-operator/pkg/controller/webhook"
+	webhook "github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,10 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
-
-const (
-	servicePort = 9876
 )
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
@@ -40,8 +36,8 @@ func Add(m manager.Manager) error {
 	if err != nil {
 		return err
 	}
-	// Determine environment
-	return webhook2.Install(m, gvk, &spinnakerValidatingController{}, servicePort)
+	webhook.Register(gvk, &spinnakerValidatingController{})
+	return nil
 }
 
 // Handle is the entry point for spinnaker preflight validations

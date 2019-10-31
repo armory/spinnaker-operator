@@ -1,23 +1,48 @@
 package webhook
 
 import (
+	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"os"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"strings"
 )
 
-func Install(m manager.Manager, kind schema.GroupVersionKind, h admission.Handler,  svcPort int) error {
+const (
+	servicePort = 9876
+)
+
+var registrations = []registration{}
+
+type registration struct {
+	kind schema.GroupVersionKind
+	h    admission.Handler
+	p    string
+}
+
+func Register(kind schema.GroupVersionKind, h admission.Handler) {
+	registrations = append(registrations, registration{
+		kind: kind,
+		h:    h,
+		p:    generateValidatePath(kind),
+	})
+}
+
+func Start(m manager.Manager) error {
+	if len(registrations) == 0 {
+		return errors.New("no kind registered for validation")
+	}
+
 	ns, name, err := getOperatorNameAndNamespace()
 	if err != nil {
 		return err
@@ -25,7 +50,7 @@ func Install(m manager.Manager, kind schema.GroupVersionKind, h admission.Handle
 
 	// Create Kubernetes service for listening to requests from API server
 	rawClient := kubernetes.NewForConfigOrDie(m.GetConfig())
-	err = deployWebhookService(ns, name, svcPort, rawClient)
+	err = deployWebhookService(ns, name, servicePort, rawClient)
 	if err != nil {
 		return err
 	}
@@ -36,17 +61,16 @@ func Install(m manager.Manager, kind schema.GroupVersionKind, h admission.Handle
 		return err
 	}
 
-	// Register webhook server
 	hookServer := m.GetWebhookServer()
 	hookServer.CertDir = c.certDir
-	hookServer.Port = svcPort
-	path := generateValidatePath(kind)
-	hookConfigName := fmt.Sprintf("%svalidatingwebhook.%s", kind.Kind, kind.Group)
-	hookServer.Register(path, &webhook.Admission{Handler: h})
+	hookServer.Port = servicePort
 
+	hookConfigName := fmt.Sprintf("spinnakervalidatingwebhook.%s", registrations[0].kind.Group)
+	for _, r := range registrations {
+		hookServer.Register(r.p, &webhook.Admission{Handler: r.h})
+	}
 	// Create validating webhook configuration for registering our webhook with the API server
-	w := getWebhookConfig(hookConfigName, name, ns, path, c, kind)
-	return deployValidatingWebhookConfiguration(hookConfigName, ns, w, rawClient)
+	return deployValidatingWebhookConfiguration(hookConfigName, ns, rawClient, c.signingCert)
 }
 
 func getOperatorNameAndNamespace() (string, string, error) {
@@ -92,39 +116,39 @@ func deployWebhookService(ns string, name string, port int, rawClient *kubernete
 	return util.CreateOrUpdateService(service, rawClient)
 }
 
-func deployValidatingWebhookConfiguration(configName, ns string, webhook v1beta1.Webhook, rawClient *kubernetes.Clientset) error {
+func deployValidatingWebhookConfiguration(configName, ns string, rawClient *kubernetes.Clientset, cert []byte) error {
 	webhookConfig := &v1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configName,
 			Namespace: ns,
 		},
-		Webhooks: []v1beta1.Webhook{webhook},
+		Webhooks: []v1beta1.Webhook{},
+	}
+
+	for _, r := range registrations {
+		w := v1beta1.Webhook{
+			Name: configName,
+			ClientConfig: v1beta1.WebhookClientConfig{
+				Service: &v1beta1.ServiceReference{
+					Namespace: ns,
+					Name:      configName,
+					Path:      &r.p,
+				},
+				CABundle: cert,
+			},
+			Rules: []v1beta1.RuleWithOperations{{
+				Operations: []v1beta1.OperationType{
+					v1beta1.Create,
+					v1beta1.Update,
+				},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{r.kind.Group},
+					APIVersions: []string{r.kind.Version},
+					Resources:   []string{r.kind.Kind}, // should be "spinnakerservices"
+				},
+			}},
+		}
+		webhookConfig.Webhooks = append(webhookConfig.Webhooks, w)
 	}
 	return util.CreateOrUpdateValidatingWebhookConfiguration(webhookConfig, rawClient)
 }
-
-func getWebhookConfig(configName, operatorName, ns, path string, c *certContext, kind schema.GroupVersionKind) v1beta1.Webhook {
-	return v1beta1.Webhook{
-		Name: configName,
-		ClientConfig: v1beta1.WebhookClientConfig{
-			Service: &v1beta1.ServiceReference{
-				Namespace: ns,
-				Name:      operatorName,
-				Path:      &path,
-			},
-			CABundle: c.signingCert,
-		},
-		Rules: []v1beta1.RuleWithOperations{{
-			Operations: []v1beta1.OperationType{
-				v1beta1.Create,
-				v1beta1.Update,
-			},
-			Rule: v1beta1.Rule{
-				APIGroups:   []string{kind.Group},
-				APIVersions: []string{kind.Version},
-				Resources:   []string{kind.Kind}, // should be "spinnakerservices"
-			},
-		}},
-	}
-}
-

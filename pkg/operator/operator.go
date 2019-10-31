@@ -4,7 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/controller"
+	"github.com/armory/spinnaker-operator/pkg/controller/accountvalidating"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakervalidating"
 	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
@@ -123,6 +125,7 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 	// Add admission controller
 	if !disableAdmission {
 		controller.Register(spinnakervalidating.Add)
+		controller.Register(accountvalidating.Add)
 	}
 
 	// Setup all Controllers
@@ -131,8 +134,17 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 		os.Exit(1)
 	}
 
+	if !disableAdmission {
+		log.Info("starting webhook server...")
+		if err := webhook.Start(mgr); err != nil {
+			log.Error(err, "error starting webhook server")
+			os.Exit(1)
+		}
+	}
+
 	gvks := []schema.GroupVersionKind{
 		spinnakerservice.SpinnakerServiceBuilder.New().GetObjectKind().GroupVersionKind(),
+		(&v1alpha2.SpinnakerAccount{}).GroupVersionKind(),
 	}
 
 	// Generates operator specific metrics based on the GVKs.
