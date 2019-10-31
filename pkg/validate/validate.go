@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,10 +27,11 @@ type ValidationResult struct {
 }
 
 type Options struct {
-	Ctx    context.Context
-	Client client.Client
-	Req    admission.Request
-	Log    logr.Logger
+	Ctx     context.Context
+	Client  client.Client
+	Req     admission.Request
+	Log     logr.Logger
+	Halyard *halyard.Service
 }
 
 type Account interface {

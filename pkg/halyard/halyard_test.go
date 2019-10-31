@@ -24,7 +24,7 @@ func makeBasicSpinnakerConfig() *v1alpha2.SpinnakerConfig {
 	}
 }
 
-func TestService_newHalyardRequest(t *testing.T) {
+func TestService_buildGenManifestsRequest(t *testing.T) {
 	type fields struct {
 		url string
 	}
@@ -181,9 +181,9 @@ hello:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				url: tt.fields.url,
+				halyardBaseUrl: tt.fields.url,
 			}
-			got, err := s.newHalyardRequest(tt.args.ctx, tt.args.spinConfig)
+			got, err := s.buildGenManifestsRequest(tt.args.ctx, tt.args.spinConfig)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newHalyardRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
