@@ -18,12 +18,12 @@ import (
 
 // Service is the Halyard implementation of the ManifestGenerator
 type Service struct {
-	halyardBaseUrl string
+	url string
 }
 
 // NewService returns a new Halyard service
 func NewService() *Service {
-	return &Service{halyardBaseUrl: "http://localhost:8064"}
+	return &Service{url: "http://localhost:8064"}
 }
 
 type responseHolder struct {
@@ -112,7 +112,7 @@ func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1al
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v1/config/deployments/manifests", s.halyardBaseUrl), body)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v1/config/deployments/manifests", s.url), body)
 	if err != nil {
 		return req, err
 	}
@@ -139,7 +139,7 @@ func (s *Service) writeDeckProfile(deckProfile interface{}, writer *multipart.Wr
 }
 
 func (s *Service) GetAllVersions(ctx context.Context) ([]string, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v1/versions/?daemon=false", s.halyardBaseUrl), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v1/versions/?daemon=false", s.url), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (s *Service) GetAllVersions(ctx context.Context) ([]string, error) {
 }
 
 func (s *Service) GetBOM(ctx context.Context, version string) (map[string]interface{}, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v1/versions/bom?daemon=false&version=%s", s.halyardBaseUrl, version), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v1/versions/bom?daemon=false&version=%s", s.url, version), nil)
 	if err != nil {
 		return nil, err
 	}

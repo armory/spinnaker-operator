@@ -181,7 +181,7 @@ hello:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				halyardBaseUrl: tt.fields.url,
+				url: tt.fields.url,
 			}
 			got, err := s.buildGenManifestsRequest(tt.args.ctx, tt.args.spinConfig)
 			if (err != nil) != tt.wantErr {

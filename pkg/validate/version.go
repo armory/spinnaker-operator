@@ -26,6 +26,6 @@ func (v *versionValidator) handleBOMError(opts Options, err error) ValidationRes
 	if errAll != nil {
 		return NewResultFromError(err, false)
 	}
-	newErr := fmt.Errorf("%s.\nAvailable versions: [%s]", err.Error(), strings.Join(all, ", "))
+	newErr := fmt.Errorf("%s.\nLatest stable versions: [%s]", err.Error(), strings.Join(all, ", "))
 	return NewResultFromError(newErr, false)
 }
