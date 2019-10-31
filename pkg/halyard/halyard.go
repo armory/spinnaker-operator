@@ -2,6 +2,7 @@ package halyard
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"io"
@@ -22,38 +23,43 @@ type Service struct {
 
 // NewService returns a new Halyard service
 func NewService() *Service {
-	return &Service{url: "http://localhost:8064/v1/config/deployments/manifests"}
+	return &Service{url: "http://localhost:8064"}
+}
+
+type responseHolder struct {
+	Err        error
+	StatusCode int
+	Body       []byte
+}
+
+type halyardErrorResponse struct {
+	ProblemSet struct {
+		Problems []struct {
+			Message string `json:"message"`
+		} `json:"problems"`
+	} `json:"problemSet"`
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
 func (s *Service) Generate(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
-	req, err := s.newHalyardRequest(ctx, spinConfig)
+	req, err := s.buildGenManifestsRequest(ctx, spinConfig)
 	if err != nil {
 		return nil, err
 	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
+	resp := s.executeRequest(req, ctx)
+	if resp.HasError() {
+		return nil, resp.Error()
 	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("got halyard response status %d, response: %s", resp.StatusCode, string(b))
-	}
-	return s.parse(b)
+	return s.parseGenManifestsResponse(resp.Body)
 }
 
-func (s *Service) parse(d []byte) (*generated.SpinnakerGeneratedConfig, error) {
+func (s *Service) parseGenManifestsResponse(d []byte) (*generated.SpinnakerGeneratedConfig, error) {
 	sgc := &generated.SpinnakerGeneratedConfig{}
 	err := yaml.Unmarshal(d, sgc)
 	return sgc, err
 }
 
-func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*http.Request, error) {
+func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	// Add config
@@ -106,7 +112,7 @@ func (s *Service) newHalyardRequest(ctx context.Context, spinConfig *v1alpha2.Sp
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", s.url, body)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v1/config/deployments/manifests", s.url), body)
 	if err != nil {
 		return req, err
 	}
@@ -130,4 +136,83 @@ func (s *Service) writeDeckProfile(deckProfile interface{}, writer *multipart.Wr
 		return err
 	}
 	return nil
+}
+
+func (s *Service) GetAllVersions(ctx context.Context) ([]string, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v1/versions/?daemon=false", s.url), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp := s.executeRequest(req, ctx)
+	if resp.HasError() {
+		return nil, resp.Error()
+	}
+	type versionListResponse struct {
+		Versions []map[string]string `json:"versions"`
+	}
+	parsed := &versionListResponse{}
+	err = json.Unmarshal(resp.Body, parsed)
+	if err != nil {
+		return nil, err
+	}
+	var versionsList []string
+	for _, versionInstance := range parsed.Versions {
+		versionsList = append(versionsList, versionInstance["version"])
+	}
+	return versionsList, nil
+}
+
+func (s *Service) GetBOM(ctx context.Context, version string) (map[string]interface{}, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v1/versions/bom?daemon=false&version=%s", s.url, version), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp := s.executeRequest(req, ctx)
+	if resp.HasError() {
+		return nil, resp.Error()
+	}
+	result := make(map[string]interface{})
+	err = json.Unmarshal(resp.Body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *Service) executeRequest(req *http.Request, ctx context.Context) responseHolder {
+	req = req.WithContext(ctx)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return responseHolder{Err: err}
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return responseHolder{Err: err, StatusCode: resp.StatusCode}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return responseHolder{StatusCode: resp.StatusCode, Body: b}
+	}
+	return responseHolder{Body: b, StatusCode: resp.StatusCode}
+}
+
+func (hr *responseHolder) HasError() bool {
+	return hr.Err != nil || hr.StatusCode < 200 || hr.StatusCode > 299
+}
+
+func (hr *responseHolder) Error() error {
+	if hr.Err != nil {
+		return hr.Err
+	}
+	if hr.StatusCode >= 200 && hr.StatusCode <= 299 {
+		return nil
+	}
+	// try to get a friendly halyard error message from its response
+	resp := &halyardErrorResponse{}
+	err := json.Unmarshal(hr.Body, &resp)
+	if err != nil || len(resp.ProblemSet.Problems) == 0 {
+		return fmt.Errorf("got halyard response status %d, response: %s", hr.StatusCode, string(hr.Body))
+	}
+	return fmt.Errorf(resp.ProblemSet.Problems[0].Message)
 }
