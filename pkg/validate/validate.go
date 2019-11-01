@@ -4,38 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// allValidatorsInSequence is used to register all SpinnakerValidator in the right execution order
-var allValidatorsInSequence []SpinnakerValidator
-
-// accountValidators keeps track of all existing AccountValidator
-var accountValidators []AccountValidator
-
-func init() {
-	accountValidators = []AccountValidator{&kubernetesAccountValidator{}}
-	allValidatorsInSequence = []SpinnakerValidator{
-		&singleNamespaceValidator{},
-		&ParallelValidator{
-			runInParallel: []SpinnakerValidator{
-				&kubernetesAccountValidator{},
-			},
-		},
-	}
+// Validators registered here should be stateless
+var ParallelValidators = []SpinnakerValidator{
+	&versionValidator{},
 }
 
 type SpinnakerValidator interface {
 	Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult
 	// TODO: cancel
-}
-
-type AccountValidator interface {
-	SpinnakerValidator
-	GetType() string
-	ValidateAccount(account Account, options Options) ValidationResult
 }
 
 type ValidationResult struct {
@@ -44,10 +27,11 @@ type ValidationResult struct {
 }
 
 type Options struct {
-	Ctx    context.Context
-	Client client.Client
-	Req    admission.Request
-	Log    logr.Logger
+	Ctx     context.Context
+	Client  client.Client
+	Req     admission.Request
+	Log     logr.Logger
+	Halyard *halyard.Service
 }
 
 type Account interface {
@@ -57,32 +41,26 @@ type Account interface {
 }
 
 func ValidateAll(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
-	var result ValidationResult
-	for _, v := range allValidatorsInSequence {
-		options.Log.Info(fmt.Sprintf("Running validator %T", v))
-		result.Merge(v.Validate(spinSvc, options))
-		if result.HasFatalErrors() {
-			options.Log.Info(fmt.Sprintf("Validator %T detected a fatal error, aborting", v))
-			return result
-		}
+	s := &singleNamespaceValidator{}
+	r := s.Validate(spinSvc, options)
+	if r.Fatal {
+		return r
 	}
-	return result
+	vs, err := generateParallelValidators(spinSvc, options)
+	if err != nil {
+		return NewResultFromError(err, true)
+	}
+	v := ParallelValidator{runInParallel: vs}
+	return v.Validate(spinSvc, options)
 }
 
-func ValidateAccount(account Account, options Options) ValidationResult {
-	var av AccountValidator
-	for _, v := range accountValidators {
-		if v.GetType() == account.GetType() {
-			av = v
-		}
+func generateParallelValidators(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ([]SpinnakerValidator, error) {
+	vs, err := GetAccountValidationsFor(spinSvc, options)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to determine validations to run")
 	}
-	if av == nil {
-		return ValidationResult{
-			Errors: []error{fmt.Errorf("account type %s doesn't have a registered AccountValidator", account.GetType())},
-			Fatal:  true,
-		}
-	}
-	return av.ValidateAccount(account, options)
+	vs = append(vs, ParallelValidators...)
+	return vs, nil
 }
 
 func (r *ValidationResult) Merge(other ValidationResult) {

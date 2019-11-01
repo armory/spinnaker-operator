@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -175,10 +176,11 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		return admission.ValidationResponse(true, "")
 	}
 	opts := validate.Options{
-		Ctx:    ctx,
-		Client: v.client,
-		Req:    req,
-		Log:    log,
+		Ctx:     ctx,
+		Client:  v.client,
+		Req:     req,
+		Log:     log,
+		Halyard: halyard.NewService(),
 	}
 	log.Info("Starting validation")
 	validationResult := validate.ValidateAll(svc, opts)
