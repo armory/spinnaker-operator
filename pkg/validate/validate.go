@@ -27,12 +27,12 @@ type ValidationResult struct {
 }
 
 type Options struct {
-	Ctx                     context.Context
-	Client                  client.Client
-	Req                     admission.Request
-	Log                     logr.Logger
-	Halyard                 *halyard.Service
-	SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
+	Ctx         context.Context
+	Client      client.Client
+	Req         admission.Request
+	Log         logr.Logger
+	Halyard     *halyard.Service
+	SpinBuilder v1alpha2.SpinnakerServiceBuilderInterface
 }
 
 type Account interface {

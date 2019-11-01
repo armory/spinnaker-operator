@@ -12,7 +12,7 @@ type singleNamespaceValidator struct{}
 func (v *singleNamespaceValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, opts Options) ValidationResult {
 	if opts.Req.AdmissionRequest.Operation == v1beta1.Create {
 		// Make sure that'v the only SpinnakerService
-		ss := opts.SpinnakerServiceBuilder.NewList()
+		ss := opts.SpinBuilder.NewList()
 		if err := opts.Client.List(opts.Ctx, ss, client.InNamespace(spinSvc.GetNamespace())); err != nil {
 			return NewResultFromError(err, true)
 		}
