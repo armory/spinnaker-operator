@@ -1,4 +1,4 @@
-package deployer
+package spindeploy
 
 // func TestPatch(t *testing.T) {
 // 	d := Deployer{}

@@ -1,12 +1,12 @@
-package deployer
+package spindeploy
 
 import (
 	"context"
 	"fmt"
 	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	"github.com/armory/spinnaker-operator/pkg/deployer/changedetector"
-	"github.com/armory/spinnaker-operator/pkg/deployer/transformer"
-	"github.com/armory/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/deploy"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,16 +14,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"time"
 )
 
-type manifestGenerator interface {
-	Generate(ctx context.Context, spinConfig *spinnakerv1alpha2.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
-}
-
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
 type Deployer struct {
-	m                       manifestGenerator
+	m                       deploy.ManifestGenerator
 	client                  client.Client
 	transformerGenerators   []transformer.Generator
 	changeDetectorGenerator changedetector.Generator
@@ -32,20 +29,24 @@ type Deployer struct {
 	evtRecorder             record.EventRecorder
 }
 
-// NewDeployer makes a new deployer
-func NewDeployer(m manifestGenerator, c client.Client, r *kubernetes.Clientset, log logr.Logger, evtRecorder record.EventRecorder) *Deployer {
+func NewDeployer(m deploy.ManifestGenerator, mgr manager.Manager, c *kubernetes.Clientset, log logr.Logger) deploy.Deployer {
+	evtRecorder := mgr.GetEventRecorderFor("spinnaker-controller")
 	return &Deployer{
 		m:                       m,
-		client:                  c,
+		client:                  mgr.GetClient(),
 		transformerGenerators:   transformer.Generators,
 		changeDetectorGenerator: &changedetector.CompositeChangeDetectorGenerator{},
-		rawClient:               r,
+		rawClient:               c,
 		evtRecorder:             evtRecorder,
 		log:                     log,
 	}
 }
 
-func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
+func (d *Deployer) GetName() string {
+	return "spindeploy"
+}
+
+func (d *Deployer) isSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
 	if err != nil {
 		return false, err
@@ -57,10 +58,20 @@ func (d *Deployer) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) error {
+func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) (bool, error) {
 	rLogger := d.log.WithValues("Service", svc.GetName())
-	rLogger.Info("Retrieving complete Spinnaker configuration")
 
+	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
+	if err != nil {
+		return false, err
+	}
+	up, err := ch.IsSpinnakerUpToDate(ctx, svc)
+	// Stop processing if up to date or in error
+	if err != nil || up {
+		return !up, err
+	}
+
+	rLogger.Info("Retrieving complete Spinnaker configuration")
 	v, err := svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
@@ -75,31 +86,31 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerSe
 	for _, t := range d.transformerGenerators {
 		tr, err := t.NewTransformer(nSvc, d.client, d.log)
 		if err != nil {
-			return err
+			return true, err
 		}
 		transformers = append(transformers, tr)
 		if err = tr.TransformConfig(ctx); err != nil {
-			return err
+			return true, err
 		}
 	}
 
 	rLogger.Info("Generating manifests with Halyard")
 	l, err := d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
 	if err != nil {
-		return err
+		return true, err
 	}
 
 	rLogger.Info("Applying options to generated manifests")
 	// Traverse transformers in reverse order
 	for i := range transformers {
 		if err = transformers[len(transformers)-i-1].TransformManifests(ctx, scheme, l); err != nil {
-			return err
+			return true, err
 		}
 	}
 
 	rLogger.Info("Saving manifests")
 	if err = d.deployConfig(ctx, scheme, l, rLogger); err != nil {
-		return err
+		return true, err
 	}
 
 	d.evtRecorder.Eventf(nSvc, corev1.EventTypeNormal, "Config", "Spinnaker version %s deployment set", v)
@@ -107,7 +118,8 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerSe
 	st := nSvc.GetStatus()
 	st.Version = v
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
-	return d.commitConfigToStatus(ctx, nSvc)
+	err = d.commitConfigToStatus(ctx, nSvc)
+	return true, err
 }
 
 func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) error {

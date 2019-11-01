@@ -2,10 +2,13 @@ package spinnakerservice
 
 import (
 	"context"
+	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/deploy"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/go-logr/logr"
 
 	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	deploy "github.com/armory/spinnaker-operator/pkg/deployer"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	extv1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,9 +24,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("spinnakerservice")
-
-var SpinnakerServiceBuilder spinnakerv1alpha2.SpinnakerServiceBuilderInterface
+var (
+	log                     = logf.Log.WithName("spinnakerservice")
+	SpinnakerServiceBuilder spinnakerv1alpha2.SpinnakerServiceBuilderInterface
+	DeployerGenerators      = []deployerGenerator{spindeploy.NewDeployer}
+)
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -31,20 +36,20 @@ func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
 
-type deployer interface {
-	IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error)
-	Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) error
-}
+type deployerGenerator func(m deploy.ManifestGenerator, mgr manager.Manager, clientset *kubernetes.Clientset, logger logr.Logger) deploy.Deployer
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	h := halyard.NewService()
 	rawClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-
+	deps := make([]deploy.Deployer, 0)
+	for _, g := range DeployerGenerators {
+		deps = append(deps, g(h, mgr, rawClient, log))
+	}
 	return &ReconcileSpinnakerService{
-		client:   mgr.GetClient(),
-		scheme:   mgr.GetScheme(),
-		deployer: deploy.NewDeployer(h, mgr.GetClient(), rawClient, log, mgr.GetEventRecorderFor("spinnaker-controller")),
+		client:    mgr.GetClient(),
+		scheme:    mgr.GetScheme(),
+		deployers: deps,
 	}
 }
 
@@ -76,9 +81,9 @@ var _ reconcile.Reconciler = &ReconcileSpinnakerService{}
 type ReconcileSpinnakerService struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	deployer deployer
+	client    client.Client
+	scheme    *runtime.Scheme
+	deployers []deploy.Deployer
 }
 
 // Reconcile reads that state of the cluster for a SpinnakerService object and makes changes based on the state read
@@ -106,22 +111,16 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	}
 
 	// Check if we need to redeploy
-	reqLogger.Info("Checking current deployment status")
-	// Check if config has changed
-	upToDate, err := r.deployer.IsSpinnakerUpToDate(ctx, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if !upToDate {
-		reqLogger.Info("Deploying Spinnaker")
-		err := r.deployer.Deploy(ctx, instance, r.scheme)
+	for _, d := range r.deployers {
+		reqLogger.Info(fmt.Sprintf("checking %s deployment", d.GetName()))
+		b, err := d.Deploy(ctx, instance, r.scheme)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		// Watch the config object
-		return reconcile.Result{Requeue: true}, nil
+		if b {
+			return reconcile.Result{Requeue: true}, nil
+		}
 	}
-
 	sc := newStatusChecker(r.client)
 	if err = sc.checks(instance); err != nil {
 		return reconcile.Result{}, err
