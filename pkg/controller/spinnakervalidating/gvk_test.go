@@ -1,6 +1,7 @@
 package spinnakervalidating
 
 import (
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/stretchr/testify/assert"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,6 +10,7 @@ import (
 )
 
 func TestSpinnakerServiceGVK(t *testing.T) {
+	SpinnakerServiceBuilder = &v1alpha2.SpinnakerServiceBuilder{}
 	req := admission.Request{AdmissionRequest: admissionv1beta1.AdmissionRequest{
 		Kind: v1.GroupVersionKind{
 			Version: "v1alpha2",
