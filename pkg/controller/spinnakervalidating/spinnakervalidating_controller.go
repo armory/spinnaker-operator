@@ -54,11 +54,12 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		return admission.ValidationResponse(true, "")
 	}
 	opts := validate.Options{
-		Ctx:     ctx,
-		Client:  v.client,
-		Req:     req,
-		Log:     log,
-		Halyard: halyard.NewService(),
+		Ctx:         ctx,
+		Client:      v.client,
+		Req:         req,
+		Log:         log,
+		Halyard:     halyard.NewService(),
+		SpinBuilder: SpinnakerServiceBuilder,
 	}
 	log.Info("Starting validation")
 	validationResult := validate.ValidateAll(svc, opts)
