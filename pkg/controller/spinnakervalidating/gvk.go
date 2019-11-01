@@ -9,7 +9,7 @@ import (
 )
 
 func isSpinnakerRequest(req admission.Request) bool {
-	gv := v1alpha2.SchemeGroupVersion
+	gv := SpinnakerServiceBuilder.GetGroupVersion()
 	return "SpinnakerService" == req.AdmissionRequest.Kind.Kind &&
 		gv.Group == req.AdmissionRequest.Kind.Group &&
 		gv.Version == req.AdmissionRequest.Kind.Version
