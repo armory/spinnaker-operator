@@ -81,7 +81,7 @@ func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountTy
 }
 
 func (a *accountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
-	err := a.v.Validate(spinSvc, options.Client, options.Ctx)
+	err := a.v.Validate(spinSvc, options.Client, options.Ctx, options.Log)
 	if err != nil {
 		return NewResultFromError(err, true)
 	}

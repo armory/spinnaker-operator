@@ -3,8 +3,11 @@ package accountvalidating
 import (
 	"context"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	webhook "github.com/armory/spinnaker-operator/pkg/controller/webhook"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -22,7 +25,7 @@ type accountValidatingController struct {
 
 // Implement admission.Handler so the controller can handle admission request.
 var _ admission.Handler = &accountValidatingController{}
-var log = logf.Log.WithName("acctvalidate")
+var log = logf.Log.WithName("accountvalidate")
 
 // Add adds the validating admission controller
 func Add(m manager.Manager) error {
@@ -37,6 +40,33 @@ func Add(m manager.Manager) error {
 // Handle is the entry point for spinnaker preflight validations
 func (v *accountValidatingController) Handle(ctx context.Context, req admission.Request) admission.Response {
 	log.Info(fmt.Sprintf("Handling admission request for: %s", req.AdmissionRequest.Kind.Kind))
+	gv := v1alpha2.SchemeGroupVersion
+	acc := &v1alpha2.SpinnakerAccount{}
+
+	if "SpinnakerAccount" == req.AdmissionRequest.Kind.Kind &&
+		gv.Group == req.AdmissionRequest.Kind.Group &&
+		gv.Version == req.AdmissionRequest.Kind.Version {
+
+		if err := v.decoder.Decode(req, acc); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		accType, err := accounts.GetType(acc.Spec.Type)
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		spinAccount, err := accType.FromCRD(acc)
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		av := spinAccount.NewValidator()
+		ctx = secrets.NewContext(ctx)
+		if err := av.Validate(nil, v.client, ctx, log); err != nil {
+			return admission.Errored(http.StatusUnprocessableEntity, err)
+		}
+	}
 	return admission.ValidationResponse(true, "")
 }
 

@@ -3,12 +3,34 @@ package secrets
 import (
 	"context"
 	"github.com/armory/go-yaml-tools/pkg/secrets"
+	"io/ioutil"
+	"os"
 	"strings"
 )
 
 // Decode decodes a potential value into a secret
 func Decode(ctx context.Context, val string) (string, error) {
 	return decode(decryptFunc, ctx, val)
+}
+
+func DecodeAsFile(ctx context.Context, val string) (string, error) {
+	if !isSecretEncrypted(val) {
+		// Check the file exists
+		_, err := os.Stat(val)
+		return val, err
+	}
+	c, err := decode(decryptFunc, ctx, val)
+	if err != nil {
+		return "", err
+	}
+	f, err := ioutil.TempFile("", "operator-")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	f.Write([]byte(c))
+	return f.Name(), nil
 }
 
 type decrypter func(val string) (string, error)
