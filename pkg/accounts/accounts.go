@@ -7,6 +7,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 var Types = map[v1alpha2.AccountType]account.SpinnakerAccountType{}
@@ -25,7 +26,11 @@ func GetType(tp v1alpha2.AccountType) (account.SpinnakerAccountType, error) {
 	if t, ok := Types[tp]; ok {
 		return t, nil
 	}
-	return nil, fmt.Errorf("no account of type %s registered", tp)
+	tps := make([]string, 0)
+	for _, t := range Types {
+		tps = append(tps, string(t.GetType()))
+	}
+	return nil, fmt.Errorf("account type %s not recognized, valid types are %s", tp, strings.Join(tps, ", "))
 }
 
 func AllValidCRDAccounts(c client.Client, ns string) ([]account.Account, error) {
