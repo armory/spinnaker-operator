@@ -2,13 +2,13 @@ package spinnakeraccount
 
 import (
 	"context"
-
 	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -48,6 +48,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to primary resource SpinnakerService
 	err = c.Watch(&source.Kind{Type: &v1alpha2.SpinnakerAccount{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
+		// Ignore no kind match
+		if _, ok := err.(*meta.NoKindMatchError); ok {
+			log.Info("operator starting without support for SpinnakerAccount")
+			return nil
+		}
 		return err
 	}
 	return nil

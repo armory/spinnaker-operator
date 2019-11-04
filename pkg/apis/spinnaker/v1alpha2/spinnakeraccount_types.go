@@ -24,13 +24,6 @@ const (
 
 type AccountPermissions map[Authorization][]string
 
-type SpinnakerAccountInterface interface {
-	GetAuth() map[string]interface{}
-	GetEnv() map[string]interface{}
-	GetSettings() map[string]interface{}
-	GetPermissions() *AccountPermissions
-}
-
 // SpinnakerAccountSpec defines the desired state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountSpec struct {
