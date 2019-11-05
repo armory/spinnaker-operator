@@ -149,28 +149,26 @@ type SpinnakerServiceList struct {
 	Items           []SpinnakerService `json:"items"`
 }
 
-// ValidationSetting is the definition of the validation for a given setting
-type ValidationSetting struct {
-	Enabled          bool  `json:"enabled"`
-	FrequencySeconds int64 `json:"frequencySeconds"`
-	FailOnError      bool  `json:"failOnError"`
-}
-
 // SpinnakerValidation defines validation settings for the deployment
 type SpinnakerValidation struct {
-	ValidationSetting *ValidationSetting      `json:"validationSetting"`
-	FailFast          bool                    `json:"failFast"`
-	Providers         []ValidationSettingList `json:"providers"`
-	PersistentStoage  *ValidationSetting      `json:"persistentStorage"`
-	MetricStores      *ValidationSetting      `json:"metricStores"`
-	Notifications     *ValidationSetting      `json:"notifications"`
-	CI                []ValidationSettingList `json:"ci"`
+	// Enable or disable validation, defaults to false
+	Enabled bool `json:"enabled"`
+	// Report errors but do not fail validation, defaults to true
+	FailOnError bool `json:"failOnError"`
+	// Fail validation on the first failed validation, defaults to false
+	// +optional
+	FailFast bool `json:"failFast"`
+
+	Providers         map[string]ValidationSetting `json:"providers"`
+	PersistentStorage map[string]ValidationSetting `json:"persistentStorage"`
+	MetricStores      map[string]ValidationSetting `json:"metricStores"`
+	Notifications     map[string]ValidationSetting `json:"notifications"`
+	CI                map[string]ValidationSetting `json:"ci"`
 }
 
-// ValidationSettingList is a map of ValidationSettings and a top level validation setting
-type ValidationSettingList struct {
-	ValidationSetting *ValidationSetting           `json:"validationSetting,omitempty"`
-	Items             map[string]ValidationSetting `json:"items"`
+type ValidationSetting struct {
+	// Number of seconds between each validation
+	FrequencySeconds int64 `json:"frequencySeconds"`
 }
 
 func init() {

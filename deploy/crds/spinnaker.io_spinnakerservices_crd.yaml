@@ -182,165 +182,78 @@ spec:
           description: SpinnakerValidation defines validation settings for the deployment
           properties:
             ci:
-              items:
-                description: ValidationSettingList is a map of ValidationSettings
-                  and a top level validation setting
+              additionalProperties:
                 properties:
-                  items:
-                    additionalProperties:
-                      description: ValidationSetting is the definition of the validation
-                        for a given setting
-                      properties:
-                        enabled:
-                          type: boolean
-                        failOnError:
-                          type: boolean
-                        frequencySeconds:
-                          format: int64
-                          type: integer
-                      required:
-                      - enabled
-                      - failOnError
-                      - frequencySeconds
-                      type: object
-                    type: object
-                  validationSetting:
-                    description: ValidationSetting is the definition of the validation
-                      for a given setting
-                    properties:
-                      enabled:
-                        type: boolean
-                      failOnError:
-                        type: boolean
-                      frequencySeconds:
-                        format: int64
-                        type: integer
-                    required:
-                    - enabled
-                    - failOnError
-                    - frequencySeconds
-                    type: object
+                  frequencySeconds:
+                    description: Number of seconds between each validation
+                    format: int64
+                    type: integer
                 required:
-                - items
+                - frequencySeconds
                 type: object
-              type: array
+              type: object
+            enabled:
+              description: Enable or disable validation, defaults to false
+              type: boolean
             failFast:
+              description: Fail validation on the first failed validation, defaults
+                to false
+              type: boolean
+            failOnError:
+              description: Report errors but do not fail validation, defaults to true
               type: boolean
             metricStores:
-              description: ValidationSetting is the definition of the validation for
-                a given setting
-              properties:
-                enabled:
-                  type: boolean
-                failOnError:
-                  type: boolean
-                frequencySeconds:
-                  format: int64
-                  type: integer
-              required:
-              - enabled
-              - failOnError
-              - frequencySeconds
+              additionalProperties:
+                properties:
+                  frequencySeconds:
+                    description: Number of seconds between each validation
+                    format: int64
+                    type: integer
+                required:
+                - frequencySeconds
+                type: object
               type: object
             notifications:
-              description: ValidationSetting is the definition of the validation for
-                a given setting
-              properties:
-                enabled:
-                  type: boolean
-                failOnError:
-                  type: boolean
-                frequencySeconds:
-                  format: int64
-                  type: integer
-              required:
-              - enabled
-              - failOnError
-              - frequencySeconds
+              additionalProperties:
+                properties:
+                  frequencySeconds:
+                    description: Number of seconds between each validation
+                    format: int64
+                    type: integer
+                required:
+                - frequencySeconds
+                type: object
               type: object
             persistentStorage:
-              description: ValidationSetting is the definition of the validation for
-                a given setting
-              properties:
-                enabled:
-                  type: boolean
-                failOnError:
-                  type: boolean
-                frequencySeconds:
-                  format: int64
-                  type: integer
-              required:
-              - enabled
-              - failOnError
-              - frequencySeconds
+              additionalProperties:
+                properties:
+                  frequencySeconds:
+                    description: Number of seconds between each validation
+                    format: int64
+                    type: integer
+                required:
+                - frequencySeconds
+                type: object
               type: object
             providers:
-              items:
-                description: ValidationSettingList is a map of ValidationSettings
-                  and a top level validation setting
+              additionalProperties:
                 properties:
-                  items:
-                    additionalProperties:
-                      description: ValidationSetting is the definition of the validation
-                        for a given setting
-                      properties:
-                        enabled:
-                          type: boolean
-                        failOnError:
-                          type: boolean
-                        frequencySeconds:
-                          format: int64
-                          type: integer
-                      required:
-                      - enabled
-                      - failOnError
-                      - frequencySeconds
-                      type: object
-                    type: object
-                  validationSetting:
-                    description: ValidationSetting is the definition of the validation
-                      for a given setting
-                    properties:
-                      enabled:
-                        type: boolean
-                      failOnError:
-                        type: boolean
-                      frequencySeconds:
-                        format: int64
-                        type: integer
-                    required:
-                    - enabled
-                    - failOnError
-                    - frequencySeconds
-                    type: object
+                  frequencySeconds:
+                    description: Number of seconds between each validation
+                    format: int64
+                    type: integer
                 required:
-                - items
+                - frequencySeconds
                 type: object
-              type: array
-            validationSetting:
-              description: ValidationSetting is the definition of the validation for
-                a given setting
-              properties:
-                enabled:
-                  type: boolean
-                failOnError:
-                  type: boolean
-                frequencySeconds:
-                  format: int64
-                  type: integer
-              required:
-              - enabled
-              - failOnError
-              - frequencySeconds
               type: object
           required:
           - ci
-          - failFast
+          - enabled
+          - failOnError
           - metricStores
           - notifications
           - persistentStorage
           - providers
-          - validationSetting
           type: object
       type: object
   version: v1alpha2
