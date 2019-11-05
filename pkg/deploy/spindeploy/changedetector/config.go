@@ -7,6 +7,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const SpinnakerConfigHashKey = "Config"
+
 type configChangeDetector struct {
 	client client.Client
 	log    logr.Logger
@@ -25,7 +27,15 @@ func (ch *configChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc
 	if err != nil {
 		return false, err
 	}
-	eh := spinSvc.GetStatus().LastConfigHash
-	spinSvc.GetStatus().LastConfigHash = h
+	st := spinSvc.GetStatus()
+	eh := ""
+	if st.LastDeployedHashes == nil {
+		st.LastDeployedHashes = map[string]string{
+			SpinnakerConfigHashKey: h,
+		}
+	} else {
+		eh = st.LastDeployedHashes[SpinnakerConfigHashKey]
+		st.LastDeployedHashes[SpinnakerConfigHashKey] = h
+	}
 	return h == eh, nil
 }

@@ -402,6 +402,13 @@ func (in *SpinnakerServiceSpec) DeepCopy() *SpinnakerServiceSpec {
 func (in *SpinnakerServiceStatus) DeepCopyInto(out *SpinnakerServiceStatus) {
 	*out = *in
 	in.LastConfigurationTime.DeepCopyInto(&out.LastConfigurationTime)
+	if in.LastDeployedHashes != nil {
+		in, out := &in.LastDeployedHashes, &out.LastDeployedHashes
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Services != nil {
 		in, out := &in.Services, &out.Services
 		*out = make([]SpinnakerDeploymentStatus, len(*in))

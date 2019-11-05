@@ -99,9 +99,9 @@ type SpinnakerServiceStatus struct {
 	// Last time the configuration was updated
 	// +optional
 	LastConfigurationTime metav1.Time `json:"lastConfigurationTime,omitempty"`
-	// Last deployed hash
+	// Last deployed hashes
 	// +optional
-	LastConfigHash string `json:"lastConfigHash,omitempty"`
+	LastDeployedHashes map[string]string `json:"lastDeployedHashes,omitempty"`
 	// Services deployment information
 	// +optional
 	// +listType=map
