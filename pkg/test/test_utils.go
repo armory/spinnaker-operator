@@ -5,7 +5,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"io/ioutil"
-	"k8s.io/api/apps/v1beta2"
+	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -52,7 +52,7 @@ func AddDeploymentToGenConfig(gen *generated.SpinnakerGeneratedConfig, depName s
 	if gen.Config == nil {
 		gen.Config = make(map[string]generated.ServiceConfig)
 	}
-	dep := &v1beta2.Deployment{}
+	dep := &v1.Deployment{}
 	ReadYamlFile(fileName, dep, t)
 	gen.Config[depName] = generated.ServiceConfig{
 		Deployment: dep,

@@ -29,7 +29,7 @@ func FindDeployment(c client.Client, spinsvc v1alpha2.SpinnakerServiceInterface,
 }
 
 func FindSecretInDeployment(c client.Client, dep *v12.Deployment, containerName, path string) (*v1.Secret, error) {
-	name := getMountedSecretNameInDeployment(dep, containerName, path)
+	name := GetMountedSecretNameInDeployment(dep, containerName, path)
 	if name != "" {
 		sec := &v1.Secret{}
 		err := c.Get(context.TODO(), client.ObjectKey{Namespace: dep.Namespace, Name: name}, sec)
@@ -38,7 +38,7 @@ func FindSecretInDeployment(c client.Client, dep *v12.Deployment, containerName,
 	return nil, fmt.Errorf("unable to find secret at path %s in container %s in deployment %s", path, containerName, dep.Name)
 }
 
-func getMountedSecretNameInDeployment(dep *v12.Deployment, containerName, path string) string {
+func GetMountedSecretNameInDeployment(dep *v12.Deployment, containerName, path string) string {
 	for _, c := range dep.Spec.Template.Spec.Containers {
 		if c.Name != containerName {
 			continue

@@ -5,7 +5,7 @@ import (
 	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
-	v1beta1 "k8s.io/api/apps/v1beta2"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,7 +16,8 @@ var Generators []Generator
 
 func init() {
 	Generators = append(Generators, &ownerTransformerGenerator{}, &targetTransformerGenerator{},
-		&exposeLbTransformerGenerator{}, &serverPortTransformerGenerator{}, &x509TransformerGenerator{})
+		&exposeLbTransformerGenerator{}, &serverPortTransformerGenerator{}, &x509TransformerGenerator{},
+		&accountsTransformerGenerator{})
 }
 
 // Transformer affects how Spinnaker is deployed.
@@ -30,7 +31,7 @@ type Transformer interface {
 // baseTransformer extends Transformer adding convenience methods.
 type baseTransformer interface {
 	transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error
-	transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1beta1.Deployment) error
+	transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1.Deployment) error
 }
 
 // Generator generates transformers for the given SpinnakerService
@@ -68,6 +69,6 @@ func (t *DefaultTransformer) transformServiceManifest(ctx context.Context, svcNa
 	return nil
 }
 
-func (t *DefaultTransformer) transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1beta1.Deployment) error {
+func (t *DefaultTransformer) transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1.Deployment) error {
 	return nil
 }

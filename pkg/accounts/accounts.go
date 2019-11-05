@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+const (
+	SpringProfile = "accounts"
+)
+
 var Types = map[v1alpha2.AccountType]account.SpinnakerAccountType{}
 
 func Register(accountTypes ...account.SpinnakerAccountType) {
@@ -71,4 +75,20 @@ func FromSpinnakerConfigSlice(accountType account.SpinnakerAccountType, settings
 		}
 	}
 	return ar, nil
+}
+
+// GetAllServicesWithAccounts returns all services potentially using accounts defined via CRDs
+func GetAllServicesWithAccounts() []string {
+	// Enable "accounts" profile on all services that have potential accounts
+	m := make(map[string]bool, 0)
+	for _, t := range Types {
+		for _, s := range t.GetServices() {
+			m[s] = true
+		}
+	}
+	svcs := make([]string, 0)
+	for k := range m {
+		svcs = append(svcs, k)
+	}
+	return svcs
 }
