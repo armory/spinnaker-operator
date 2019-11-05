@@ -124,8 +124,7 @@ spec:
                   type: object
               type: object
             validation:
-              description: SpinnakerValidation defines validation settings for the
-                deployment
+              description: validation settings for the deployment
               properties:
                 ci:
                   additionalProperties:
@@ -239,13 +238,15 @@ spec:
             apiUrl:
               description: Exposed Gate URL
               type: string
-            lastConfigHash:
-              description: Last deployed hash
-              type: string
             lastConfigurationTime:
               description: Last time the configuration was updated
               format: date-time
               type: string
+            lastDeployedHashes:
+              additionalProperties:
+                type: string
+              description: Last deployed hashes
+              type: object
             serviceCount:
               description: Number of services in Spinnaker
               type: integer
