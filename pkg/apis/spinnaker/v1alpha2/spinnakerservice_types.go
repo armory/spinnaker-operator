@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -12,8 +13,12 @@ import (
 // +k8s:openapi-gen=true
 type SpinnakerServiceSpec struct {
 	SpinnakerConfig SpinnakerConfig `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
-	Expose          ExposeConfig    `json:"expose,omitempty"`
-	Accounts        AccountConfig   `json:"accounts,omitempty"`
+	// +optional
+	Validation SpinnakerValidation `json:"validation,omitempty"`
+	// +optional
+	Expose ExposeConfig `json:"expose,omitempty"`
+	// +optional
+	Accounts AccountConfig `json:"accounts,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -135,9 +140,8 @@ type SpinnakerService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec       SpinnakerServiceSpec   `json:"spec,omitempty"`
-	Status     SpinnakerServiceStatus `json:"status,omitempty"`
-	Validation SpinnakerValidation    `json:"validation,omitempty"`
+	Spec   SpinnakerServiceSpec   `json:"spec,omitempty"`
+	Status SpinnakerServiceStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -149,26 +153,34 @@ type SpinnakerServiceList struct {
 	Items           []SpinnakerService `json:"items"`
 }
 
-// SpinnakerValidation defines validation settings for the deployment
+// validation settings for the deployment
 type SpinnakerValidation struct {
-	// Enable or disable validation, defaults to false
-	Enabled bool `json:"enabled"`
-	// Report errors but do not fail validation, defaults to true
-	FailOnError bool `json:"failOnError"`
+	*ValidationSetting
 	// Fail validation on the first failed validation, defaults to false
 	// +optional
 	FailFast bool `json:"failFast"`
 
-	Providers         map[string]ValidationSetting `json:"providers"`
-	PersistentStorage map[string]ValidationSetting `json:"persistentStorage"`
-	MetricStores      map[string]ValidationSetting `json:"metricStores"`
-	Notifications     map[string]ValidationSetting `json:"notifications"`
-	CI                map[string]ValidationSetting `json:"ci"`
+	// +optional
+	Providers map[string]ValidationSetting `json:"providers,omitempty"`
+	// +optional
+	PersistentStorage map[string]ValidationSetting `json:"persistentStorage,omitempty"`
+	// +optional
+	MetricStores map[string]ValidationSetting `json:"metricStores,omitempty"`
+	// +optional
+	Notifications map[string]ValidationSetting `json:"notifications,omitempty"`
+	// +optional
+	CI map[string]ValidationSetting `json:"ci,omitempty"`
 }
 
 type ValidationSetting struct {
+	// Enable or disable validation, defaults to false
+	Enabled bool `json:"enabled"`
+	// Report errors but do not fail validation, defaults to true
+	// +optional
+	FailOnError *bool `json:"failOnError,omitempty"`
 	// Number of seconds between each validation
-	FrequencySeconds int64 `json:"frequencySeconds"`
+	// +optional
+	FrequencySeconds intstr.IntOrString `json:"frequencySeconds,omitempty"`
 }
 
 func init() {

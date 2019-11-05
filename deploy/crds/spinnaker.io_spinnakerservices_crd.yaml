@@ -123,6 +123,110 @@ spec:
                   description: Parsed service settings - comments are stripped
                   type: object
               type: object
+            validation:
+              description: SpinnakerValidation defines validation settings for the
+                deployment
+              properties:
+                ci:
+                  additionalProperties:
+                    properties:
+                      enabled:
+                        description: Enable or disable validation, defaults to false
+                        type: boolean
+                      failOnError:
+                        description: Report errors but do not fail validation, defaults
+                          to true
+                        type: boolean
+                      frequencySeconds:
+                        anyOf:
+                        - type: string
+                        - type: integer
+                        description: Number of seconds between each validation
+                    required:
+                    - enabled
+                    type: object
+                  type: object
+                failFast:
+                  description: Fail validation on the first failed validation, defaults
+                    to false
+                  type: boolean
+                metricStores:
+                  additionalProperties:
+                    properties:
+                      enabled:
+                        description: Enable or disable validation, defaults to false
+                        type: boolean
+                      failOnError:
+                        description: Report errors but do not fail validation, defaults
+                          to true
+                        type: boolean
+                      frequencySeconds:
+                        anyOf:
+                        - type: string
+                        - type: integer
+                        description: Number of seconds between each validation
+                    required:
+                    - enabled
+                    type: object
+                  type: object
+                notifications:
+                  additionalProperties:
+                    properties:
+                      enabled:
+                        description: Enable or disable validation, defaults to false
+                        type: boolean
+                      failOnError:
+                        description: Report errors but do not fail validation, defaults
+                          to true
+                        type: boolean
+                      frequencySeconds:
+                        anyOf:
+                        - type: string
+                        - type: integer
+                        description: Number of seconds between each validation
+                    required:
+                    - enabled
+                    type: object
+                  type: object
+                persistentStorage:
+                  additionalProperties:
+                    properties:
+                      enabled:
+                        description: Enable or disable validation, defaults to false
+                        type: boolean
+                      failOnError:
+                        description: Report errors but do not fail validation, defaults
+                          to true
+                        type: boolean
+                      frequencySeconds:
+                        anyOf:
+                        - type: string
+                        - type: integer
+                        description: Number of seconds between each validation
+                    required:
+                    - enabled
+                    type: object
+                  type: object
+                providers:
+                  additionalProperties:
+                    properties:
+                      enabled:
+                        description: Enable or disable validation, defaults to false
+                        type: boolean
+                      failOnError:
+                        description: Report errors but do not fail validation, defaults
+                          to true
+                        type: boolean
+                      frequencySeconds:
+                        anyOf:
+                        - type: string
+                        - type: integer
+                        description: Number of seconds between each validation
+                    required:
+                    - enabled
+                    type: object
+                  type: object
+              type: object
           required:
           - spinnakerConfig
           type: object
@@ -179,83 +283,6 @@ spec:
             version:
               description: Current deployed version of Spinnaker
               type: string
-          type: object
-        validation:
-          description: SpinnakerValidation defines validation settings for the deployment
-          properties:
-            ci:
-              additionalProperties:
-                properties:
-                  frequencySeconds:
-                    description: Number of seconds between each validation
-                    format: int64
-                    type: integer
-                required:
-                - frequencySeconds
-                type: object
-              type: object
-            enabled:
-              description: Enable or disable validation, defaults to false
-              type: boolean
-            failFast:
-              description: Fail validation on the first failed validation, defaults
-                to false
-              type: boolean
-            failOnError:
-              description: Report errors but do not fail validation, defaults to true
-              type: boolean
-            metricStores:
-              additionalProperties:
-                properties:
-                  frequencySeconds:
-                    description: Number of seconds between each validation
-                    format: int64
-                    type: integer
-                required:
-                - frequencySeconds
-                type: object
-              type: object
-            notifications:
-              additionalProperties:
-                properties:
-                  frequencySeconds:
-                    description: Number of seconds between each validation
-                    format: int64
-                    type: integer
-                required:
-                - frequencySeconds
-                type: object
-              type: object
-            persistentStorage:
-              additionalProperties:
-                properties:
-                  frequencySeconds:
-                    description: Number of seconds between each validation
-                    format: int64
-                    type: integer
-                required:
-                - frequencySeconds
-                type: object
-              type: object
-            providers:
-              additionalProperties:
-                properties:
-                  frequencySeconds:
-                    description: Number of seconds between each validation
-                    format: int64
-                    type: integer
-                required:
-                - frequencySeconds
-                type: object
-              type: object
-          required:
-          - ci
-          - enabled
-          - failOnError
-          - metricStores
-          - notifications
-          - persistentStorage
-          - providers
           type: object
       type: object
   version: v1alpha2

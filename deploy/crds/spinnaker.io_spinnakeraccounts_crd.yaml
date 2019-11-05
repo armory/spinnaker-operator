@@ -31,27 +31,41 @@ spec:
         spec:
           description: SpinnakerAccountSpec defines the desired state of SpinnakerAccount
           properties:
+            auth: {}
             enabled:
-              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                Important: Run "operator-sdk generate k8s" to regenerate code after
-                modifying this file Add custom validation using kubebuilder tags:
-                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
               type: boolean
+            env: {}
             permissions:
               additionalProperties:
                 items:
                   type: string
                 type: array
               type: object
+            settings: {}
             type:
               type: string
-            validate:
-              type: boolean
+            validation:
+              properties:
+                enabled:
+                  description: Enable or disable validation, defaults to false
+                  type: boolean
+                failOnError:
+                  description: Report errors but do not fail validation, defaults
+                    to true
+                  type: boolean
+                frequencySeconds:
+                  anyOf:
+                  - type: string
+                  - type: integer
+                  description: Number of seconds between each validation
+              required:
+              - enabled
+              type: object
           required:
           - enabled
           - permissions
           - type
-          - validate
+          - validation
           type: object
         status:
           description: SpinnakerAccountStatus defines the observed state of SpinnakerAccount
@@ -81,10 +95,6 @@ spec:
               - seconds
               type: object
             valid:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "operator-sdk generate k8s" to regenerate
-                code after modifying this file Add custom validation using kubebuilder
-                tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
               type: boolean
           required:
           - invalidReason
