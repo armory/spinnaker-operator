@@ -1,81 +1,53 @@
 package util
 
 import (
-	"github.com/magiconair/properties/assert"
+	"github.com/ghodss/yaml"
+	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"testing"
 )
 
 func TestGetMountedSecretNameInDeployment(t *testing.T) {
-	d := &v1.Deployment{
-		Spec: v1.DeploymentSpec{
-			Replicas: nil,
-			Selector: nil,
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{
-						{
-							Name: "test1",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: "val1",
-									Items:      nil,
-								},
-							},
-						},
-						{
-							Name: "test2",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: "val2",
-									Items:      nil,
-								},
-							},
-						},
-						{
-							Name: "test3",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: "val3",
-									Items:      nil,
-								},
-							},
-						},
-					},
-					Containers: []corev1.Container{
-						{
-							Name: "monitoring",
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "test1",
-									MountPath: "/opt/spinnaker/config",
-								},
-								{
-									Name:      "test2",
-									MountPath: "/opt/monitoring",
-								},
-							},
-						},
-						{
-							Name: "clouddriver",
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "test3",
-									MountPath: "/opt/spinnaker/config",
-								},
-								{
-									Name:      "test1",
-									MountPath: "/opt/monitoring",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	s := `
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  selector: null
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - name: monitoring
+        resources: {}
+        volumeMounts:
+        - mountPath: /opt/spinnaker/config
+          name: test1
+        - mountPath: /opt/monitoring
+          name: test2
+      - name: clouddriver
+        resources: {}
+        volumeMounts:
+        - mountPath: /opt/spinnaker/config
+          name: test3
+        - mountPath: /opt/monitoring
+          name: test1
+      volumes:
+      - name: test1
+        secret:
+          secretName: val1
+      - name: test2
+        secret:
+          secretName: val2
+      - name: test3
+        secret:
+          secretName: val3
+status: {}`
 
-	v := GetMountedSecretNameInDeployment(d, "clouddriver", "/opt/spinnaker/config")
-	assert.Equal(t, "val3", v)
+	d := &v1.Deployment{}
+	if assert.Nil(t, yaml.Unmarshal([]byte(s), d)) {
+		v := GetMountedSecretNameInDeployment(d, "clouddriver", "/opt/spinnaker/config")
+		assert.Equal(t, "val3", v)
+	}
 }
