@@ -205,10 +205,9 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 							Format: "",
 						},
 					},
-					"validate": {
+					"validation": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.ValidationSetting"),
 						},
 					},
 					"permissions": {
@@ -246,7 +245,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 							},
 						},
 					},
-					"Env": {
+					"env": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
@@ -275,9 +274,11 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"enabled", "type", "validate", "permissions", "auth", "Env", "settings"},
+				Required: []string{"enabled", "type", "validation", "permissions"},
 			},
 		},
+		Dependencies: []string{
+			"./pkg/apis/spinnaker/v1alpha2.ValidationSetting"},
 	}
 }
 
@@ -370,6 +371,11 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref common.Referenc
 							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerConfig"),
 						},
 					},
+					"validation": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"),
+						},
+					},
 					"expose": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("./pkg/apis/spinnaker/v1alpha2.ExposeConfig"),
@@ -385,7 +391,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha2.AccountConfig", "./pkg/apis/spinnaker/v1alpha2.ExposeConfig", "./pkg/apis/spinnaker/v1alpha2.SpinnakerConfig"},
+			"./pkg/apis/spinnaker/v1alpha2.AccountConfig", "./pkg/apis/spinnaker/v1alpha2.ExposeConfig", "./pkg/apis/spinnaker/v1alpha2.SpinnakerConfig", "./pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"},
 	}
 }
 

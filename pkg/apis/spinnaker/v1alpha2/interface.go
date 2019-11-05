@@ -14,6 +14,7 @@ type SpinnakerServiceInterface interface {
 	GetSpinnakerConfig() *SpinnakerConfig
 	DeepCopyInterface() SpinnakerServiceInterface
 	GetAccountsConfig() AccountConfig
+	GetValidation() SpinnakerValidation
 }
 
 type SpinnakerServiceListInterface interface {
@@ -41,6 +42,10 @@ func (s *SpinnakerService) GetStatus() *SpinnakerServiceStatus {
 
 func (s *SpinnakerService) GetSpinnakerConfig() *SpinnakerConfig {
 	return &s.Spec.SpinnakerConfig
+}
+
+func (s *SpinnakerService) GetValidation() SpinnakerValidation {
+	return s.Spec.Validation
 }
 
 func (s *SpinnakerServiceList) GetItems() []SpinnakerServiceInterface {

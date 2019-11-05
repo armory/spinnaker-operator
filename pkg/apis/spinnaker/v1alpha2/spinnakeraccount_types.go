@@ -27,14 +27,13 @@ type AccountPermissions map[Authorization][]string
 // SpinnakerAccountSpec defines the desired state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountSpec struct {
-	Enabled bool        `json:"enabled"`
-	Type    AccountType `json:"type"`
-	// TODO: Add ValidationSettings here
-	Validate    bool               `json:"validate"`
+	Enabled     bool               `json:"enabled"`
+	Type        AccountType        `json:"type"`
+	Validation  ValidationSetting  `json:"validation"`
 	Permissions AccountPermissions `json:"permissions"`
-	Auth        FreeForm           `json:"auth,omitEmpty"`
-	Env         FreeForm           `json:"env,omitEmpty'`
-	Settings    FreeForm           `json:"settings,omitEmpty"`
+	Auth        FreeForm           `json:"auth,omitempty"`
+	Env         FreeForm           `json:"env,omitempty"`
+	Settings    FreeForm           `json:"settings,omitempty"`
 }
 
 // SpinnakerAccountStatus defines the observed state of SpinnakerAccount
