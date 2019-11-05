@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,5 +33,5 @@ type Account interface {
 }
 
 type AccountValidator interface {
-	Validate(v1alpha2.SpinnakerServiceInterface, client.Client, context.Context) error
+	Validate(v1alpha2.SpinnakerServiceInterface, client.Client, context.Context, logr.Logger) error
 }

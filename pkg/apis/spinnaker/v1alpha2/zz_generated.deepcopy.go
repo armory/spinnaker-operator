@@ -256,7 +256,13 @@ func (in *SpinnakerConfig) DeepCopyInto(out *SpinnakerConfig) {
 			(*out)[key] = val
 		}
 	}
-	in.ServiceSettings.DeepCopyInto(&out.ServiceSettings)
+	if in.ServiceSettings != nil {
+		in, out := &in.ServiceSettings, &out.ServiceSettings
+		*out = make(map[string]FreeForm, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
 	if in.Profiles != nil {
 		in, out := &in.Profiles, &out.Profiles
 		*out = make(map[string]FreeForm, len(*in))

@@ -4,9 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/controller"
+	"github.com/armory/spinnaker-operator/pkg/controller/accountvalidating"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakervalidating"
+	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -22,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -60,7 +64,7 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 	}
 	defaultCertsDir := filepath.Join(home, "spinnaker-operator-certs")
 	fs.BoolVar(&disableAdmission, "disable-admission-controller", false, "Set to disable admission controller")
-	fs.StringVar(&spinnakervalidating.CertsDir, "certs-dir", defaultCertsDir, "Directory where tls.crt, tls.key and ca.crt files are found. Default: $HOME/spinnaker-operator-certs")
+	fs.StringVar(&webhook.CertsDir, "certs-dir", defaultCertsDir, "Directory where tls.crt, tls.key and ca.crt files are found. Default: $HOME/spinnaker-operator-certs")
 	pflag.CommandLine.AddGoFlagSet(&fs)
 
 	pflag.Parse()
@@ -122,6 +126,7 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 	// Add admission controller
 	if !disableAdmission {
 		controller.Register(spinnakervalidating.Add)
+		controller.Register(accountvalidating.Add)
 	}
 
 	// Setup all Controllers
@@ -130,8 +135,18 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 		os.Exit(1)
 	}
 
-	gvks := []schema.GroupVersionKind{
-		spinnakerservice.SpinnakerServiceBuilder.New().GetObjectKind().GroupVersionKind(),
+	if !disableAdmission {
+		log.Info("starting webhook server...")
+		if err := webhook.Start(mgr); err != nil {
+			log.Error(err, "error starting webhook server")
+			os.Exit(1)
+		}
+	}
+
+	gvks, err := getGVKs(mgr)
+	if err != nil {
+		log.Error(err, "unable to get GroupVersionKind")
+		os.Exit(1)
 	}
 
 	// Generates operator specific metrics based on the GVKs.
@@ -158,4 +173,20 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
+}
+
+func getGVKs(m manager.Manager) ([]schema.GroupVersionKind, error) {
+	gvks := make([]schema.GroupVersionKind, 0)
+	objs := []kruntime.Object{
+		spinnakerservice.SpinnakerServiceBuilder.New(),
+		&v1alpha2.SpinnakerAccount{},
+	}
+	for _, obj := range objs {
+		gvk, err := apiutil.GVKForObject(obj, m.GetScheme())
+		if err != nil {
+			return nil, err
+		}
+		gvks = append(gvks, gvk)
+	}
+	return gvks, nil
 }

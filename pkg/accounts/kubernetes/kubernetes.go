@@ -1,9 +1,13 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/go-logr/logr"
 )
 
 type AccountType struct {
@@ -117,4 +121,14 @@ func (k *Account) validateFormat() error {
 
 func (k *Account) NewValidator() account.AccountValidator {
 	return &kubernetesAccountValidator{account: k}
+}
+
+func (k *Account) newKubeConfig(ctx context.Context, log logr.Logger) (string, error) {
+	if k.Auth.KubeconfigFile != "" {
+		log.Info(fmt.Sprintf("attempting to access kubeconfig %s", k.Auth.KubeconfigFile))
+		return secrets.DecodeAsFile(ctx, k.Auth.KubeconfigFile)
+	}
+
+	// Try to form the kubeconfigfile
+	return "", errors.New("not implemented")
 }

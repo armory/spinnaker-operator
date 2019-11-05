@@ -53,7 +53,7 @@ config:
       data:
         spinnaker-monitoring.yml: IyMgV0FSTklORwojIyBUaGlzIGZpbGUgd2FzIGF1dG9nZW5lcmF0ZWQsIGFuZCBfd2lsbF8gYmUgb3ZlcndyaXR0ZW4gYnkgSGFseWFyZC4KIyMgQW55IGVkaXRzIHlvdSBtYWtlIGhlcmUgX3dpbGxfIGJlIGxvc3QuCgpkYXRhZG9nOgogIGVuYWJsZWQ6IGZhbHNlCiAgdGFnczogW10KcHJvbWV0aGV1czoKICBlbmFibGVkOiB0cnVlCiAgYWRkX3NvdXJjZV9tZXRhbGFiZWxzOiB0cnVlCnN0YWNrZHJpdmVyOgogIGVuYWJsZWQ6IGZhbHNlCnBlcmlvZDogMzAKZW5hYmxlZDogdHJ1ZQoKc2VydmVyOgogIGhvc3Q6IDAuMC4wLjAKICBwb3J0OiA4MDA4Cgptb25pdG9yOgogIHBlcmlvZDogMzAKICBtZXRyaWNfc3RvcmU6CiAgLSBwcm9tZXRoZXVzCgojIGhhbGNvbmZpZyAK
     deployment:
-      apiVersion: apps/v1beta2
+      apiVersion: apps/v1
       kind: Deployment
       metadata:
         name: spin-igor

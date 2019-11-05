@@ -21,7 +21,7 @@ type SpinnakerConfig struct {
 	// Supporting files for the Spinnaker config
 	Files map[string]string `json:"files,omitempty"`
 	// Parsed service settings - comments are stripped
-	ServiceSettings FreeForm `json:"service-settings,omitempty"`
+	ServiceSettings map[string]FreeForm `json:"service-settings,omitempty"`
 	// Service profiles will be parsed as YAML
 	Profiles map[string]FreeForm `json:"profiles,omitempty"`
 	// Main deployment configuration to be passed to Halyard
