@@ -10,19 +10,19 @@ import (
 
 func TestAddSpringProfile(t *testing.T) {
 	c := v1alpha2.SpinnakerConfig{
-		Profiles: make(map[string]v1alpha2.FreeForm),
+		ServiceSettings: make(map[string]v1alpha2.FreeForm),
 	}
-	if assert.Nil(t, addSpringProfile(&c, "clouddriver", "accounts")) {
-		s, err := inspect.GetObjectPropString(context.TODO(), c.Profiles, "clouddriver.env.SPRING_PROFILES_ACTIVE")
+	if assert.Nil(t, addSpringProfile(&c, "clouddriver", "test")) {
+		s, err := inspect.GetObjectPropString(context.TODO(), c.ServiceSettings, "clouddriver.env.SPRING_PROFILES_ACTIVE")
 		if assert.Nil(t, err) {
-			assert.Equal(t, "accounts", s)
+			assert.Equal(t, "test", s)
 		}
 	}
 }
 
 func TestAddSpringProfileExisting(t *testing.T) {
 	c := v1alpha2.SpinnakerConfig{
-		Profiles: map[string]v1alpha2.FreeForm{
+		ServiceSettings: map[string]v1alpha2.FreeForm{
 			"clouddriver": {
 				"env": map[string]interface{}{
 					"SPRING_PROFILES_ACTIVE": "local",
@@ -30,10 +30,10 @@ func TestAddSpringProfileExisting(t *testing.T) {
 			},
 		},
 	}
-	if assert.Nil(t, addSpringProfile(&c, "clouddriver", "accounts")) {
-		s, err := inspect.GetObjectPropString(context.TODO(), c.Profiles, "clouddriver.env.SPRING_PROFILES_ACTIVE")
+	if assert.Nil(t, addSpringProfile(&c, "clouddriver", "test")) {
+		s, err := inspect.GetObjectPropString(context.TODO(), c.ServiceSettings, "clouddriver.env.SPRING_PROFILES_ACTIVE")
 		if assert.Nil(t, err) {
-			assert.Equal(t, "local,accounts", s)
+			assert.Equal(t, "local,test", s)
 		}
 	}
 }

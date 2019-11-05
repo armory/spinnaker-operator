@@ -65,21 +65,21 @@ func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *ru
 	}
 
 	for k := range gen.Config {
-		ss, err := accounts.PrepareSettings(k, crdAccs)
+		settings, err := accounts.PrepareSettings(k, crdAccs)
 		if err != nil {
 			return err
 		}
-		c, ok := gen.Config[k]
+		config, ok := gen.Config[k]
 		if !ok {
 			continue
 		}
-		secretName := util.GetMountedSecretNameInDeployment(c.Deployment, k, "/opt/spinnaker/config")
-		sec := getSecretFromConfig(c, secretName)
+		secretName := util.GetMountedSecretNameInDeployment(config.Deployment, k, "/opt/spinnaker/config")
+		sec := getSecretFromConfig(config, secretName)
 		if sec == nil {
 			continue
 		}
 
-		if err = util.UpdateSecret(sec, k, ss, accounts.SpringProfile); err != nil {
+		if err = util.UpdateSecret(sec, k, settings, accounts.SpringProfile); err != nil {
 			return err
 		}
 	}
@@ -97,10 +97,10 @@ func getSecretFromConfig(s generated.ServiceConfig, n string) *v1.Secret {
 }
 
 func addSpringProfile(sc *v1alpha2.SpinnakerConfig, svc string, p string) error {
-	sp, ok := sc.Profiles[svc]
+	sp, ok := sc.ServiceSettings[svc]
 	if !ok {
 		sp = v1alpha2.FreeForm{}
-		sc.Profiles[svc] = sp
+		sc.ServiceSettings[svc] = sp
 	}
 	ex, _ := inspect.GetObjectPropString(context.TODO(), sp, "env.SPRING_PROFILES_ACTIVE")
 	if len(ex) > 0 {
