@@ -38,16 +38,6 @@ func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType acco
 			return nil, err
 		}
 	}
-	// Get CRD accounts if enabled
-	if spinSvc.GetAccountsConfig().Enabled {
-		crdAccs, err := accounts.AllValidCRDAccounts(options.Client, spinSvc.GetNamespace())
-		if err != nil {
-			return nil, err
-		}
-		for i := range crdAccs {
-			acc = append(acc, crdAccs[i])
-		}
-	}
 	return acc, err
 }
 
