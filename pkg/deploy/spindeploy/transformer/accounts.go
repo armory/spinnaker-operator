@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
-	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
@@ -65,13 +64,8 @@ func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *ru
 		return err
 	}
 
-	acc := make([]account.Account, 0)
-	for i := range crdAccs {
-		acc = append(acc, crdAccs[i])
-	}
-
 	for k := range gen.Config {
-		ss, err := accounts.PrepareSettings(k, acc)
+		ss, err := accounts.PrepareSettings(k, crdAccs)
 		if err != nil {
 			return err
 		}
