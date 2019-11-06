@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"errors"
+
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 )
@@ -32,6 +33,14 @@ func (k *AccountType) newAccount() *Account {
 		Env:      Env{},
 		Settings: v1alpha2.FreeForm{},
 	}
+}
+
+func (k *AccountType) GetValidationSettings(spinsvc v1alpha2.SpinnakerServiceInterface) v1alpha2.ValidationSetting {
+	v := spinsvc.GetValidation()
+	if s, ok := v.Providers[string(v1alpha2.KubernetesAccountType)]; ok {
+		return s
+	}
+	return v.GetValidationSettings()
 }
 
 type Env struct {

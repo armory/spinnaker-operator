@@ -19,12 +19,16 @@ type SpinnakerAccountType interface {
 	GetAccountsKey() string
 	// Key under which accounts are stored in profile/config
 	GetConfigAccountsKey() string
+	// GetValidationSettings returns validation settings if validation must happen
+	GetValidationSettings(spinsvc v1alpha2.SpinnakerServiceInterface) v1alpha2.ValidationSetting
 }
 
 type Account interface {
+	// GetName returns the name of the account
 	GetName() string
 	GetType() v1alpha2.AccountType
 	NewValidator() AccountValidator
+	// Output the account definition in Spinnaker terms
 	ToSpinnakerSettings() (map[string]interface{}, error)
 	GetSettings() *v1alpha2.FreeForm
 	GetHash() (string, error)

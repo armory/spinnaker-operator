@@ -4,10 +4,38 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// SpinnakerService is the Schema for the spinnakerservices API
+// +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="version",type="string",JSONPath=".status.version",description="Version"
+// +kubebuilder:printcolumn:name="lastConfigured",type="date",JSONPath=".status.lastDeployed.config.lastUpdatedAt",description="Last Configured"
+// +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.status",description="Status"
+// +kubebuilder:printcolumn:name="services",type="number",JSONPath=".status.serviceCount",description="Services"
+// +kubebuilder:printcolumn:name="url",type="string",JSONPath=".status.uiUrl",description="URL"
+// +kubebuilder:printcolumn:name="apiUrl",type="string",JSONPath=".status.apiUrl",description="API URL",priority=1
+// +kubebuilder:resource:path=spinnakerservices,shortName=spinsvc
+type SpinnakerService struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   SpinnakerServiceSpec   `json:"spec,omitempty"`
+	Status SpinnakerServiceStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// SpinnakerServiceList contains a list of SpinnakerService
+type SpinnakerServiceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []SpinnakerService `json:"items"`
+}
 
 // SpinnakerServiceSpec defines the desired state of SpinnakerService
 // +k8s:openapi-gen=true
@@ -33,14 +61,6 @@ type SpinnakerConfig struct {
 	Config FreeForm `json:"config,omitempty"`
 }
 
-// +k8s:deepcopy-gen=true
-type AccountConfig struct {
-	// Enable the injection of SpinnakerAccount
-	Enabled bool `json:"enabled,omitempty"`
-	// Enable accounts to be added dynamically
-	Dynamic bool `json:"dynamic,omitempty"`
-}
-
 // GetHash returns a hash of the config used
 func (s *SpinnakerConfig) GetHash() (string, error) {
 	data, err := json.Marshal(s)
@@ -49,6 +69,14 @@ func (s *SpinnakerConfig) GetHash() (string, error) {
 	}
 	m := md5.Sum(data)
 	return hex.EncodeToString(m[:]), nil
+}
+
+// +k8s:deepcopy-gen=true
+type AccountConfig struct {
+	// Enable the injection of SpinnakerAccount
+	Enabled bool `json:"enabled,omitempty"`
+	// Enable accounts to be added dynamically
+	Dynamic bool `json:"dynamic,omitempty"`
 }
 
 // ExposeConfig represents the configuration for exposing Spinnaker
@@ -96,12 +124,9 @@ type SpinnakerServiceStatus struct {
 	// Current deployed version of Spinnaker
 	// +optional
 	Version string `json:"version,omitempty"`
-	// Last time the configuration was updated
-	// +optional
-	LastConfigurationTime metav1.Time `json:"lastConfigurationTime,omitempty"`
 	// Last deployed hashes
 	// +optional
-	LastDeployedHashes map[string]string `json:"lastDeployedHashes,omitempty"`
+	LastDeployed map[string]HashStatus `json:"lastDeployed,omitempty"`
 	// Services deployment information
 	// +optional
 	// +listType=map
@@ -124,42 +149,23 @@ type SpinnakerServiceStatus struct {
 	AccountCount int `json:"accountCount,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// SpinnakerService is the Schema for the spinnakerservices API
 // +k8s:openapi-gen=true
-// +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="version",type="string",JSONPath=".status.version",description="Version"
-// +kubebuilder:printcolumn:name="lastConfigured",type="date",JSONPath=".status.lastConfigurationTime",description="Last Configured"
-// +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.status",description="Status"
-// +kubebuilder:printcolumn:name="services",type="number",JSONPath=".status.serviceCount",description="Services"
-// +kubebuilder:printcolumn:name="url",type="string",JSONPath=".status.uiUrl",description="URL"
-// +kubebuilder:printcolumn:name="apiUrl",type="string",JSONPath=".status.apiUrl",description="API URL",priority=1
-// +kubebuilder:resource:path=spinnakerservices,shortName=spinsvc
-type SpinnakerService struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   SpinnakerServiceSpec   `json:"spec,omitempty"`
-	Status SpinnakerServiceStatus `json:"status,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// SpinnakerServiceList contains a list of SpinnakerService
-type SpinnakerServiceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SpinnakerService `json:"items"`
+type HashStatus struct {
+	Hash          string      `json:"hash"`
+	LastUpdatedAt metav1.Time `json:"lastUpdatedAt,omitempty"`
 }
 
 // validation settings for the deployment
 type SpinnakerValidation struct {
-	*ValidationSetting
+	// Report errors but do not fail validation, defaults to true
+	// +optional
+	FailOnError *bool `json:"failOnError,omitempty"`
+	// Number of seconds between each validation
+	// +optional
+	FrequencySeconds intstr.IntOrString `json:"frequencySeconds,omitempty"`
 	// Fail validation on the first failed validation, defaults to false
 	// +optional
 	FailFast bool `json:"failFast"`
-
 	// +optional
 	Providers map[string]ValidationSetting `json:"providers,omitempty"`
 	// +optional

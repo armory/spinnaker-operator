@@ -14,7 +14,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha2_ExposeConfig(ref),
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigService(ref),
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref),
-		"./pkg/apis/spinnaker/v1alpha2.KubernetesAuth":               schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref),
+		"./pkg/apis/spinnaker/v1alpha2.HashStatus":                   schema_pkg_apis_spinnaker_v1alpha2_HashStatus(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccount":             schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec":         schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus":       schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountStatus(ref),
@@ -143,42 +143,29 @@ func schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref common.
 	}
 }
 
-func schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_spinnaker_v1alpha2_HashStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"kubeconfigFile": {
+					"hash": {
 						SchemaProps: spec.SchemaProps{
-							Description: "KubeconfigFile referenced as an encrypted secret",
-							Type:        []string{"string"},
-							Format:      "",
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
-					"kubeconfigSecret": {
+					"lastUpdatedAt": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kubeconfig referenced as a Kubernetes secret",
-							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
-						},
-					},
-					"kubeconfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kubeconfig config referenced directly",
-							Ref:         ref("k8s.io/client-go/tools/clientcmd/api.Config"),
-						},
-					},
-					"provider": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Cloud provider configuration",
-							Ref:         ref("k8s.io/client-go/tools/clientcmd/api.AuthProviderConfig"),
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},
+				Required: []string{"hash"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.SecretReference", "k8s.io/client-go/tools/clientcmd/api.AuthProviderConfig", "k8s.io/client-go/tools/clientcmd/api.Config"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -426,13 +413,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 							Format:      "",
 						},
 					},
-					"lastConfigurationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Last time the configuration was updated",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastDeployedHashes": {
+					"lastDeployed": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Last deployed hashes",
 							Type:        []string{"object"},
@@ -440,8 +421,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Ref: ref("./pkg/apis/spinnaker/v1alpha2.HashStatus"),
 									},
 								},
 							},
@@ -505,6 +485,6 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"./pkg/apis/spinnaker/v1alpha2.HashStatus", "./pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus"},
 	}
 }
