@@ -14,6 +14,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha2_ExposeConfig(ref),
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigService(ref),
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref),
+		"./pkg/apis/spinnaker/v1alpha2.HashStatus":                   schema_pkg_apis_spinnaker_v1alpha2_HashStatus(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccount":             schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec":         schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus":       schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountStatus(ref),
@@ -139,6 +140,32 @@ func schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref common.
 				},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_spinnaker_v1alpha2_HashStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"hash": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"lastUpdatedAt": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"hash"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -409,13 +436,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 							Format:      "",
 						},
 					},
-					"lastConfigurationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Last time the configuration was updated",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastDeployedHashes": {
+					"lastDeployed": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Last deployed hashes",
 							Type:        []string{"object"},
@@ -423,8 +444,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+										Ref: ref("./pkg/apis/spinnaker/v1alpha2.HashStatus"),
 									},
 								},
 							},
@@ -488,6 +508,6 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"./pkg/apis/spinnaker/v1alpha2.HashStatus", "./pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus"},
 	}
 }

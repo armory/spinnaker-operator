@@ -8,7 +8,7 @@ spec:
     description: Version
     name: version
     type: string
-  - JSONPath: .status.lastConfigurationTime
+  - JSONPath: .status.lastDeployed.config.lastUpdatedAt
     description: Last Configured
     name: lastConfigured
     type: date
@@ -149,6 +149,15 @@ spec:
                   description: Fail validation on the first failed validation, defaults
                     to false
                   type: boolean
+                failOnError:
+                  description: Report errors but do not fail validation, defaults
+                    to true
+                  type: boolean
+                frequencySeconds:
+                  anyOf:
+                  - type: string
+                  - type: integer
+                  description: Number of seconds between each validation
                 metricStores:
                   additionalProperties:
                     properties:
@@ -238,13 +247,17 @@ spec:
             apiUrl:
               description: Exposed Gate URL
               type: string
-            lastConfigurationTime:
-              description: Last time the configuration was updated
-              format: date-time
-              type: string
-            lastDeployedHashes:
+            lastDeployed:
               additionalProperties:
-                type: string
+                properties:
+                  hash:
+                    type: string
+                  lastUpdatedAt:
+                    format: date-time
+                    type: string
+                required:
+                - hash
+                type: object
               description: Last deployed hashes
               type: object
             serviceCount:

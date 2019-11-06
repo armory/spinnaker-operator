@@ -5,9 +5,10 @@ import (
 	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
-const SpinnakerConfigHashKey = "Config"
+const SpinnakerConfigHashKey = "config"
 
 type configChangeDetector struct {
 	client client.Client
@@ -28,14 +29,6 @@ func (ch *configChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc
 		return false, err
 	}
 	st := spinSvc.GetStatus()
-	eh := ""
-	if st.LastDeployedHashes == nil {
-		st.LastDeployedHashes = map[string]string{
-			SpinnakerConfigHashKey: h,
-		}
-	} else {
-		eh = st.LastDeployedHashes[SpinnakerConfigHashKey]
-		st.LastDeployedHashes[SpinnakerConfigHashKey] = h
-	}
-	return h == eh, nil
+	prior := st.UpdateHashIfNotExist(SpinnakerConfigHashKey, h, time.Now(), true)
+	return h == prior.Hash, nil
 }
