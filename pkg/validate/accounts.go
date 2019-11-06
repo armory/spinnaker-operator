@@ -33,7 +33,7 @@ func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, option
 			}
 			hc := status.UpdateHashIfNotExist(getValidationHashKey(a), h, now, false)
 			// If accounts were never validated or if the validation is too old less than x ago
-			if hc.Hash != h || !v.NeedsValidation(hc.LastUpdatedAt) {
+			if hc.Hash != h || v.NeedsValidation(hc.LastUpdatedAt) {
 				validators = append(validators, &accountValidator{v: a.NewValidator(), fatal: v.IsFatal()})
 			}
 		}
