@@ -2,10 +2,12 @@ package validate
 
 import (
 	"context"
+	"fmt"
 	accounts "github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
+	"time"
 )
 
 // GetAccountValidationsFor inspects all known providers, retrieves their accounts,
@@ -13,13 +15,27 @@ import (
 func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ([]SpinnakerValidator, error) {
 	validators := make([]SpinnakerValidator, 0)
 	for _, t := range accounts.Types {
+		v := t.GetValidationSettings(spinSvc)
+		if !v.Enabled {
+			continue
+		}
 		// Get accounts from that type
 		as, err := getAllAccounts(spinSvc, t, options)
 		if err != nil {
 			return nil, err
 		}
+		status := spinSvc.GetStatus()
+		now := time.Now()
 		for _, a := range as {
-			validators = append(validators, &accountValidator{v: a.NewValidator()})
+			h, err := a.GetHash()
+			if err != nil {
+				return nil, err
+			}
+			hc := status.UpdateHashIfNotExist(getValidationHashKey(a), h, now, false)
+			// If accounts were never validated or if the validation is too old less than x ago
+			if hc.Hash != h || !v.NeedsValidation(hc.LastUpdatedAt) {
+				validators = append(validators, &accountValidator{v: a.NewValidator(), fatal: v.IsFatal()})
+			}
 		}
 	}
 	return validators, nil
@@ -42,7 +58,8 @@ func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType acco
 }
 
 type accountValidator struct {
-	v account.AccountValidator
+	v     account.AccountValidator
+	fatal bool
 }
 
 func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
@@ -73,7 +90,11 @@ func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountTy
 func (a *accountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
 	err := a.v.Validate(spinSvc, options.Client, options.Ctx, options.Log)
 	if err != nil {
-		return NewResultFromError(err, true)
+		return NewResultFromError(err, a.fatal)
 	}
 	return ValidationResult{}
+}
+
+func getValidationHashKey(a account.Account) string {
+	return fmt.Sprintf("account-%s-%s", a.GetType(), a.GetName())
 }

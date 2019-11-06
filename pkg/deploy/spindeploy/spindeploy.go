@@ -9,13 +9,11 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"time"
 )
 
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
@@ -123,7 +121,5 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerSe
 }
 
 func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) error {
-	status := svc.GetStatus()
-	status.LastConfigurationTime = metav1.NewTime(time.Now())
 	return d.client.Status().Update(ctx, svc)
 }

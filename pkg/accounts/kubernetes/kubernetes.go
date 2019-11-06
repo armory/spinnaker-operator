@@ -48,6 +48,14 @@ func (k *AccountType) FromSpinnakerConfig(settings map[string]interface{}) (acco
 	return k.BaseFromSpinnakerConfig(k.newAccount(), settings)
 }
 
+func (k *AccountType) GetValidationSettings(spinsvc v1alpha2.SpinnakerServiceInterface) v1alpha2.ValidationSetting {
+	v := spinsvc.GetValidation()
+	if s, ok := v.Providers[string(v1alpha2.KubernetesAccountType)]; ok {
+		return s
+	}
+	return v.GetValidationSettings()
+}
+
 type Auth struct {
 	// User to use in the kubeconfig file
 	User string `json:"user,omitempty"`
