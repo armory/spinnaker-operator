@@ -105,9 +105,10 @@ run-dev:
 .PHONY: debug
 debug:
 	OPERATOR_NAME=local-operator \
-    WATCH_NAMESPACE=operator \
 	dlv debug --headless  --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
 	--kubeconfig ${KUBECONFIG} --disable-admission-controller
+
+#     WATCH_NAMESPACE=spinnaker-operator \
 
 .PHONY: k8s
 k8s:

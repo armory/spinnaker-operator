@@ -31,10 +31,88 @@ spec:
         spec:
           description: SpinnakerAccountSpec defines the desired state of SpinnakerAccount
           properties:
-            auth: {}
             enabled:
               type: boolean
-            env: {}
+            kubernetes:
+              properties:
+                kubeconfig:
+                  description: Kubeconfig config referenced directly
+                  properties:
+                    apiVersion:
+                      description: 'Legacy field from pkg/api/types.go TypeMeta. TODO(jlowdermilk):
+                        remove this after eliminating downstream dependencies.'
+                      type: string
+                    clusters:
+                      description: Clusters is a map of referencable names to cluster
+                        configs
+                    contexts:
+                      description: Contexts is a map of referencable names to context
+                        configs
+                    current-context:
+                      description: CurrentContext is the name of the context that
+                        you would like to use by default
+                      type: string
+                    extensions:
+                      additionalProperties: {}
+                      description: Extensions holds additional information. This is
+                        useful for extenders so that reads and writes don't clobber
+                        unknown fields
+                      type: object
+                    kind:
+                      description: 'Legacy field from pkg/api/types.go TypeMeta. TODO(jlowdermilk):
+                        remove this after eliminating downstream dependencies.'
+                      type: string
+                    preferences:
+                      description: Preferences holds general information to be use
+                        for cli interactions
+                      properties:
+                        colors:
+                          type: boolean
+                        extensions:
+                          additionalProperties: {}
+                          description: Extensions holds additional information. This
+                            is useful for extenders so that reads and writes don't
+                            clobber unknown fields
+                          type: object
+                      type: object
+                    users:
+                      description: AuthInfos is a map of referencable names to user
+                        configs
+                  required:
+                  - clusters
+                  - contexts
+                  - current-context
+                  - preferences
+                  - users
+                  type: object
+                kubeconfigFile:
+                  description: KubeconfigFile referenced as an encrypted secret
+                  type: string
+                kubeconfigSecret:
+                  description: Kubeconfig referenced as a Kubernetes secret
+                  properties:
+                    name:
+                      description: Name is unique within a namespace to reference
+                        a secret resource.
+                      type: string
+                    namespace:
+                      description: Namespace defines the space within which the secret
+                        name must be unique.
+                      type: string
+                  type: object
+                provider:
+                  description: Cloud provider configuration
+                  properties:
+                    config:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+              type: object
             permissions:
               additionalProperties:
                 items:

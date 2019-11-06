@@ -13,7 +13,7 @@ import (
 func TestPrepareSettings(t *testing.T) {
 	acc1 := &kubernetes.Account{
 		Name: "account1",
-		Auth: kubernetes.Auth{
+		Auth: &v1alpha2.KubernetesAuth{
 			KubeconfigFile: "/tmp/kubeconfig-1.yml",
 		},
 		Env:      kubernetes.Env{},
@@ -21,7 +21,7 @@ func TestPrepareSettings(t *testing.T) {
 	}
 	acc2 := &kubernetes.Account{
 		Name: "account2",
-		Auth: kubernetes.Auth{
+		Auth: &v1alpha2.KubernetesAuth{
 			KubeconfigFile: "/tmp/kubeconfig-2.yml",
 		},
 		Env:      kubernetes.Env{},

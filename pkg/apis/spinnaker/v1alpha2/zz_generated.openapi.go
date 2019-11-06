@@ -14,6 +14,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha2_ExposeConfig(ref),
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigService(ref),
 		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref),
+		"./pkg/apis/spinnaker/v1alpha2.KubernetesAuth":               schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccount":             schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec":         schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref),
 		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus":       schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountStatus(ref),
@@ -142,6 +143,45 @@ func schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref common.
 	}
 }
 
+func schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kubeconfigFile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeconfigFile referenced as an encrypted secret",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"kubeconfigSecret": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubeconfig referenced as a Kubernetes secret",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+					"kubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubeconfig config referenced directly",
+							Ref:         ref("k8s.io/client-go/tools/clientcmd/api.Config"),
+						},
+					},
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Cloud provider configuration",
+							Ref:         ref("k8s.io/client-go/tools/clientcmd/api.AuthProviderConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.SecretReference", "k8s.io/client-go/tools/clientcmd/api.AuthProviderConfig", "k8s.io/client-go/tools/clientcmd/api.Config"},
+	}
+}
+
 func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -231,32 +271,9 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 							},
 						},
 					},
-					"auth": {
+					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"object"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-					"env": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"object"},
-										Format: "",
-									},
-								},
-							},
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.KubernetesAuth"),
 						},
 					},
 					"settings": {
@@ -278,7 +295,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/spinnaker/v1alpha2.ValidationSetting"},
+			"./pkg/apis/spinnaker/v1alpha2.KubernetesAuth", "./pkg/apis/spinnaker/v1alpha2.ValidationSetting"},
 	}
 }
 

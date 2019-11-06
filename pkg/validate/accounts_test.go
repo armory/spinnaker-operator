@@ -18,7 +18,9 @@ spec:
         kubernetes:
           accounts:
           - name: acc1
+            kubeconfigFile: test-1.yml
           - name: acc2
+            kubeconfigFile: test-2.yml
 `
 	spinsvc := &v1alpha2.SpinnakerService{}
 	if assert.Nil(t, yaml.Unmarshal([]byte(s), spinsvc)) {

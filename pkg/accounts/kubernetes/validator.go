@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/go-logr/logr"
@@ -11,29 +12,57 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	noAuthProvidedError      = fmt.Errorf("Kubernetes auth needs to be defined")
+	noKubernetesDefinedError = fmt.Errorf("Kubernetes needs to be defined")
+)
+
 type kubernetesAccountValidator struct {
 	account *Account
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
-	p, err := k.account.newKubeConfig(ctx, log)
+	config, err := k.makeClient()
 	if err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("got kubeconfig file %s", p))
-	return k.validateAccess(p)
+	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) validateAccess(kubeconfigPath string) error {
-	c, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
-		&clientcmd.ConfigOverrides{
-			CurrentContext: k.account.Auth.Context,
-		}).ClientConfig()
+func (k *kubernetesAccountValidator) makeClient() (clientcmd.ClientConfig, error) {
+	if k.account.Auth == nil {
+		return nil, noKubernetesDefinedError
+	}
+	if k.account.Auth.KubeconfigFile != "" {
+		return nil, errors.New("not implemented")
+	}
+	if k.account.Auth.Kubeconfig != nil {
+		return clientcmd.NewDefaultClientConfig(*k.account.Auth.Kubeconfig, nil), nil
+	}
+	if k.account.Auth.Provider != nil {
+
+	}
+	if k.account.Auth.KubeconfigSecret != nil {
+
+	}
+	return nil, noAuthProvidedError
+}
+
+func (k *kubernetesAccountValidator) validateAccess(clientConfig clientcmd.ClientConfig) error {
+	cc, err := clientConfig.ClientConfig()
 	if err != nil {
 		return err
 	}
-	clientset, err := kubernetes.NewForConfig(c)
+	//clientConfig.
+	//c, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+	//	&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+	//	&clientcmd.ConfigOverrides{
+	//		CurrentContext: k.account.Auth.Context,
+	//	}).ClientConfig()
+	//if err != nil {
+	//	return err
+	//}
+	clientset, err := kubernetes.NewForConfig(cc)
 	if err != nil {
 		return err
 	}

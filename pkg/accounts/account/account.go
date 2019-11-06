@@ -26,8 +26,6 @@ type Account interface {
 	GetType() v1alpha2.AccountType
 	NewValidator() AccountValidator
 	ToSpinnakerSettings() (map[string]interface{}, error)
-	GetEnv() interface{}
-	GetAuth() interface{}
 	GetSettings() *v1alpha2.FreeForm
 	GetHash() (string, error)
 }

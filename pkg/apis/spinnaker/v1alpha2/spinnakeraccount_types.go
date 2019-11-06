@@ -1,7 +1,9 @@
 package v1alpha2
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -31,9 +33,25 @@ type SpinnakerAccountSpec struct {
 	Type        AccountType        `json:"type"`
 	Validation  ValidationSetting  `json:"validation"`
 	Permissions AccountPermissions `json:"permissions"`
-	Auth        FreeForm           `json:"auth,omitempty"`
-	Env         FreeForm           `json:"env,omitempty"`
-	Settings    FreeForm           `json:"settings,omitempty"`
+	// +optional
+	Kubernetes *KubernetesAuth `json:"kubernetes,omitempty"`
+	Settings   FreeForm        `json:"settings,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type KubernetesAuth struct {
+	// KubeconfigFile referenced as an encrypted secret
+	// +optional
+	KubeconfigFile string `json:"kubeconfigFile,omitempty"`
+	// Kubeconfig referenced as a Kubernetes secret
+	// +optional
+	KubeconfigSecret *v1.SecretReference `json:"kubeconfigSecret,omitempty"`
+	// Kubeconfig config referenced directly
+	// +optional
+	Kubeconfig *api.Config `json:"kubeconfig,omitempty"`
+	// Cloud provider configuration
+	// +optional
+	Provider *api.AuthProviderConfig `json:"provider,omitempty"`
 }
 
 // SpinnakerAccountStatus defines the observed state of SpinnakerAccount

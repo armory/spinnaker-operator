@@ -4,28 +4,25 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 )
 
 type BaseAccountType struct{}
 
-func (b *BaseAccountType) BaseFromCRD(a Account, account *v1alpha2.SpinnakerAccount) (Account, error) {
-	if err := inspect.Convert(account.Spec.Env, a.GetEnv()); err != nil {
-		return a, err
-	}
-	if err := inspect.Convert(account.Spec.Auth, a.GetAuth()); err != nil {
-		return a, err
-	}
-	// Settings values are copied directly
-	for k, v := range account.Spec.Settings {
-		(*a.GetSettings())[k] = v
-	}
-	return a, nil
-}
+//func (b *BaseAccountType) BaseFromCRD(a Account, account *v1alpha2.SpinnakerAccount) (Account, error) {
+//	inspect.Convert(account.Spec.Settings, a.GetSettings())
+//	if err := inspect.Convert(account.Spec.Env, a.GetEnv()); err != nil {
+//		return a, err
+//	}
+//	// Settings values are copied directly
+//	for k, v := range account.Spec.Settings {
+//		(*a.GetSettings())[k] = v
+//	}
+//	return a, nil
+//}
 
 func (b *BaseAccountType) BaseFromSpinnakerConfig(a Account, settings map[string]interface{}) (Account, error) {
-	if err := inspect.Dispatch(settings, a, a.GetAuth(), a.GetEnv(), a.GetSettings()); err != nil {
+	if err := inspect.Convert(settings, a.GetSettings()); err != nil {
 		return nil, err
 	}
 	return a, nil
@@ -34,22 +31,14 @@ func (b *BaseAccountType) BaseFromSpinnakerConfig(a Account, settings map[string
 type BaseAccount struct{}
 
 func (b *BaseAccount) BaseToSpinnakerSettings(a Account) (map[string]interface{}, error) {
-	r := map[string]interface{}{
-		"name": a.GetName(),
-	}
-	// Merge settings, auth, and env
-	// Order matters
-	ias := []interface{}{a.GetSettings(), a.GetAuth(), a.GetEnv()}
-	for i := range ias {
-		m := make(map[string]interface{})
-		if err := inspect.Convert(ias[i], &m); err != nil {
+	m := make(map[string]interface{})
+	if a.GetSettings() != nil {
+		if err := inspect.Convert(a.GetSettings(), &m); err != nil {
 			return nil, err
 		}
-		for ky, v := range m {
-			r[ky] = v
-		}
 	}
-	return r, nil
+	m["name"] = a.GetName()
+	return m, nil
 }
 
 func (b *BaseAccount) GetHash() (string, error) {
