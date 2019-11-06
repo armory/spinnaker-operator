@@ -69,6 +69,10 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		log.Error(err, errorMsg, "metadata.name", svc)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+	// Update the status with any admission status change
+	if err := v.client.Status().Update(ctx, svc); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
 	log.Info("SpinnakerService is valid", "metadata.name", svc)
 	return admission.ValidationResponse(true, "")
 }
