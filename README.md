@@ -114,3 +114,65 @@ spinnakerservice.spinnaker.io "spinnaker" deleted
 Detailed information about the SpinnakerService CRD fields and how to configure Spinnaker can be found [in the wiki](https://github.com/armory/spinnaker-operator/wiki/SpinnakerService-CRD)
 
 
+## Uninstalling the operator
+
+If for some reason the operator needs to be uninstalled/deleted, there are still two ways in which Spinnaker itself can be prevented from being deleted, explained in the following sections.
+
+### Replacing the operator with Halyard
+
+First you need to export Spinnaker configuration settings to a format that Halyard understands: 
+1. From the `SpinnakerService` manifest, copy the contents of `spec.spinnakerConfig.config` to its own file named `config`, and save it with the following structure:
+```
+currentDeployment: default
+deploymentConfigurations:
+- name: default
+  <<CONTENT HERE>> 
+```
+2. For each entry in `spec.spinnakerConfig.profiles`, copy it to its own file inside a `profiles` folder with a `<entry-name>-local.yml` name.
+3. For each entry in `spec.spinnakerConfig.service-settings`, copy it to its own file inside a `service-settings` folder with a `<entry-name>.yml` name.
+4. For each entry in `spec.spinnakerConfig.files`, copy it to its own file inside a directory structure following the name of the entry with double underscores (__) replaced by a path separator. Example: an entry named `profiles__rosco__packer__example-packer-config.json` would produce the file `profiles/rosco/packer/example-packer-config.json`.
+
+At the end, you would have the following directory tree:
+```
+config
+profiles/
+service-settings/
+```
+
+After that, you can put these files in your Halyard home directory and deploy Spinnaker running `hal deploy apply`.
+
+Finally you can delete the operator and their CRD's from the Kubernetes cluster
+
+```bash
+$ kubectl delete -n <namespace> -f deploy/operator/<installation type>
+$ kubectl delete -f deploy/crds/
+```
+
+### Removing operator ownership from Spinnaker resources
+
+Removing ownership can de done executing a `kubectl edit <resource type> <resource name>`, and deleting the entry in block `metadata.ownerReferences` that includes `SpinnakerService` kind. Example:
+```yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  ownerReferences:
+  - apiVersion: spinnaker.io/v1alpha2
+    blockOwnerDeletion: true
+    controller: true
+    kind: SpinnakerService
+    name: spinnaker
+    uid: 6b20ab21-00db-11ea-b631-0219d1069e16
+```
+Spinnaker resources with owner references to operator include `deployment` and `service`.
+You can get the list of deployments managed the operator:
+```
+OPERATOR_NAME=
+kubectl get deployment --selector=app.kubernetes.io/managed-by=$OPERATOR_NAME
+```
+
+Finally you can delete the operator and their CRD's from the Kubernetes cluster
+
+```bash
+$ kubectl delete -n <namespace> -f deploy/operator/<installation type>
+$ kubectl delete -f deploy/crds/
+```
