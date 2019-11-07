@@ -135,13 +135,14 @@ deploymentConfigurations:
 At the end, you would have the following directory tree:
 ```
 config
-profiles/
-service-settings/
+default/
+  profiles/
+  service-settings/
 ```
 
 After that, you can put these files in your Halyard home directory and deploy Spinnaker running `hal deploy apply`.
 
-Finally you can delete the operator and their CRD's from the Kubernetes cluster
+Finally you can delete the operator and their CRDs from the Kubernetes cluster.
 
 ```bash
 $ kubectl delete -n <namespace> -f deploy/operator/<installation type>
@@ -170,7 +171,7 @@ OPERATOR_NAME=
 kubectl get deployment --selector=app.kubernetes.io/managed-by=$OPERATOR_NAME
 ```
 
-Finally you can delete the operator and their CRD's from the Kubernetes cluster
+Finally you can delete the operator and their CRDs from the Kubernetes cluster.
 
 ```bash
 $ kubectl delete -n <namespace> -f deploy/operator/<installation type>
