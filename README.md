@@ -151,28 +151,18 @@ $ kubectl delete -f deploy/crds/
 
 ### Removing operator ownership from Spinnaker resources
 
-Removing ownership can de done executing a `kubectl edit <resource type> <resource name>`, and deleting the entry in block `metadata.ownerReferences` that includes `SpinnakerService` kind. Example:
-```yaml
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  ownerReferences:
-  - apiVersion: spinnaker.io/v1alpha2
-    blockOwnerDeletion: true
-    controller: true
-    kind: SpinnakerService
-    name: spinnaker
-    uid: 6b20ab21-00db-11ea-b631-0219d1069e16
+You can execute the following script to remove ownership of Spinnaker resources, where `NAMESPACE` is the namespace where Spinnaker is installed:
+```bash
+NAMESPACE=
+for rtype in deployment service
+do
+    for r in $(kubectl -n $NAMESPACE get $rtype --selector=app=spin -o jsonpath='{.items[*].metadata.name}') 
+    do
+        kubectl -n $NAMESPACE patch $rtype $r --type json -p='[{"op": "remove", "path": "/metadata/ownerReferences"}]'
+    done
+done
 ```
-Spinnaker resources with owner references to operator include `deployment` and `service`.
-You can get the list of deployments managed the operator:
-```
-OPERATOR_NAME=
-kubectl get deployment --selector=app.kubernetes.io/managed-by=$OPERATOR_NAME
-```
-
 Finally you can delete the operator and their CRDs from the Kubernetes cluster.
-
 ```bash
 $ kubectl delete -n <namespace> -f deploy/operator/<installation type>
 $ kubectl delete -f deploy/crds/
