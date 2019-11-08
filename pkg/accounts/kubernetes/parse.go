@@ -23,7 +23,7 @@ func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Accou
 		return nil, noKubernetesDefinedError
 	}
 	// Parse settings relevant to the environment
-	if err := inspect.Convert(account.Spec.Settings, &a.Env); err != nil {
+	if err := inspect.Source(&a.Env, account.Spec.Settings); err != nil {
 		return nil, err
 	}
 	return a, nil
@@ -74,28 +74,6 @@ func (k *Account) kubeconfigToSpinnakerSettings(ctx context.Context, settings ma
 
 	}
 	return errors.New("auth method not implemented")
-}
-
-//func (k *Account) sourceSettings(ctx context.Context) error {
-//	auth, err := parseAuthSettings(*k.GetSettings())
-//	if err != nil {
-//		return err
-//	}
-//
-//	kconfig, err := auth.makeKubeconfigFile(ctx)
-//	if err != nil {
-//		return err
-//	}
-//	k.Auth.Kubeconfig = kconfig
-//	return nil
-//}
-
-func parseAuthSettings(settings map[string]interface{}) (*authSettings, error) {
-	a := &authSettings{}
-	if err := inspect.Dispatch(settings, a); err != nil {
-		return nil, err
-	}
-	return a, nil
 }
 
 type authSettings struct {
