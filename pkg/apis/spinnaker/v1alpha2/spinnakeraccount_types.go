@@ -1,9 +1,8 @@
 package v1alpha2
 
 import (
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/clientcmd/api"
+	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -45,13 +44,16 @@ type KubernetesAuth struct {
 	KubeconfigFile string `json:"kubeconfigFile,omitempty"`
 	// Kubeconfig referenced as a Kubernetes secret
 	// +optional
-	KubeconfigSecret *v1.SecretReference `json:"kubeconfigSecret,omitempty"`
+	KubeconfigSecret *SecretInNamespaceReference `json:"kubeconfigSecret,omitempty"`
 	// Kubeconfig config referenced directly
 	// +optional
-	Kubeconfig *api.Config `json:"kubeconfig,omitempty"`
-	// Cloud provider configuration
-	// +optional
-	Provider *api.AuthProviderConfig `json:"provider,omitempty"`
+	Kubeconfig *v1.Config `json:"kubeconfig,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type SecretInNamespaceReference struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
 }
 
 // SpinnakerAccountStatus defines the observed state of SpinnakerAccount

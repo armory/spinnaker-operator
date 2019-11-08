@@ -11,8 +11,11 @@ import (
 )
 
 const (
-	SpringProfile = "accounts"
+	SpringProfile     = "accounts"
+	AccountSecretPath = "/var/operator-accounts"
 )
+
+var ServicesWithAccountsFiles = []string{"clouddriver"}
 
 var Types = map[v1alpha2.AccountType]account.SpinnakerAccountType{}
 

@@ -80,7 +80,7 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 
 	// Fetch the SpinnakerService instance
 	instance := &v1alpha2.SpinnakerAccount{}
-	ctx := secrets.NewContext(context.TODO())
+	ctx := secrets.NewContext(context.TODO(), r.client, request.Namespace)
 	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -101,11 +101,11 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 	cpInstance := instance.DeepCopy()
-	err = r.deploy(cpInstance, aType)
+	err = r.deploy(ctx, cpInstance, aType)
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, accountType account.SpinnakerAccountType) error {
+func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account *v1alpha2.SpinnakerAccount, accountType account.SpinnakerAccountType) error {
 	spinsvc, err := util.FindSpinnakerService(r.client, account.Namespace, SpinnakerServiceBuilder)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, a
 
 	// Go through all affected services and update dynamic config secret
 	for _, svc := range accountType.GetServices() {
-		ss, err := accounts.PrepareSettings(svc, allAccounts)
+		ss, err := accounts.PrepareSettings(ctx, svc, allAccounts)
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func (r *ReconcileSpinnakerAccount) deploy(account *v1alpha2.SpinnakerAccount, a
 			return err
 		}
 
-		if err = r.client.Update(context.TODO(), sec); err != nil {
+		if err = r.client.Update(ctx, sec); err != nil {
 			return err
 		}
 	}

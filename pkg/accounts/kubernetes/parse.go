@@ -2,11 +2,13 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -17,6 +19,9 @@ func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Accou
 	a.Name = account.Name
 	a.Settings = account.Spec.Settings
 	a.Auth = account.Spec.Kubernetes
+	if a.Auth == nil {
+		return nil, noKubernetesDefinedError
+	}
 	// Parse settings relevant to the environment
 	if err := inspect.Convert(account.Spec.Settings, &a.Env); err != nil {
 		return nil, err
@@ -26,15 +31,49 @@ func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Accou
 
 func (k *AccountType) FromSpinnakerConfig(settings map[string]interface{}) (account.Account, error) {
 	a := k.newAccount()
-	if _, err := k.BaseFromSpinnakerConfig(a, settings); err != nil {
-		return nil, err
-	}
-	n, ok := settings["name"].(string)
+	n, ok := settings["name"]
 	if !ok {
-		return nil, fmt.Errorf("account missing name")
+		return nil, fmt.Errorf("%s account missing name", a.GetType())
 	}
-	a.Name = n
+	if name, ok := n.(string); ok {
+		a.Name = name
+	} else {
+		return nil, fmt.Errorf("name is not a string")
+	}
+	a.Settings = settings
 	return a, nil
+}
+
+func (k *Account) kubeconfigToSpinnakerSettings(ctx context.Context, settings map[string]interface{}) error {
+	if k.Auth.KubeconfigFile != "" {
+		// Must be referencing a file either as a secret or made available to Spinnaker out of band
+		// pass as is
+		settings[KubeconfigFileSettings] = k.Auth.KubeconfigFile
+		return nil
+	}
+	if k.Auth.Kubeconfig != nil {
+		// Let's just serialize the inlined kubeconfig
+		b, err := yaml.Marshal(k.Auth.Kubeconfig)
+		if err != nil {
+			return err
+		}
+		settings[KubeconfigFileContentSettings] = string(b)
+		return nil
+	}
+	if k.Auth.KubeconfigSecret != nil {
+		sc, err := secrets.FromContextWithError(ctx)
+		if err != nil {
+			return err
+		}
+		config, err := util.GetSecretContent(sc.Client, sc.Namespace, k.Auth.KubeconfigSecret.Name, k.Auth.KubeconfigSecret.Key)
+		if err != nil {
+			return err
+		}
+		// TODO change to a file, track it and add to secret
+		settings[KubeconfigFileContentSettings] = config
+
+	}
+	return errors.New("auth method not implemented")
 }
 
 //func (k *Account) sourceSettings(ctx context.Context) error {

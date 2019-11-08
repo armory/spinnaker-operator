@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 )
@@ -15,7 +16,7 @@ func foundIn(obj string, list []string) bool {
 }
 
 // PrepareSettings gathers all accounts for the given services in the given namespace
-func PrepareSettings(svc string, accountList []account.Account) (map[string]interface{}, error) {
+func PrepareSettings(ctx context.Context, svc string, accountList []account.Account) (map[string]interface{}, error) {
 	ss := make(map[string]interface{})
 	// For each account type that may deploy to this service
 	for accountType := range Types {
@@ -29,7 +30,7 @@ func PrepareSettings(svc string, accountList []account.Account) (map[string]inte
 		aSettings := make([]map[string]interface{}, 0)
 		for _, a := range accountList {
 			if a.GetType() == accountType {
-				m, err := a.ToSpinnakerSettings()
+				m, err := a.ToSpinnakerSettings(ctx)
 				if err != nil {
 					return nil, err
 				}

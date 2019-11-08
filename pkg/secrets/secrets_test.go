@@ -3,6 +3,7 @@ package secrets
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 )
 
@@ -12,16 +13,16 @@ const badFormatSecret string = "encrypted:s3!r:us-west-2"
 const decryptedValue = "mockSecret"
 const didNotGetCalled = "didn't get called"
 
-func mockDecrypt(val string) (string, error) {
+func mockDecrypt(c client.Client, namespace string, val string) (string, error) {
 	return decryptedValue, nil
 }
 
-func dontCallMe(val string) (string, error) {
+func dontCallMe(c client.Client, namespace string, val string) (string, error) {
 	return didNotGetCalled, nil
 }
 
 func TestDecrypt(t *testing.T) {
-	ctx := NewContext(context.TODO())
+	ctx := NewContext(context.TODO(), nil, "")
 
 	// decrypt secret syntax
 	v, err := decode(mockDecrypt, ctx, encryptedSecret)
@@ -38,7 +39,7 @@ func TestDecrypt(t *testing.T) {
 }
 
 func TestBadFormat(t *testing.T) {
-	ctx := NewContext(context.TODO())
+	ctx := NewContext(context.TODO(), nil, "")
 
 	// calling real decrypter with bad syntax should return error
 	_, err := Decode(ctx, badFormatSecret)
@@ -49,12 +50,12 @@ func TestBadFormat(t *testing.T) {
 
 func TestCaching(t *testing.T) {
 	// cache is empty to start
-	ctx := NewContext(context.TODO())
+	ctx := NewContext(context.TODO(), nil, "")
 	c, ok := FromContext(ctx)
 	if !ok {
 		t.Fatalf("error getting context cache")
 	}
-	assert.Empty(t, c)
+	assert.Empty(t, c.Cache)
 
 	// decode and store a secret
 	v, err := decode(mockDecrypt, ctx, encryptedSecret)
@@ -67,8 +68,8 @@ func TestCaching(t *testing.T) {
 	if !ok {
 		t.Fatalf("error getting context cache")
 	}
-	assert.Contains(t, decryptedValue, (*c)[encryptedSecret])
-	assert.Equal(t, 1, len(*c))
+	assert.Contains(t, decryptedValue, c.Cache[encryptedSecret])
+	assert.Equal(t, 1, len(c.Cache))
 
 	// if we decrypt same secret again
 	v, err = decode(dontCallMe, ctx, encryptedSecret)
@@ -84,6 +85,6 @@ func TestCaching(t *testing.T) {
 	if !ok {
 		t.Fatalf("error getting context cache")
 	}
-	assert.Contains(t, decryptedValue, (*c)[encryptedSecret])
-	assert.Equal(t, 1, len(*c))
+	assert.Contains(t, decryptedValue, c.Cache[encryptedSecret])
+	assert.Equal(t, 1, len(c.Cache))
 }

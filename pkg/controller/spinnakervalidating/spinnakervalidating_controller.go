@@ -56,7 +56,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 
 	opts := validate.Options{
-		Ctx:         secrets.NewContext(ctx),
+		Ctx:         secrets.NewContext(ctx, v.client, req.Namespace),
 		Client:      v.client,
 		Req:         req,
 		Log:         log,

@@ -25,7 +25,7 @@ spec:
   type: Kubernetes
 `,
 			expected: func(t *testing.T, _ account.Account, err error) {
-				assert.Nil(t, err)
+				assert.Equal(t, noKubernetesDefinedError, err)
 			},
 		},
 		{

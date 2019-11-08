@@ -64,12 +64,12 @@ func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *ru
 		}
 		return err
 	}
-	return updateServiceSettings(crdAccs, gen)
+	return updateServiceSettings(ctx, crdAccs, gen)
 }
 
-func updateServiceSettings(crdAccounts []account.Account, gen *generated.SpinnakerGeneratedConfig) error {
+func updateServiceSettings(ctx context.Context, crdAccounts []account.Account, gen *generated.SpinnakerGeneratedConfig) error {
 	for k := range gen.Config {
-		settings, err := accounts.PrepareSettings(k, crdAccounts)
+		settings, err := accounts.PrepareSettings(ctx, k, crdAccounts)
 		if err != nil {
 			return err
 		}

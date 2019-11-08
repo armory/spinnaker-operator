@@ -2,10 +2,12 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/authorization/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -22,30 +24,56 @@ type kubernetesAccountValidator struct {
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
-	config, err := k.makeClient()
+	config, err := k.makeClient(ctx)
 	if err != nil {
 		return err
 	}
 	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) makeClient() (clientcmd.ClientConfig, error) {
-	if k.account.Auth == nil {
+func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (clientcmd.ClientConfig, error) {
+	auth := k.account.Auth
+	if auth == nil {
+		// Attempt from settings
 		return nil, noKubernetesDefinedError
 	}
-	if k.account.Auth.KubeconfigFile != "" {
-		return nil, errors.New("not implemented")
-	}
-	if k.account.Auth.Kubeconfig != nil {
-		return clientcmd.NewDefaultClientConfig(*k.account.Auth.Kubeconfig, nil), nil
-	}
-	if k.account.Auth.Provider != nil {
 
+	if auth.KubeconfigFile != "" {
+		return makeClientFromFile(ctx, auth.KubeconfigFile)
 	}
-	if k.account.Auth.KubeconfigSecret != nil {
-
+	if auth.Kubeconfig != nil {
+		//auth.Kubeconfig
+		//return clientcmd.NewDefaultClientConfig(*auth.Kubeconfig, nil), nil
+	}
+	if auth.KubeconfigSecret != nil {
+		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
 	}
 	return nil, noAuthProvidedError
+}
+
+func makeClientFromFile(ctx context.Context, file string) (clientcmd.ClientConfig, error) {
+	file, err := secrets.DecodeAsFile(ctx, file)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := clientcmd.LoadFromFile(file)
+	if err != nil {
+		return nil, err
+	}
+	return clientcmd.NewDefaultClientConfig(*cfg, nil), nil
+}
+
+func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (clientcmd.ClientConfig, error) {
+	sc, err := secrets.FromContextWithError(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to make kubeconfig file")
+	}
+	str, err := util.GetSecretContent(sc.Client, sc.Namespace, ref.Name, ref.Key)
+	if err != nil {
+		return nil, err
+	}
+	return clientcmd.NewClientConfigFromBytes([]byte(str))
 }
 
 func (k *kubernetesAccountValidator) validateAccess(clientConfig clientcmd.ClientConfig) error {
