@@ -46,6 +46,7 @@ func (k *AccountType) FromSpinnakerConfig(settings map[string]interface{}) (acco
 func (k *Account) ToSpinnakerSettings(ctx context.Context) (map[string]interface{}, error) {
 	m := k.BaseAccount.BaseToSpinnakerSettings(k)
 	if k.Auth != nil {
+		m["providerVersion"] = "V2"
 		if err := k.kubeAuthToSpinnakerSettings(ctx, m); err != nil {
 			return nil, err
 		}
