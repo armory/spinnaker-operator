@@ -28,13 +28,16 @@ type AccountPermissions map[Authorization][]string
 // SpinnakerAccountSpec defines the desired state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountSpec struct {
-	Enabled     bool               `json:"enabled"`
-	Type        AccountType        `json:"type"`
-	Validation  ValidationSetting  `json:"validation"`
+	Enabled bool        `json:"enabled"`
+	Type    AccountType `json:"type"`
+	// +optional
+	Validation ValidationSetting `json:"validation"`
+	// +optional
 	Permissions AccountPermissions `json:"permissions"`
 	// +optional
 	Kubernetes *KubernetesAuth `json:"kubernetes,omitempty"`
-	Settings   FreeForm        `json:"settings,omitempty"`
+	// +optional
+	Settings FreeForm `json:"settings,omitempty"`
 }
 
 // +k8s:openapi-gen=true
@@ -59,7 +62,6 @@ type SecretInNamespaceReference struct {
 // SpinnakerAccountStatus defines the observed state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountStatus struct {
-	Valid           bool             `json:"valid"`
 	InvalidReason   string           `json:"invalidReason"`
 	LastValidatedAt metav1.Timestamp `json:"lastValidatedAt"`
 }

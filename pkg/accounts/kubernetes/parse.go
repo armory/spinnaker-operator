@@ -10,8 +10,6 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/ghodss/yaml"
-	"io/ioutil"
-	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Account, error) {
@@ -44,7 +42,18 @@ func (k *AccountType) FromSpinnakerConfig(settings map[string]interface{}) (acco
 	return a, nil
 }
 
-func (k *Account) kubeconfigToSpinnakerSettings(ctx context.Context, settings map[string]interface{}) error {
+// ToSpinnakerSettings outputs an account (either parsed from CRD or from settings) to Spinnaker settings
+func (k *Account) ToSpinnakerSettings(ctx context.Context) (map[string]interface{}, error) {
+	m := k.BaseAccount.BaseToSpinnakerSettings(k)
+	if k.Auth != nil {
+		if err := k.kubeAuthToSpinnakerSettings(ctx, m); err != nil {
+			return nil, err
+		}
+	}
+	return m, nil
+}
+
+func (k *Account) kubeAuthToSpinnakerSettings(ctx context.Context, settings map[string]interface{}) error {
 	if k.Auth.KubeconfigFile != "" {
 		// Must be referencing a file either as a secret or made available to Spinnaker out of band
 		// pass as is
@@ -71,58 +80,7 @@ func (k *Account) kubeconfigToSpinnakerSettings(ctx context.Context, settings ma
 		}
 		// TODO change to a file, track it and add to secret
 		settings[KubeconfigFileContentSettings] = config
-
+		return nil
 	}
 	return errors.New("auth method not implemented")
-}
-
-type authSettings struct {
-	// User to use in the kubeconfig file
-	User string `json:"user,omitempty"`
-	// Context to use in the kubeconfig file if not default
-	Context string `json:"context,omitempty"`
-	// Cluster to use in the kubeconfig file
-	Cluster        string `json:"cluster,omitempty"`
-	ServiceAccount bool   `json:"serviceAccount,omitempty"`
-	// Reference to a kubeconfig file
-	KubeconfigFile      string   `json:"kubeconfigFile,omitempty"`
-	OAuthServiceAccount string   `json:"oAuthServiceAccount,omitempty"`
-	OAuthScopes         []string `json:"oAuthScopes,omitempty"`
-}
-
-func (a *authSettings) makeKubeconfigFile(ctx context.Context) (*api.Config, error) {
-	if a.KubeconfigFile == "" {
-		return nil, nil
-	}
-	// Get a handle on the actual kubeconfig file
-	k, err := secrets.Decode(ctx, a.KubeconfigFile)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse it as a context
-	b, err := ioutil.ReadFile(k)
-	if err != nil {
-		return nil, err
-	}
-
-	c := &api.Config{}
-	if err = yaml.Unmarshal(b, c); err != nil {
-		return nil, err
-	}
-
-	// Extract current context
-	if a.Context != "" {
-		c.CurrentContext = a.Context
-	}
-
-	// If user and cluster are specified, we'll make a new context
-	if a.User != "" && a.Cluster != "" {
-		aCtx := &api.Context{
-			Cluster:  a.Cluster,
-			AuthInfo: a.User,
-		}
-		c.Contexts[c.CurrentContext] = aCtx
-	}
-	return c, nil
 }

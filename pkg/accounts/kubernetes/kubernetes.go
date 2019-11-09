@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"errors"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
@@ -68,16 +67,6 @@ type Account struct {
 	Auth     *v1alpha2.KubernetesAuth
 	Env      Env               `json:"env,omitempty"`
 	Settings v1alpha2.FreeForm `json:"settings,omitempty"`
-}
-
-func (k *Account) ToSpinnakerSettings(ctx context.Context) (map[string]interface{}, error) {
-	m := k.BaseAccount.BaseToSpinnakerSettings(k)
-	if k.Auth != nil {
-		if err := k.kubeconfigToSpinnakerSettings(ctx, m); err != nil {
-			return nil, err
-		}
-	}
-	return m, nil
 }
 
 func (k *Account) GetType() v1alpha2.AccountType {

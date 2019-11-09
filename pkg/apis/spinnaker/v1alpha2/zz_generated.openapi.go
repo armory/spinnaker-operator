@@ -338,7 +338,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"enabled", "type", "validation", "permissions"},
+				Required: []string{"enabled", "type"},
 			},
 		},
 		Dependencies: []string{
@@ -353,12 +353,6 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountStatus(ref common.Refere
 				Description: "SpinnakerAccountStatus defines the observed state of SpinnakerAccount",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"valid": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
-						},
-					},
 					"invalidReason": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -371,7 +365,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountStatus(ref common.Refere
 						},
 					},
 				},
-				Required: []string{"valid", "invalidReason", "lastValidatedAt"},
+				Required: []string{"invalidReason", "lastValidatedAt"},
 			},
 		},
 		Dependencies: []string{

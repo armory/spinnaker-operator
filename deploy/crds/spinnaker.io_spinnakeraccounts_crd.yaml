@@ -400,9 +400,7 @@ spec:
               type: object
           required:
           - enabled
-          - permissions
           - type
-          - validation
           type: object
         status:
           description: SpinnakerAccountStatus defines the observed state of SpinnakerAccount
@@ -431,12 +429,9 @@ spec:
               - nanos
               - seconds
               type: object
-            valid:
-              type: boolean
           required:
           - invalidReason
           - lastValidatedAt
-          - valid
           type: object
       type: object
   version: v1alpha2

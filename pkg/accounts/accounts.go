@@ -40,15 +40,15 @@ func GetType(tp v1alpha2.AccountType) (account.SpinnakerAccountType, error) {
 	return nil, fmt.Errorf("account type %s not recognized, valid types are %s", tp, strings.Join(tps, ", "))
 }
 
-func AllValidCRDAccounts(c client.Client, ns string) ([]account.Account, error) {
+func AllValidCRDAccounts(ctx context.Context, c client.Client, ns string) ([]account.Account, error) {
 	spinAccounts := &v1alpha2.SpinnakerAccountList{}
-	if err := c.List(context.TODO(), spinAccounts, client.InNamespace(ns)); err != nil {
+	if err := c.List(ctx, spinAccounts, client.InNamespace(ns)); err != nil {
 		return nil, err
 	}
 
 	accounts := make([]account.Account, 0)
 	for _, a := range spinAccounts.Items {
-		if !a.Spec.Enabled || !a.Status.Valid {
+		if !a.Spec.Enabled {
 			continue
 		}
 		accountType, err := GetType(a.Spec.Type)

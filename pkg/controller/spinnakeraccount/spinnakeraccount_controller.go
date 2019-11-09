@@ -123,7 +123,7 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account *v1alpha
 	}
 
 	// Get all Spinnaker accounts
-	allAccounts, err := accounts.AllValidCRDAccounts(r.client, account.Namespace)
+	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, account.Namespace)
 	if err != nil {
 		return err
 	}
