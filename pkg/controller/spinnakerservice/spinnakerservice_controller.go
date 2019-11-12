@@ -97,7 +97,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 
 	// Fetch the SpinnakerService instance
 	instance := SpinnakerServiceBuilder.New()
-	ctx := secrets.NewContext(context.TODO())
+	ctx := secrets.NewContext(context.TODO(), r.client, request.Namespace)
 	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {

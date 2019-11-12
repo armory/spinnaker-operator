@@ -2,6 +2,7 @@ package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -27,19 +28,40 @@ type AccountPermissions map[Authorization][]string
 // SpinnakerAccountSpec defines the desired state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountSpec struct {
-	Enabled     bool               `json:"enabled"`
-	Type        AccountType        `json:"type"`
-	Validation  ValidationSetting  `json:"validation"`
+	Enabled bool        `json:"enabled"`
+	Type    AccountType `json:"type"`
+	// +optional
+	Validation ValidationSetting `json:"validation"`
+	// +optional
 	Permissions AccountPermissions `json:"permissions"`
-	Auth        FreeForm           `json:"auth,omitempty"`
-	Env         FreeForm           `json:"env,omitempty"`
-	Settings    FreeForm           `json:"settings,omitempty"`
+	// +optional
+	Kubernetes *KubernetesAuth `json:"kubernetes,omitempty"`
+	// +optional
+	Settings FreeForm `json:"settings,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type KubernetesAuth struct {
+	// KubeconfigFile referenced as an encrypted secret
+	// +optional
+	KubeconfigFile string `json:"kubeconfigFile,omitempty"`
+	// Kubeconfig referenced as a Kubernetes secret
+	// +optional
+	KubeconfigSecret *SecretInNamespaceReference `json:"kubeconfigSecret,omitempty"`
+	// Kubeconfig config referenced directly
+	// +optional
+	Kubeconfig *v1.Config `json:"kubeconfig,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type SecretInNamespaceReference struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
 }
 
 // SpinnakerAccountStatus defines the observed state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountStatus struct {
-	Valid           bool             `json:"valid"`
 	InvalidReason   string           `json:"invalidReason"`
 	LastValidatedAt metav1.Timestamp `json:"lastValidatedAt"`
 }

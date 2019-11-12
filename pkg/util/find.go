@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/ghodss/yaml"
@@ -9,6 +10,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var errSecretNotFound = errors.New("secret not found")
 
 func FindSpinnakerService(c client.Client, ns string, builder v1alpha2.SpinnakerServiceBuilderInterface) (v1alpha2.SpinnakerServiceInterface, error) {
 	l := builder.NewList()
@@ -36,6 +39,17 @@ func FindSecretInDeployment(c client.Client, dep *v12.Deployment, containerName,
 		return sec, err
 	}
 	return nil, fmt.Errorf("unable to find secret at path %s in container %s in deployment %s", path, containerName, dep.Name)
+}
+
+func GetSecretContent(c client.Client, namespace, name, key string) (string, error) {
+	sec := &v1.Secret{}
+	if err := c.Get(context.TODO(), client.ObjectKey{Name: name, Namespace: namespace}, sec); err != nil {
+		return "", err
+	}
+	if d, ok := sec.Data[key]; ok {
+		return string(d), nil
+	}
+	return "", errSecretNotFound
 }
 
 func GetMountedSecretNameInDeployment(dep *v12.Deployment, containerName, path string) string {

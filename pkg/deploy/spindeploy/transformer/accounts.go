@@ -51,11 +51,11 @@ func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
 
 func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	if !a.svc.GetAccountsConfig().Enabled {
-		a.log.Info("account disabled, skipping")
+		a.log.Info("accounts disabled, skipping")
 		return nil
 	}
 	// Get CRD accounts if enabled
-	crdAccs, err := accounts.AllValidCRDAccounts(a.client, a.svc.GetNamespace())
+	crdAccs, err := accounts.AllValidCRDAccounts(ctx, a.client, a.svc.GetNamespace())
 	if err != nil {
 		// Ignore no kind match
 		if _, ok := err.(*meta.NoKindMatchError); ok {
@@ -64,12 +64,13 @@ func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *ru
 		}
 		return err
 	}
-	return updateServiceSettings(crdAccs, gen)
+	a.log.Info(fmt.Sprintf("found %d accounts to deploy", len(crdAccs)))
+	return updateServiceSettings(ctx, crdAccs, gen)
 }
 
-func updateServiceSettings(crdAccounts []account.Account, gen *generated.SpinnakerGeneratedConfig) error {
+func updateServiceSettings(ctx context.Context, crdAccounts []account.Account, gen *generated.SpinnakerGeneratedConfig) error {
 	for k := range gen.Config {
-		settings, err := accounts.PrepareSettings(k, crdAccounts)
+		settings, err := accounts.PrepareSettings(ctx, k, crdAccounts)
 		if err != nil {
 			return err
 		}

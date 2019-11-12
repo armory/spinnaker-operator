@@ -89,7 +89,7 @@ spec:
         - name: spin-clouddriver-files-287979322
           mountPath: /opt/spinnaker/config
         - name: spin-clouddriver-files-954857370
-          mountPath: /Users/nicolas/.hal/default/staging/dependencies
+          mountPath: /tmp/somefiles
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: local
@@ -113,16 +113,33 @@ spec:
 			},
 		},
 	}
-	assert.Nil(t, updateServiceSettings(nil, g))
+	assert.Nil(t, updateServiceSettings(context.TODO(), nil, g))
+
 	accs := []account.Account{
-		&kubernetes.Account{Name: "test"},
+		&kubernetes.Account{
+			Name: "test",
+			Auth: &v1alpha2.KubernetesAuth{
+				KubeconfigFile: "kube.yml",
+			},
+		},
 	}
-	if !assert.Nil(t, updateServiceSettings(accs, g)) {
+	if !assert.Nil(t, updateServiceSettings(context.TODO(), accs, g)) {
 		return
 	}
 	b, ok := dcs1.Data["clouddriver-accounts.yml"]
 	if !assert.True(t, ok) {
 		return
 	}
-	assert.Equal(t, "kubernetes:\n  accounts:\n  - name: test\n", string(b))
+	// Parse as map
+	m := make(map[string]interface{})
+	if assert.Nil(t, yaml.Unmarshal(b, &m)) {
+		v, err := inspect.GetObjectPropString(context.TODO(), m, "kubernetes.accounts.0.name")
+		if assert.Nil(t, err) {
+			assert.Equal(t, "test", v)
+		}
+		v, err = inspect.GetObjectPropString(context.TODO(), m, "kubernetes.accounts.0.kubeconfigFile")
+		if assert.Nil(t, err) {
+			assert.Equal(t, "kube.yml", v)
+		}
+	}
 }

@@ -5,49 +5,35 @@ import (
 	"testing"
 )
 
-func TestDispatch(t *testing.T) {
-	a := map[string]interface{}{
-		"a": true,
-		"b": []string{"b1", "b2"},
-		"c": map[string]interface{}{
-			"c1": []string{"c11", "c12"},
-			"c2": []string{"c21", "c22"},
-		},
-		"d":        "dval",
-		"n":        "name",
-		"dynamic1": "t",
-		"dynamic2": true,
+func TestSource(t *testing.T) {
+	type st struct {
+		A         string `json:"a,omitempty"`
+		B         string `json:"bb"`
+		C         int    `json:"c"`
+		NotTagged string
+		E         []string `json:"e"`
+	}
+	m := map[string]interface{}{
+		"a":         "Avalue",
+		"bb":        "Bvalue",
+		"c":         10,
+		"NotTagged": "somevalue",
+		"e":         []string{"e1", "e2"},
+	}
+	s := &st{}
+	if assert.Nil(t, Source(s, m)) {
+		assert.Equal(t, "Avalue", s.A)
+		assert.Equal(t, "Bvalue", s.B)
+		assert.Equal(t, 10, s.C)
+		assert.Equal(t, "", s.NotTagged)
+		assert.Equal(t, 2, len(s.E))
 	}
 
-	type t1 struct {
-		A bool   `json:"a,omitempty""`
-		D string `json:"d,omitempty""`
+	s = &st{}
+	m = map[string]interface{}{
+		"a": 10,
 	}
+	assert.NotNil(t, Source(s, m))
 
-	type t2 struct {
-		C map[string][]string `json:"c,omitempty""`
-		B []string            `json:"b,omitempty""`
-	}
-
-	type t3 map[string]interface{}
-
-	type s struct {
-		k1 t1
-		k2 t2
-		k3 t3
-		N  string `json:"n,omitempty""`
-	}
-
-	v := &s{
-		k1: t1{},
-		k2: t2{},
-		k3: t3{},
-	}
-
-	if assert.Nil(t, Dispatch(a, &v.k1, &v.k2, &v.k3, v)) {
-		assert.Equal(t, "name", v.N)
-		assert.Equal(t, "dval", v.k1.D)
-		assert.Equal(t, 2, len(v.k2.C["c1"]))
-		assert.Equal(t, 2, len(v.k2.B))
-	}
+	assert.NotNil(t, Source(nil, m))
 }

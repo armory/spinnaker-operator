@@ -62,7 +62,7 @@ func (v *accountValidatingController) Handle(ctx context.Context, req admission.
 		}
 
 		av := spinAccount.NewValidator()
-		ctx = secrets.NewContext(ctx)
+		ctx = secrets.NewContext(ctx, v.client, acc.GetNamespace())
 		if err := av.Validate(nil, v.client, ctx, log); err != nil {
 			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
