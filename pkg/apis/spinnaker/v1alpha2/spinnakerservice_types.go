@@ -176,6 +176,10 @@ type SpinnakerValidation struct {
 	Notifications map[string]ValidationSetting `json:"notifications,omitempty"`
 	// +optional
 	CI map[string]ValidationSetting `json:"ci,omitempty"`
+	// +optional
+	Pubsub map[string]ValidationSetting `json:"pubsub,omitempty"`
+	// +optional
+	Canary map[string]ValidationSetting `json:"canary,omitempty"`
 }
 
 type ValidationSetting struct {

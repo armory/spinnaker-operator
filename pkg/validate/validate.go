@@ -61,6 +61,8 @@ func generateParallelValidators(spinSvc v1alpha2.SpinnakerServiceInterface, opti
 		return nil, errors.Wrap(err, "unable to determine validations to run")
 	}
 	vs = append(vs, ParallelValidators...)
+	// Add outsources Halyard validation
+	vs = append(vs, &halValidator{})
 	return vs, nil
 }
 
