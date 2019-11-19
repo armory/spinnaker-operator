@@ -7,12 +7,12 @@ spec:
   spinnakerConfig:
     # spec.spinnakerConfig.config - This section contains the contents of a deployment found in a halconfig .deploymentConfigurations[0]
     config:
-      version: 1.15.1   # the version of Spinnaker to be deployed
+      version: 1.17.1   # the version of Spinnaker to be deployed
       persistentStorage:
         persistentStoreType: s3
         s3:
           bucket: mybucket
-          rootFolder: front50
+          rootFolder: front50 # Change me
 
     # spec.spinnakerConfig.profiles - This section contains the YAML of each service's profile
     profiles:
@@ -23,7 +23,6 @@ spec:
         # Use the | YAML symbol to indicate a block-style multiline string
         settings-local.js: |
           window.spinnakerSettings.feature.kustomizeEnabled = true;
-          window.spinnakerSettings.feature.artifactsRewrite = true;
       echo: {}    # is the contents of ~/.hal/default/profiles/echo.yml
       fiat: {}    # is the contents of ~/.hal/default/profiles/fiat.yml
       front50: {} # is the contents of ~/.hal/default/profiles/front50.yml
@@ -94,3 +93,5 @@ spec:
 #           service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
 #           service.beta.kubernetes.io/aws-load-balancer-ssl-cert: null
 #         publicPort: 443
+
+  validation:
