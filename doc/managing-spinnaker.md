@@ -1,16 +1,5 @@
 # Managing Spinnaker
 
-- Stop using Halyard commands: just `kubectl apply` your Spinnaker configuration. This includes support for local files.
-- Expose Spinnaker to the outside world (via `LoadBalancer`). You can still disable that behavior if you prefer to manage ingresses and LBs yourself. 
-- Deploy any version of Spinnaker. The operator is not tied to a particular version of Spinnaker. 
-- Keep secrets separate from your config, store your config in `git`, and have an easy Gitops workflow.
-- Validate your configuration before applying it (with webhook validation) 
-- Store Spinnaker secrets in Kubernetes secrets
-- Patch versions, accounts or any setting with `kustomize`. 
-- Monitor the health of Spinnaker via `kubectl`
-- Define Kubernetes accounts in `SpinnakerAccount` objects and store kubeconfig inline, in Kubernetes secrets, in s3, or gcs **[experimental]**
-
-
 ### Installing Spinnaker
 
 ```bash
