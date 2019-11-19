@@ -64,7 +64,7 @@ Events:              <none>
 Delete:
 
 ```bash
-$ kubectl -n mynamespace deleted spinnakerservice spinnaker
+$ kubectl -n mynamespace delete spinnakerservice spinnaker
 spinnakerservice.spinnaker.io "spinnaker" deleted
 ```
 
