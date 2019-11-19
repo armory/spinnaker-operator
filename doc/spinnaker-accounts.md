@@ -1,12 +1,11 @@
 # SpinnakerAccount
 
-`SpinnakerAccount` lets us define and manage accounts outside of Spinnaker itself and with Kubernetes native
+`SpinnakerAccount` lets us define and manage accounts outside of Spinnaker's configuration and with Kubernetes native
 tools. The main use case is to automate the discovery of accounts by Spinnaker that are provisioned automatically.
 
 For example, you may already have a pipeline that provisions a Kubernetes cluster with Terraform, if you want that 
 new cluster to be available you'd just need to create a `SpinnakerAccount` of type `Kubernetes` in Spinnaker's namespace.
    
-
 ## Format
 
 ```yaml
