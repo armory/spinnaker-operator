@@ -11,18 +11,71 @@ The validating admission controller [requires](https://kubernetes.io/docs/refere
 - Admission controllers enabled (`-enable-admission-plugins`)
 - `ValidatingAdmissionWebhook` enabled in the kube-apiserver (should be the default)
 
-Note: If you can't use the validation webhook, pass the `--without-admission-controller` to the operator (like in `deploy/operator/basic/deployment.yaml`).
+Note: If you can't use the validation webhook, pass the `--disable-admission-controller` to the operator (like in `deploy/operator/basic/deployment.yaml`).
 
-## Installation
+## Spinnaker installed in under a minute (or two)
+
+For the impatient, more explanation can be found below.
+
+```bash
+# For a stable release (https://github.com/armory/spinnaker-operator/releases)
+$ mkdir -p spinnaker-operator && cd spinnaker-operator
+$ RELEASE=v0.2.0 bash -c 'curl -L https://github.com/armory/spinnaker-operator/releases/download/${RELEASE}/manifests.tgz | tar -xz'
+ 
+# For the latest development work (master) 
+$ git clone https://github.com/armory/spinnaker-operator.git && cd spinnaker-operator
+
+# Install or update CRDs cluster wide
+$ kubectl apply -f deploy/crds/
+
+# Install operator in namespace spinnaker-operator, see below if you want a different namespace
+$ kubectl create ns spinnaker-operator
+$ kubectl -n spinnaker-operator apply -f deploy/operator/cluster
+
+# Install Spinnaker in "spinnaker" namespace
+$ kubectl create ns spinnaker
+$ kubectl -n spinnaker apply -f deploy/spinnaker/basic
+
+# Watch the install progress, check out the pods being created too!
+$ kubectl -n spinnaker get spinsvc spinnaker -w
+```
+
+## What can you do with the Spinnaker Operator?
+
+- Stop using Halyard commands: just `kubectl apply` your Spinnaker configuration. This includes support for local files.
+- Expose Spinnaker to the outside world (via `LoadBalancer`). You can still disable that behavior if you prefer to manage ingresses and LBs yourself. 
+- Deploy any version of Spinnaker. The operator is not tied to a particular version of Spinnaker. 
+- Keep secrets separate from your config, store your config in `git`, and have an easy Gitops workflow.
+- Validate your configuration before applying it (with webhook validation) 
+- Store Spinnaker secrets in Kubernetes secrets
+- Patch versions, accounts or any setting with `kustomize`. 
+- Monitor the health of Spinnaker via `kubectl`
+- Define Kubernetes accounts in `SpinnakerAccount` objects and store kubeconfig inline, in Kubernetes secrets, in s3, or gcs **[experimental]**
+
+## Accounts CRD (experimental)
+The Spinnaker Operator introduces a new CRD for Spinnaker accounts. A `SpinnakerAccount` is defined in an object - separate
+from the main Spinnaker config - so its creation and maintenance can easily be automated.
+
+The long term goal is to support all accounts (providers, CI, notifications, ...) but the first implementation deals with
+Kubernetes accounts.
+
+| Account type | Status |
+|------------|----------|
+| `Kubernetes` | alpha |
+
+Read more at [Spinnaker accounts](doc/spinnaker-accounts.md)
+
+
+## Operator Installation (detailed)
 Download CRDs and example manifests from the [latest stable release](https://github.com/armory/spinnaker-operator/releases).
-CRD and examples on `master` are unstable and subject to change.
+CRD and examples on `master` are unstable and subject to change but feedback is greatly appreciated.
 
 **Breaking Change**: In 0.2.x+, the CRD no longer references a `configMap` but contains the whole configuration. 
 It allows users to use `kustomize` to layer their Spinnaker changes and makes validation easier.    
 
-### Operator Installation
+### Step 1: Install CRDs
 
-First we'll install the `SpinnakerService` CRD:
+First we'll install the `SpinnakerService` and `SpinnakerAccount` CRDs:
 
 ```bash
 $ mkdir -p spinnaker-operator && cd spinnaker-operator
@@ -30,9 +83,14 @@ $ tar -xvf operator-manifests.tgz .
 $ kubectl apply -f deploy/crds/
 ```
 
+Note: `SpinnakerAccount` CRD is optional.
+
+
+### Step 2: Install Operator
+
 There are two modes for the operator:
-- basic mode to install Spinnaker in a single namespace without validating admission webhook
-- cluster mode works across namespaces and requires a `ClusterRole` to perform validation
+- **basic mode** to install Spinnaker in a single namespace without validating admission webhook
+- **cluster mode** works across namespaces and requires a `ClusterRole` to perform validation
 
 The main difference between the two modes is that basic only requires a `Role` (vs a `ClusterRole`) and has no validating webhook.
 
@@ -49,121 +107,50 @@ $ kubectl apply -n <namespace> -f deploy/operator/basic
 
 #### Cluster install
 To install the operator:
-1. Decide which namespace the operator should live in. We suggest `spinnaker-operator`, since it could deploy multiple Spinnakers.
-2. Edit the namespace in `deploy/operator/cluster/role_binding.yml` to be the namespace where you want the operator to live.
+1. Decide and create the namespace the operator should live in. We suggest `spinnaker-operator`.
+2. If you pick a different namespace than `spinnaker-operator`, edit the namespace in `deploy/operator/cluster/role_binding.yml`.
 3. Run:
 
 ```bash
 $ kubectl apply -n spinnaker-operator -f deploy/operator/cluster
 ```
 
-### Spinnaker Installation
+## Spinnaker Installation
 
-Once you've installed the operator, you can install Spinnaker by making a configuration (`configMap`). Check out examples in `deploy/spinnaker/basic/SpinnakerService.yml`. If you prefer to use `kustomize`, we've added some kustomization in `deploy/spinnaker/kustomize/` (WIP)
+Once you've installed CRDs and operator, check out examples in `deploy/spinnaker/`. Below the 
+`spinnaker-namespace` parameter refers to the namespace where you want to install
+Spinnaker. It is likely different from  the operator's namespace.
 
 
-#### Example 1: Installing version 1.15.1
+### Example 1: Basic Install
 
-**Important**: In `deploy/spinnaker/basic/SpinnakerService.yml`, change the `config.persistentStorage` section to point to an s3 bucket you own or use a different persistent storage.
+**Important**: In `deploy/spinnaker/basic/spinnakerservice.yml`, change the `config.persistentStorage` section to point to an s3 bucket you own or use a different persistent storage.
 
+`spinnakerservice.yml` currently points to version `1.17.1` but you can install any version of Spinnaker with the operator. Just change the version in the manifest.  
 
 ```bash
-$ kubectl -n <namespace> apply -f deploy/spinnaker/basic/SpinnakerService.yml
+$ kubectl create ns <spinnaker-namespace>
+$ kubectl -n <spinnaker-namespace> apply -f deploy/spinnaker/basic/spinnakerservice.yml
 ```
 
 This configuration does not contain any connected accounts, just a persistent storage.
 
-#### Example 2: Using Kustomize
+### Example 2: Install with all parameters
+
+You'll find a more complete example under `deploy/spinnaker/basic/spinnakerservice.yml` with all parameters available.
+
+### Example 3: Using Kustomize
 
 Set your own values in `deploy/spinnaker/kustomize/kustomization.yml`, then:
 
 
 ```bash
-$ kustomize build deploy/spinnaker/kustomize/ | kubectl -n <namespace> apply -f -
+$ kubectl create ns <spinnaker-namespace>
+$ kustomize build deploy/spinnaker/kustomize/ | kubectl -n <spinnaker-namespace> apply -f -
 ```
  
-
-### Managing Spinnaker
-
-You can manage your Spinnaker installations with `kubectl`.
-
-#### Listing Spinnaker instances
-```bash
-$ kubectl get spinnakerservice --all-namespaces
-NAMESPACE     NAME        VERSION
-mynamespace   spinnaker   1.15.1
-```
-
-The short name `spinsvc` is also available.
-
-#### Describing Spinnaker instances
-```bash
-$ kubectl -n mynamespace describe spinnakerservice spinnaker
-```
-
-#### Deleting Spinnaker instances
-Delete:
-```bash
-$ kubectl -n mynamespace deleted spinnakerservice spinnaker
-spinnakerservice.spinnaker.io "spinnaker" deleted
-```
-
-
-## Configuring Spinnaker
-
-Detailed information about the SpinnakerService CRD fields and how to configure Spinnaker can be found [in the wiki](https://github.com/armory/spinnaker-operator/wiki/SpinnakerService-CRD)
-
+## SpinnakerService options
+See [all SpinnakerService options](doc/options.md).
 
 ## Uninstalling the operator
-
-If for some reason the operator needs to be uninstalled/deleted, there are still two ways in which Spinnaker itself can be prevented from being deleted, explained in the following sections.
-
-### Replacing the operator with Halyard
-
-First you need to export Spinnaker configuration settings to a format that Halyard understands: 
-1. From the `SpinnakerService` manifest, copy the contents of `spec.spinnakerConfig.config` to its own file named `config`, and save it with the following structure:
-```
-currentDeployment: default
-deploymentConfigurations:
-- name: default
-  <<CONTENT HERE>> 
-```
-2. For each entry in `spec.spinnakerConfig.profiles`, copy it to its own file inside a `profiles` folder with a `<entry-name>-local.yml` name.
-3. For each entry in `spec.spinnakerConfig.service-settings`, copy it to its own file inside a `service-settings` folder with a `<entry-name>.yml` name.
-4. For each entry in `spec.spinnakerConfig.files`, copy it to its own file inside a directory structure following the name of the entry with double underscores (__) replaced by a path separator. Example: an entry named `profiles__rosco__packer__example-packer-config.json` would produce the file `profiles/rosco/packer/example-packer-config.json`.
-
-At the end, you would have the following directory tree:
-```
-config
-default/
-  profiles/
-  service-settings/
-```
-
-After that, you can put these files in your Halyard home directory and deploy Spinnaker running `hal deploy apply`.
-
-Finally you can delete the operator and their CRDs from the Kubernetes cluster.
-
-```bash
-$ kubectl delete -n <namespace> -f deploy/operator/<installation type>
-$ kubectl delete -f deploy/crds/
-```
-
-### Removing operator ownership from Spinnaker resources
-
-You can execute the following script to remove ownership of Spinnaker resources, where `NAMESPACE` is the namespace where Spinnaker is installed:
-```bash
-NAMESPACE=
-for rtype in deployment service
-do
-    for r in $(kubectl -n $NAMESPACE get $rtype --selector=app=spin -o jsonpath='{.items[*].metadata.name}') 
-    do
-        kubectl -n $NAMESPACE patch $rtype $r --type json -p='[{"op": "remove", "path": "/metadata/ownerReferences"}]'
-    done
-done
-```
-Finally you can delete the operator and their CRDs from the Kubernetes cluster.
-```bash
-$ kubectl delete -n <namespace> -f deploy/operator/<installation type>
-$ kubectl delete -f deploy/crds/
-```
+See [this section](doc/uninstalling.md).
