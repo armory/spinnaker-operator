@@ -71,7 +71,7 @@ spinnakerservice.spinnaker.io "spinnaker" deleted
 
 # Secrets
 When it comes to storing secrets, you have several options each with their own pros and cons. Generally speaking, 
-you should pick the method that matches your workflow the best. There's no significant performance options between each option:
+you should pick the method that matches your workflow the best. There's no significant performance differences between each option:
 
 ## Secrets in a cloud provider storage (s3, s3-like, gcs)
 This method lets you store secrets externally. You can then manage access as any other bucket you manage.
