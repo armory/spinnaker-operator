@@ -2,7 +2,10 @@ package halyard
 
 import "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 
-// Validators we're going always going to skip
+// Validators we're going always going to skip: they're referenced by the simple class name
+// of the com.netflix.spinnaker.halyard.config.model.v1.node.Validator Java class that implements the validation.
+// As more validations are added to the operator, skip the corresponding Halyard validation here until we can
+// eventually remove Halyard validations.
 var validationsToSkip = []string{
 	"HalconfigValidator",
 	"FieldValidator",

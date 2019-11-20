@@ -72,10 +72,10 @@ func parseValidationResponse(d []byte, logger logr.Logger) error {
 	}
 	msgs := make([]string, 0)
 	for _, v := range resp {
-		if v.Severity == "WARNING" {
-			logger.Info(fmt.Sprintf("WARN: %s at %s", v.Message, v.Location))
-		} else {
+		if v.Severity == "FATAL" || v.Severity == "ERROR" {
 			msgs = append(msgs, fmt.Sprintf("spinnakerConfig.config.%s: %s", v.Location, v.Message))
+		} else {
+			logger.Info(fmt.Sprintf("%s: %s at %s", v.Severity, v.Message, v.Location))
 		}
 	}
 	if len(msgs) == 0 {
