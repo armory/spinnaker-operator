@@ -20,6 +20,9 @@ func GetObjectPropBool(obj interface{}, prop string, defaultVal bool) (bool, err
 	return false, fmt.Errorf("%s is not a boolean, found %s", prop, c.Kind().String())
 }
 
+// GetObjectPropString returns the value at the given prop, a boolean to indicate if the
+// property refers to a string, and a potential error.
+// Note that the boolean is only true when the file was dereferenced through a secret
 func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (string, error) {
 	c, err := getObjectProp(obj, prop)
 	if err != nil {
@@ -27,7 +30,8 @@ func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (str
 	}
 	switch c.Kind() {
 	case reflect.String:
-		return secrets.Decode(ctx, c.String())
+		s, _, err := secrets.Decode(ctx, c.String())
+		return s, err
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(c.Int(), 10), nil
 	case reflect.Float64:

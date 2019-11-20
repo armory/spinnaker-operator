@@ -2,90 +2,68 @@ package secrets
 
 import (
 	"context"
-	"fmt"
 	"github.com/armory/go-yaml-tools/pkg/secrets"
-	"github.com/armory/spinnaker-operator/pkg/secrets/kubernetes"
-	"io/ioutil"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
+func init() {
+	secrets.Engines["kubernetes"] = NewSecretDecrypter
+}
+
 // Decode decodes a potential value into a secret
-func Decode(ctx context.Context, val string) (string, error) {
-	return decode(decryptFunc, ctx, val)
-}
-
-func DecodeAsFile(ctx context.Context, val string) (string, error) {
-	if !isSecretEncrypted(val) {
-		// Check the file exists
-		_, err := os.Stat(val)
-		return val, err
+func Decode(ctx context.Context, val string) (string, bool, error) {
+	if !secrets.IsEncryptedSecret(val) {
+		return val, false, nil
 	}
-	c, err := decode(decryptFunc, ctx, val)
+
+	// Get decrypter
+	dec, err := secrets.NewDecrypter(ctx, val)
 	if err != nil {
-		return "", err
-	}
-	f, err := ioutil.TempFile("", "operator-")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	f.Write([]byte(c))
-	return f.Name(), nil
-}
-
-type decrypter func(c client.Client, namespace string, val string) (string, error)
-
-func decode(decrypt decrypter, ctx context.Context, val string) (string, error) {
-	if !isSecretEncrypted(val) {
-		return val, nil
+		return val, false, err
 	}
 
 	var v string
 	c, err := FromContextWithError(ctx)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
+
 	// Check if in cache
 	if v, ok := c.Cache[val]; ok {
-		return v, nil
+		return v, false, nil
 	}
-	v, err = decrypt(c.Client, c.Namespace, val)
+
+	// Check if in file cache
+	if v, ok := c.FileCache[val]; ok {
+		return v, true, nil
+	}
+
+	v, err = dec.Decrypt()
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
+
 	// If we could get the cache, update it
-	c.Cache[val] = v
-	return v, nil
+	if dec.IsFile() {
+		c.FileCache[val] = v
+	} else {
+		c.Cache[val] = v
+	}
+	return v, dec.IsFile(), nil
 }
 
-func isSecretEncrypted(str string) bool {
-	return strings.HasPrefix(str, "encrypted:")
-}
-
-func decryptFunc(c client.Client, namespace string, val string) (string, error) {
-	secretDecrypter, err := NewDecrypter(c, namespace, val)
+// DecodeAsFile is decode with a check that the final value is a file that exists
+func DecodeAsFile(ctx context.Context, val string) (string, error) {
+	// We ignore the isFile return value to support old style "encrypted:" file references
+	s, _, err := Decode(ctx, val)
 	if err != nil {
 		return "", err
 	}
-	return secretDecrypter.Decrypt()
+	_, err = os.Stat(s)
+	return s, err
 }
 
-func NewDecrypter(c client.Client, namespace string, encryptedSecret string) (secrets.Decrypter, error) {
-	engine, params := secrets.ParseTokens(encryptedSecret)
-	switch engine {
-	case "s3":
-		return secrets.NewS3Decrypter(params), nil
-	case "vault":
-		return secrets.NewVaultDecrypter(params), nil
-	case "k8s":
-		return kubernetes.NewSecretDecrypter(c, namespace, params), nil
-	case "noop":
-		params["v"] = encryptedSecret[len("encrypted:noop!v:"):]
-		return NewNop(params), nil
-	default:
-		return nil, fmt.Errorf("secret engine %s not found", engine)
-	}
+func ShouldDecryptToValidate(val string) bool {
+	e, _, _ := secrets.GetEngine(val)
+	return e == "k8s"
 }

@@ -62,22 +62,12 @@ func (s *Service) parseGenManifestsResponse(d []byte) (*generated.SpinnakerGener
 func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	// Add config
-	b, err := yaml.Marshal(spinConfig.Config)
-	if err != nil {
-		return nil, err
-	}
-	if err = s.addPart(writer, "config", b); err != nil {
+	if err := s.addObjectToRequest(ctx, writer, "config", spinConfig.Config); err != nil {
 		return nil, err
 	}
 	//Add service settings
 	for k := range spinConfig.ServiceSettings {
-		b, err := yaml.Marshal(spinConfig.ServiceSettings[k])
-		if err != nil {
-			return nil, err
-		}
-
-		if err = s.addPart(writer, fmt.Sprintf("service-settings__%s.yml", k), b); err != nil {
+		if err := s.addObjectToRequest(ctx, writer, fmt.Sprintf("service-settings__%s.yml", k), spinConfig.ServiceSettings[k]); err != nil {
 			return nil, err
 		}
 	}
@@ -93,22 +83,17 @@ func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1al
 	//mp := spinConfig.Profiles.AsMap()
 	for k := range spinConfig.Profiles {
 		if k == "deck" {
-			if err = s.writeDeckProfile(spinConfig.Profiles[k]["settings-local.js"], writer); err != nil {
+			if err := s.writeDeckProfile(spinConfig.Profiles[k]["settings-local.js"], writer); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		b, err := yaml.Marshal(spinConfig.Profiles[k])
-		if err != nil {
-			return nil, err
-		}
-		if err = s.addPart(writer, fmt.Sprintf("profiles__%s-local.yml", k), b); err != nil {
+		if err := s.addObjectToRequest(ctx, writer, fmt.Sprintf("profiles__%s-local.yml", k), spinConfig.Profiles[k]); err != nil {
 			return nil, err
 		}
 	}
 
-	err = writer.Close()
-	if err != nil {
+	if err := writer.Close(); err != nil {
 		return nil, err
 	}
 
@@ -119,6 +104,14 @@ func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1al
 	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return req, nil
+}
+
+func (s *Service) addObjectToRequest(ctx context.Context, writer *multipart.Writer, param string, object interface{}) error {
+	b, err := yaml.Marshal(object)
+	if err != nil {
+		return err
+	}
+	return s.addPart(writer, param, b)
 }
 
 func (s *Service) addPart(writer *multipart.Writer, param string, content []byte) error {

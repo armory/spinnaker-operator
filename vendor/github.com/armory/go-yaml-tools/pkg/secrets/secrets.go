@@ -1,61 +1,96 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
+	yamlParse "gopkg.in/yaml.v2"
+	"io/ioutil"
+	"reflect"
 	"strings"
 )
 
+const (
+	encryptedPrefix     = "encrypted:"
+	encryptedFilePrefix = "encryptedFile:"
+)
+
+var Engines = map[string]func(context.Context, bool, string) (Decrypter, error){
+	"s3":   NewS3Decrypter,
+	"gcs":  NewGcsDecrypter,
+	"noop": NewNoopDecrypter,
+}
+
 type Decrypter interface {
 	Decrypt() (string, error)
+	IsFile() bool
 }
 
-type NoSecret struct {
-	secret string
+func IsEncryptedSecret(val string) bool {
+	return strings.HasPrefix(val, encryptedPrefix) ||
+		strings.HasPrefix(val, encryptedFilePrefix)
 }
 
-func (n *NoSecret) Decrypt() (string, error) {
-	return n.secret, nil
-}
-
-var Registry ConfigRegistry
-
-type ConfigRegistry struct {
-	VaultConfig VaultConfig
-}
-
-func RegisterVaultConfig(vaultConfig VaultConfig) error {
-	if err := ValidateVaultConfig(vaultConfig); err != nil {
-		return fmt.Errorf("vault configuration error - %s", err)
+func NewDecrypter(ctx context.Context, encryptedSecret string) (Decrypter, error) {
+	e, isFile, params := GetEngine(encryptedSecret)
+	if e == "" {
+		return &NoopDecrypter{value: encryptedSecret}, nil
 	}
-	Registry.VaultConfig = vaultConfig
-	return nil
-}
-
-func NewDecrypter(encryptedSecret string) Decrypter {
-	engine, params := ParseTokens(encryptedSecret)
-	switch engine {
-	case "s3":
-		return NewS3Decrypter(params)
-	case "vault":
-		return NewVaultDecrypter(params)
-	default:
-		return &NoSecret{encryptedSecret}
+	engine, ok := Engines[e]
+	if !ok {
+		return nil, fmt.Errorf("secret engine %s not registered", e)
 	}
+	return engine(ctx, isFile, params)
 }
 
-func ParseTokens(encryptedSecret string) (string, map[string]string) {
-	var engine string
-	params := map[string]string{}
-	tokens := strings.Split(encryptedSecret, "!")
-	for _, element := range tokens {
-		kv := strings.Split(element, ":")
-		if len(kv) == 2 {
-			if kv[0] == "encrypted" {
-				engine = kv[1]
-			} else {
-				params[kv[0]] = kv[1]
-			}
+// GetEngine returns the name of the engine if recognized,
+// the remainder of the parameters (unparsed) and a boolean that indicates
+// if the user requested a file.
+func GetEngine(encryptedSecret string) (string, bool, string) {
+	isFile := false
+	prefixLen := 0
+	if strings.HasPrefix(encryptedSecret, encryptedPrefix) {
+		prefixLen = len(encryptedPrefix)
+	} else if strings.HasPrefix(encryptedSecret, encryptedFilePrefix) {
+		prefixLen = len(encryptedFilePrefix)
+		isFile = true
+	}
+	idx := strings.Index(encryptedSecret, "!")
+	if idx == -1 {
+		return "", false, ""
+	}
+	return encryptedSecret[prefixLen:idx], isFile, encryptedSecret[idx+1:]
+}
+
+func parseSecretFile(fileContents []byte, key string) (string, error) {
+	m := make(map[interface{}]interface{})
+	if err := yamlParse.Unmarshal(fileContents, &m); err != nil {
+		return "", err
+	}
+
+	for _, yamlKey := range strings.Split(key, ".") {
+		switch s := m[yamlKey].(type) {
+		case map[interface{}]interface{}:
+			m = s
+		case string:
+			return s, nil
+		case nil:
+			return "", fmt.Errorf("error parsing secret file: couldn't find key %q in yaml", key)
+		default:
+			return "", fmt.Errorf("error parsing secret file: unknown type %q with value %q",
+				reflect.TypeOf(s), s)
 		}
 	}
-	return engine, params
+
+	return "", fmt.Errorf("error parsing secret file for key %q", key)
+}
+
+func ToTempFile(content []byte) (string, error) {
+	f, err := ioutil.TempFile("", "secret-")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	f.Write([]byte(content))
+	return f.Name(), nil
 }
