@@ -126,6 +126,25 @@ spec:
             validation:
               description: validation settings for the deployment
               properties:
+                canary:
+                  additionalProperties:
+                    properties:
+                      enabled:
+                        description: Enable or disable validation, defaults to false
+                        type: boolean
+                      failOnError:
+                        description: Report errors but do not fail validation, defaults
+                          to true
+                        type: boolean
+                      frequencySeconds:
+                        anyOf:
+                        - type: string
+                        - type: integer
+                        description: Number of seconds between each validation
+                    required:
+                    - enabled
+                    type: object
+                  type: object
                 ci:
                   additionalProperties:
                     properties:
@@ -216,6 +235,25 @@ spec:
                     type: object
                   type: object
                 providers:
+                  additionalProperties:
+                    properties:
+                      enabled:
+                        description: Enable or disable validation, defaults to false
+                        type: boolean
+                      failOnError:
+                        description: Report errors but do not fail validation, defaults
+                          to true
+                        type: boolean
+                      frequencySeconds:
+                        anyOf:
+                        - type: string
+                        - type: integer
+                        description: Number of seconds between each validation
+                    required:
+                    - enabled
+                    type: object
+                  type: object
+                pubsub:
                   additionalProperties:
                     properties:
                       enabled:
