@@ -533,6 +533,20 @@ func (in *SpinnakerValidation) DeepCopyInto(out *SpinnakerValidation) {
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
+	if in.Pubsub != nil {
+		in, out := &in.Pubsub, &out.Pubsub
+		*out = make(map[string]ValidationSetting, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
+	if in.Canary != nil {
+		in, out := &in.Canary, &out.Canary
+		*out = make(map[string]ValidationSetting, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
 	return
 }
 
