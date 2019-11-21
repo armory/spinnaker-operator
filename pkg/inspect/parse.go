@@ -67,10 +67,13 @@ func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, e
 	for i := 0; i < array.Len(); i++ {
 		v := array.Index(i)
 		// TODO: Fix the case when v is a struct, like for customResources in an account config
-		if !v.Elem().Type().AssignableTo(target.Elem()) {
-			return reflect.Value{}, fmt.Errorf("found unassignable type, expected %v but found %v", target.Elem(), v.Elem().Type())
+		if v.Kind() == reflect.Interface || v.Kind() == reflect.Ptr {
+			v = v.Elem()
 		}
-		result = reflect.Append(result, v.Elem())
+		if !v.Type().AssignableTo(target.Elem()) {
+			return reflect.Value{}, fmt.Errorf("found unassignable type, expected %v but found %v", target.Elem(), v.Type())
+		}
+		result = reflect.Append(result, v)
 	}
 	return result, nil
 }

@@ -21,8 +21,7 @@ var Types = map[v1alpha2.AccountType]account.SpinnakerAccountType{}
 
 func Register(accountTypes ...account.SpinnakerAccountType) {
 	for _, a := range accountTypes {
-		st := strings.ToLower(string(a.GetType()))
-		Types[v1alpha2.AccountType(st)] = a
+		Types[a.GetType()] = a
 	}
 }
 
@@ -31,8 +30,7 @@ func init() {
 }
 
 func GetType(tp v1alpha2.AccountType) (account.SpinnakerAccountType, error) {
-	tplower := v1alpha2.AccountType(strings.ToLower(string(tp)))
-	if t, ok := Types[tplower]; ok {
+	if t, ok := Types[tp]; ok {
 		return t, nil
 	}
 	tps := make([]string, 0)
