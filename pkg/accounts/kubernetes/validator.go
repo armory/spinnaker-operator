@@ -9,7 +9,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	v1 "k8s.io/api/authorization/v1"
+	v13 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -32,6 +32,9 @@ type kubernetesAccountValidator struct {
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
+	if err := k.validateSettings(ctx, log); err != nil {
+		return err
+	}
 	if k.account.Auth != nil && k.account.Auth.UseServiceAccount && spinSvc == nil {
 		// don't validate if the spinnaker account needs a k8s service account to run validations, and there's no SpinnakerService yet
 		return nil
@@ -193,61 +196,26 @@ func (k *kubernetesAccountValidator) validateAccess(clientConfig clientcmd.Clien
 	if err != nil {
 		return err
 	}
-
-	// Check what the client can do
-	// TODO loop through the check we need
-	// Checks are by namespace if namespaces or omitNamespaces (get them before)
-	// Get list of api resources (see getResources below)
-	// If CRDs are listed, try them explicitly
-	sars := clientset.AuthorizationV1().SelfSubjectAccessReviews()
-	sar := &v1.SelfSubjectAccessReview{
-		Spec: v1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &v1.ResourceAttributes{
-				//Namespace:   "",
-				Verb:    "*",
-				Group:   "*",
-				Version: "*",
-				//Resource:    "",
-				//Subresource: "",
-				//Name:        "",
-			},
-			NonResourceAttributes: nil,
-		},
-	}
-	res, err := sars.Create(sar)
+	// Get namespaces. The test is analogous to what is done in Halyard
+	// We want to keep it short so any improvement should remain short (e.g. not a request per namespace)
+	_, err = clientset.CoreV1().Namespaces().List(v13.ListOptions{})
 	if err != nil {
-		return err
-	}
-	if res.Status.Denied {
-		return fmt.Errorf("access denied to cluster for account %s", k.account.Name)
+		return errors.Wrap(err, fmt.Sprintf("unable to verify access to account %s", k.account.Name))
 	}
 	return nil
 }
 
-//func (v *kubernetesAccountValidator) getResources(c *kubernetes.Clientset) error {
-//	_, rscs, err := c.ServerGroupsAndResources()
-//	if err != nil {
-//		return err
-//	}
-//}
-//
-//func getAccessResourceAttributes(a Account) *v1.ResourceAttributes {
-//	nss := a.Env.Namespaces
-//	if len(nss) == 0 {
-//
-//	} else {
-//
-//	}
-//}
-//
-//func getAccessResourceAttributesInNs(a Account, ns string) []*v1.ResourceAttributes {
-//	if len(a.Env.Kinds) == 0 && len(a.Env.OmitKinds) == 0 {
-//		return &v1.ResourceAttributes{
-//			Namespace: ns,
-//			Verb:      "*",
-//			Group:     "*",
-//			Version:   "*",
-//			Resource:  "*",
-//		}
-//	}
-//}
+func (k *kubernetesAccountValidator) validateSettings(ctx context.Context, log logr.Logger) error {
+	nss, err := inspect.GetStringArray(k.account.Settings, "namespaces")
+	if err != nil {
+		nss = make([]string, 0)
+	}
+	omitNss, err := inspect.GetStringArray(k.account.Settings, "omitNamespaces")
+	if err != nil {
+		omitNss = make([]string, 0)
+	}
+	if len(nss) > 0 && len(omitNss) > 0 {
+		return fmt.Errorf("At most one of \"namespaces\" and \"omitNamespaces\" can be supplied.")
+	}
+	return nil
+}

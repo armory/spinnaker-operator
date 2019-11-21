@@ -34,7 +34,7 @@ func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, option
 			hc := status.UpdateHashIfNotExist(getValidationHashKey(a), h, now, false)
 			// If accounts were never validated or if the validation is too old less than x ago
 			if hc.Hash != h || v.NeedsValidation(hc.LastUpdatedAt) {
-				validators = append(validators, &accountValidator{v: a.NewValidator(), fatal: v.IsFatal()})
+				validators = append(validators, &accountValidator{v: a.NewValidator(), fatal: v.IsFatal(), name: a.GetName()})
 			}
 		}
 	}
@@ -59,6 +59,7 @@ func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType acco
 
 type accountValidator struct {
 	v     account.AccountValidator
+	name  string
 	fatal bool
 }
 
@@ -88,7 +89,7 @@ func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountTy
 }
 
 func (a *accountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
-	err := a.v.Validate(spinSvc, options.Client, options.Ctx, options.Log)
+	err := a.v.Validate(spinSvc, options.Client, options.Ctx, options.Log.WithValues("Account.Name", a.name))
 	if err != nil {
 		return NewResultFromError(err, a.fatal)
 	}
