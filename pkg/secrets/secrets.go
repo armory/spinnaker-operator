@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	secrets.Engines["kubernetes"] = NewSecretDecrypter
+	secrets.Engines["kubernetes"] = NewKubernetesSecretDecrypter
 }
 
 // Decode decodes a potential value into a secret

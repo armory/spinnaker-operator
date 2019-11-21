@@ -47,12 +47,12 @@ func (s *Service) parseGenManifestsResponse(d []byte) (*generated.SpinnakerGener
 func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	if err := s.addObjectToRequest(ctx, writer, "config", spinConfig.Config); err != nil {
+	if err := s.addObjectToRequest(writer, "config", spinConfig.Config); err != nil {
 		return nil, err
 	}
 	//Add service settings
 	for k := range spinConfig.ServiceSettings {
-		if err := s.addObjectToRequest(ctx, writer, fmt.Sprintf("service-settings__%s.yml", k), spinConfig.ServiceSettings[k]); err != nil {
+		if err := s.addObjectToRequest(writer, fmt.Sprintf("service-settings__%s.yml", k), spinConfig.ServiceSettings[k]); err != nil {
 			return nil, err
 		}
 	}
@@ -73,7 +73,7 @@ func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1al
 			}
 			continue
 		}
-		if err := s.addObjectToRequest(ctx, writer, fmt.Sprintf("profiles__%s-local.yml", k), spinConfig.Profiles[k]); err != nil {
+		if err := s.addObjectToRequest(writer, fmt.Sprintf("profiles__%s-local.yml", k), spinConfig.Profiles[k]); err != nil {
 			return nil, err
 		}
 	}
@@ -91,7 +91,7 @@ func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1al
 	return req, nil
 }
 
-func (s *Service) addObjectToRequest(ctx context.Context, writer *multipart.Writer, param string, object interface{}) error {
+func (s *Service) addObjectToRequest(writer *multipart.Writer, param string, object interface{}) error {
 	b, err := yaml.Marshal(object)
 	if err != nil {
 		return err

@@ -17,7 +17,7 @@ type KubernetesDecrypter struct {
 	isFile    bool
 }
 
-func NewSecretDecrypter(ctx context.Context, isFile bool, params string) (secrets.Decrypter, error) {
+func NewKubernetesSecretDecrypter(ctx context.Context, isFile bool, params string) (secrets.Decrypter, error) {
 	c, err := FromContextWithError(ctx)
 	if err != nil {
 		return nil, err
