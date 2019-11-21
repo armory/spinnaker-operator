@@ -1,7 +1,8 @@
 module github.com/armory/spinnaker-operator
 
 require (
-	github.com/armory/go-yaml-tools v0.0.0-20190802212505-df014e75df27
+	github.com/armory/go-yaml-tools v0.0.0-20191120233933-0620b6b7ea86
+	github.com/aws/aws-sdk-go v1.25.39 // indirect
 	github.com/emicklei/go-restful v2.9.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
@@ -59,7 +60,5 @@ replace (
 replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.2-0.20190919011008-6ed4ff330711
 
 replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.10.1-0.20191004014855-dc713e4d7890
-
-replace github.com/armory/go-yaml-tools => /Users/nicolas/dev/go-yaml-tools
 
 go 1.13
