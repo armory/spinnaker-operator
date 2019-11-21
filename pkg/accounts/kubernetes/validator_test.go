@@ -33,7 +33,7 @@ users:
 	a := &Account{
 		Name: "test",
 		Auth: &v1alpha2.KubernetesAuth{
-			KubeconfigFile: fmt.Sprintf("encrypted:noop!v:%s", s),
+			KubeconfigFile: fmt.Sprintf("encryptedFile:noop!%s", s),
 		},
 	}
 	kv := &kubernetesAccountValidator{account: a}
