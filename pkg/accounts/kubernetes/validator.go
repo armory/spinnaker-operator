@@ -11,18 +11,19 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/authorization/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
 var (
-	noAuthProvidedError      = fmt.Errorf("Kubernetes auth needs to be defined")
-	noKubernetesDefinedError = fmt.Errorf("Kubernetes needs to be defined")
-	noValidKubeconfigError   = fmt.Errorf("no valid kubeconfig file or content found")
+	noAuthProvidedError      = fmt.Errorf("kubernetes auth needs to be defined")
+	noKubernetesDefinedError = fmt.Errorf("kubernetes needs to be defined")
 )
 
 type kubernetesAccountValidator struct {
@@ -37,11 +38,18 @@ func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceI
 	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (clientcmd.ClientConfig, error) {
+func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (*rest.Config, error) {
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, k.account.Settings)
+		c, err := makeClientFromSettings(ctx, k.account.Settings)
+		if err != nil {
+			return nil, err
+		}
+		if c != nil {
+			return c, nil
+		}
+		return makeOwnClusterClient()
 	}
 	if auth.KubeconfigFile != "" {
 		return makeClientFromFile(ctx, auth.KubeconfigFile, nil)
@@ -56,7 +64,7 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (clientcmd.
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings) (clientcmd.ClientConfig, error) {
+func makeClientFromFile(ctx context.Context, file string, settings *authSettings) (*rest.Config, error) {
 	file, err := secrets.DecodeAsFile(ctx, file)
 	if err != nil {
 		return nil, err
@@ -67,11 +75,11 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 		return nil, err
 	}
 
-	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)), nil
+	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (clientcmd.ClientConfig, error) {
+func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (*rest.Config, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
@@ -80,21 +88,25 @@ func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespac
 	if err != nil {
 		return nil, err
 	}
-	return clientcmd.NewClientConfigFromBytes([]byte(str))
+	clientConfig, err := clientcmd.NewClientConfigFromBytes([]byte(str))
+	if err != nil {
+		return nil, err
+	}
+	return clientConfig.ClientConfig()
 }
 
 // makeClientFromConfigAPI makes a client config from the v1 Config (the usual format for kubeconfig) inlined
 // into the CRD.
-func makeClientFromConfigAPI(config *clientcmdv1.Config) (clientcmd.ClientConfig, error) {
+func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
 	cfg := clientcmdapi.NewConfig()
 	if err := clientcmdlatest.Scheme.Convert(config, cfg, nil); err != nil {
 		return nil, nil
 	}
-	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}), nil
+	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}) (clientcmd.ClientConfig, error) {
+func makeClientFromSettings(ctx context.Context, settings map[string]interface{}) (*rest.Config, error) {
 	aSettings := &authSettings{}
 	if err := inspect.Source(aSettings, settings); err != nil {
 		return nil, err
@@ -107,9 +119,30 @@ func makeClientFromSettings(ctx context.Context, settings map[string]interface{}
 		if err != nil {
 			return nil, err
 		}
-		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)), nil
+		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)).ClientConfig()
 	}
-	return nil, noValidKubeconfigError
+	return nil, nil
+}
+
+func makeOwnClusterClient() (*rest.Config, error) {
+	if isRunningInCluster() {
+		return rest.InClusterConfig()
+	}
+	// operator may be running outside the cluster, load its default configuration
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	cfg, err := rules.Load()
+	if err != nil {
+		return nil, err
+	}
+	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
+}
+
+func isRunningInCluster() bool {
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	if len(host) == 0 || len(port) == 0 {
+		return false
+	}
+	return true
 }
 
 func makeOverrideFromAuthSettings(config *clientcmdapi.Config, settings *authSettings) *clientcmd.ConfigOverrides {
@@ -158,12 +191,8 @@ type authSettings struct {
 	OAuthScopes         []string `json:"oAuthScopes,omitempty"`
 }
 
-func (k *kubernetesAccountValidator) validateAccess(clientConfig clientcmd.ClientConfig) error {
-	cc, err := clientConfig.ClientConfig()
-	if err != nil {
-		return err
-	}
-	clientset, err := kubernetes.NewForConfig(cc)
+func (k *kubernetesAccountValidator) validateAccess(clientConfig *rest.Config) error {
+	clientset, err := kubernetes.NewForConfig(clientConfig)
 	if err != nil {
 		return err
 	}

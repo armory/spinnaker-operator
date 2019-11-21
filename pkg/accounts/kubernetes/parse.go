@@ -17,9 +17,6 @@ func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Accou
 	a.Name = account.Name
 	a.Settings = account.Spec.Settings
 	a.Auth = account.Spec.Kubernetes
-	if a.Auth == nil {
-		return nil, noKubernetesDefinedError
-	}
 	// Parse settings relevant to the environment
 	if err := inspect.Source(&a.Env, account.Spec.Settings); err != nil {
 		return nil, err
