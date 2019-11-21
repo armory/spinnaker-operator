@@ -43,6 +43,39 @@ spec:
 				assert.Nil(t, err)
 			},
 		},
+		{
+			name: "full kubernetes config",
+			manifest: `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerAccount
+metadata:
+  name: account1
+spec:
+  type: Kubernetes
+  kubernetes: {}
+  settings:
+    name: kubernetes
+    requiredGroupMembership: []
+    providerVersion: V2
+    permissions: {}
+    dockerRegistries: []
+    configureImagePullSecrets: true
+    cacheThreads: 1
+    namespaces:
+    - ns1
+    - ns2
+    omitNamespaces: []
+    kinds: []
+    omitKinds: []
+    customResources: []
+    cachingPolicies: []
+    oAuthScopes: []
+    onlySpinnakerManaged: false
+`,
+			expected: func(t *testing.T, _ account.Account, err error) {
+				assert.Nil(t, err)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -65,7 +98,7 @@ func TestFromSpinnakerSettings(t *testing.T) {
 		expected func(t *testing.T, a account.Account, err error)
 	}{
 		{
-			name:   "basic settings, parsing doesn't validate",
+			name: "basic settings, parsing doesn't validate",
 			settings: map[string]interface{}{
 				"name": "test",
 			},
@@ -74,7 +107,7 @@ func TestFromSpinnakerSettings(t *testing.T) {
 			},
 		},
 		{
-			name:   "but names are still required",
+			name: "but names are still required",
 			settings: map[string]interface{}{
 				"kubeconfigFile": "test",
 			},
