@@ -9,4 +9,5 @@ const (
 	DeckServiceName         = "spin-deck"
 	DeckOverrideBaseUrlProp = "security.uiSecurity.overrideBaseUrl"
 	DeckSSLEnabledProp      = "security.uiSecurity.ssl.enabled"
+	ClouddriverName         = "clouddriver"
 )

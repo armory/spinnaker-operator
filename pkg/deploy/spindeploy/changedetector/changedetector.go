@@ -48,7 +48,6 @@ func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Clien
 func (ch *compositeChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
 	rLogger := ch.log.WithValues("Service", svc.GetName())
 	for _, changeDetector := range ch.changeDetectors {
-		rLogger.Info(fmt.Sprintf("Running %T", changeDetector))
 		isUpToDate, err := changeDetector.IsSpinnakerUpToDate(ctx, svc)
 		if err != nil {
 			return false, err

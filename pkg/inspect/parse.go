@@ -46,13 +46,41 @@ func Source(i interface{}, settings map[string]interface{}) error {
 			continue
 		}
 		sv := reflect.ValueOf(setting)
-		if !sv.Type().AssignableTo(f.Type) {
-			return fmt.Errorf("found unassignable type at %s", f.Name)
+		switch sv.Kind() {
+		case reflect.Slice, reflect.Array:
+			av, e := toSpecificArray(sv, f.Type)
+			if e != nil {
+				return e
+			}
+			v.FieldByName(f.Name).Set(av)
+		default:
+			if !sv.Type().AssignableTo(f.Type) {
+				return fmt.Errorf("found unassignable type at %s, expected %v but found %v", f.Name, f.Type, sv.Type())
+			}
+			v.FieldByName(f.Name).Set(sv)
 		}
-		v.FieldByName(f.Name).Set(sv)
 	}
 	return nil
 }
+
+
+// toSpecificArray converts an array of one type to an array of a desired type if it's assignable.
+func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, error) {
+	result := reflect.MakeSlice(reflect.SliceOf(target.Elem()), 0, array.Cap())
+	for i := 0; i < array.Len(); i++ {
+		v := array.Index(i)
+		// TODO: Fix the case when v is a struct, like for customResources in an account config
+		if v.Kind() == reflect.Interface || v.Kind() == reflect.Ptr {
+			v = v.Elem()
+		}
+		if !v.Type().AssignableTo(target.Elem()) {
+			return reflect.Value{}, fmt.Errorf("found unassignable type, expected %v but found %v", target.Elem(), v.Type())
+		}
+		result = reflect.Append(result, v)
+	}
+	return result, nil
+}
+
 
 // SanitizeSecrets visits all nodes and returns copies of the struct with secrets that are not passthrough
 // replaced

@@ -15,14 +15,16 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
 var (
-	noAuthProvidedError      = fmt.Errorf("Kubernetes auth needs to be defined")
-	noKubernetesDefinedError = fmt.Errorf("Kubernetes needs to be defined")
-	noValidKubeconfigError   = fmt.Errorf("no valid kubeconfig file or content found")
+	noAuthProvidedError      = fmt.Errorf("kubernetes auth needs to be defined")
+	noKubernetesDefinedError = fmt.Errorf("kubernetes needs to be defined")
+	noValidKubeconfigError   = fmt.Errorf("no valid kubeconfig file, kubeconfig content or service account information found")
+	noServiceAccountName     = fmt.Errorf("no service account name configured in SpinnakerService for clouddriver")
 )
 
 type kubernetesAccountValidator struct {
@@ -30,14 +32,18 @@ type kubernetesAccountValidator struct {
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
-	config, err := k.makeClient(ctx)
+	if k.account.Auth != nil && k.account.Auth.UseServiceAccount && spinSvc == nil {
+		// don't validate if the spinnaker account needs a k8s service account to run validations, and there's no SpinnakerService yet
+		return nil
+	}
+	config, err := k.makeClient(ctx, spinSvc)
 	if err != nil {
 		return err
 	}
 	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (clientcmd.ClientConfig, error) {
+func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface) (clientcmd.ClientConfig, error) {
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
@@ -51,6 +57,9 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (clientcmd.
 	}
 	if auth.KubeconfigSecret != nil {
 		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
+	}
+	if auth.UseServiceAccount {
+		return makeClientFromServiceAccount(ctx, spinSvc)
 	}
 	return nil, noAuthProvidedError
 }
@@ -110,6 +119,23 @@ func makeClientFromSettings(ctx context.Context, settings map[string]interface{}
 		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)), nil
 	}
 	return nil, noValidKubeconfigError
+}
+
+func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface) (clientcmd.ClientConfig, error) {
+	_, err := spinSvc.GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
+	if err != nil {
+		return nil, noServiceAccountName
+	}
+	// TODO: Create clientcmd.ClientConfig from a service account
+	return nil, nil
+}
+
+func isRunningInCluster() bool {
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	if len(host) == 0 || len(port) == 0 {
+		return false
+	}
+	return true
 }
 
 func makeOverrideFromAuthSettings(config *clientcmdapi.Config, settings *authSettings) *clientcmd.ConfigOverrides {

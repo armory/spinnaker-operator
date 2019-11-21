@@ -104,6 +104,9 @@ func getSecretFromConfig(s generated.ServiceConfig, n string) *v1.Secret {
 func addSpringProfile(sc *v1alpha2.SpinnakerConfig, svc string, p string) error {
 	sp, ok := sc.ServiceSettings[svc]
 	if !ok {
+		if sc.ServiceSettings == nil {
+			sc.ServiceSettings = map[string]v1alpha2.FreeForm{}
+		}
 		sp = v1alpha2.FreeForm{}
 		sc.ServiceSettings[svc] = sp
 	}
