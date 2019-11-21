@@ -37,9 +37,14 @@ users:
 	}
 	kv := &kubernetesAccountValidator{account: a}
 	ctx := secrets.NewContext(context.TODO(), nil, "ns1")
-	c, err := kv.makeClient(ctx)
+	c, err := kv.makeClient(ctx, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	assert.Equal(t, "http://mycluster.com", c.Host)
+	r, err := c.RawConfig()
+	if !assert.Nil(t, err) {
+		return
+	}
+	assert.Equal(t, 1, len(r.Contexts))
+	assert.Equal(t, "http://mycluster.com", r.Clusters["test-cluster"].Server)
 }

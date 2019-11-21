@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/authorization/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -24,6 +23,8 @@ import (
 var (
 	noAuthProvidedError      = fmt.Errorf("kubernetes auth needs to be defined")
 	noKubernetesDefinedError = fmt.Errorf("kubernetes needs to be defined")
+	noValidKubeconfigError   = fmt.Errorf("no valid kubeconfig file, kubeconfig content or service account information found")
+	noServiceAccountName     = fmt.Errorf("no service account name configured in SpinnakerService for clouddriver")
 )
 
 type kubernetesAccountValidator struct {
@@ -31,25 +32,22 @@ type kubernetesAccountValidator struct {
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
-	config, err := k.makeClient(ctx)
+	if k.account.Auth != nil && k.account.Auth.UseServiceAccount && spinSvc == nil {
+		// don't validate if the spinnaker account needs a k8s service account to run validations, and there's no SpinnakerService yet
+		return nil
+	}
+	config, err := k.makeClient(ctx, spinSvc)
 	if err != nil {
 		return err
 	}
 	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (*rest.Config, error) {
+func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface) (clientcmd.ClientConfig, error) {
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		c, err := makeClientFromSettings(ctx, k.account.Settings)
-		if err != nil {
-			return nil, err
-		}
-		if c != nil {
-			return c, nil
-		}
-		return makeOwnClusterClient()
+		return makeClientFromSettings(ctx, k.account.Settings)
 	}
 	if auth.KubeconfigFile != "" {
 		return makeClientFromFile(ctx, auth.KubeconfigFile, nil)
@@ -60,11 +58,14 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context) (*rest.Conf
 	if auth.KubeconfigSecret != nil {
 		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
 	}
+	if auth.UseServiceAccount {
+		return makeClientFromServiceAccount(ctx, spinSvc)
+	}
 	return nil, noAuthProvidedError
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings) (*rest.Config, error) {
+func makeClientFromFile(ctx context.Context, file string, settings *authSettings) (clientcmd.ClientConfig, error) {
 	file, err := secrets.DecodeAsFile(ctx, file)
 	if err != nil {
 		return nil, err
@@ -75,11 +76,11 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 		return nil, err
 	}
 
-	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
+	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)), nil
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (*rest.Config, error) {
+func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (clientcmd.ClientConfig, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
@@ -88,25 +89,21 @@ func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespac
 	if err != nil {
 		return nil, err
 	}
-	clientConfig, err := clientcmd.NewClientConfigFromBytes([]byte(str))
-	if err != nil {
-		return nil, err
-	}
-	return clientConfig.ClientConfig()
+	return clientcmd.NewClientConfigFromBytes([]byte(str))
 }
 
 // makeClientFromConfigAPI makes a client config from the v1 Config (the usual format for kubeconfig) inlined
 // into the CRD.
-func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
+func makeClientFromConfigAPI(config *clientcmdv1.Config) (clientcmd.ClientConfig, error) {
 	cfg := clientcmdapi.NewConfig()
 	if err := clientcmdlatest.Scheme.Convert(config, cfg, nil); err != nil {
 		return nil, nil
 	}
-	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
+	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}), nil
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}) (*rest.Config, error) {
+func makeClientFromSettings(ctx context.Context, settings map[string]interface{}) (clientcmd.ClientConfig, error) {
 	aSettings := &authSettings{}
 	if err := inspect.Source(aSettings, settings); err != nil {
 		return nil, err
@@ -119,22 +116,18 @@ func makeClientFromSettings(ctx context.Context, settings map[string]interface{}
 		if err != nil {
 			return nil, err
 		}
-		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)).ClientConfig()
+		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)), nil
 	}
-	return nil, nil
+	return nil, noValidKubeconfigError
 }
 
-func makeOwnClusterClient() (*rest.Config, error) {
-	if isRunningInCluster() {
-		return rest.InClusterConfig()
-	}
-	// operator may be running outside the cluster, load its default configuration
-	rules := clientcmd.NewDefaultClientConfigLoadingRules()
-	cfg, err := rules.Load()
+func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface) (clientcmd.ClientConfig, error) {
+	_, err := spinSvc.GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
 	if err != nil {
-		return nil, err
+		return nil, noServiceAccountName
 	}
-	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
+	// TODO: Create clientcmd.ClientConfig from a service account
+	return nil, nil
 }
 
 func isRunningInCluster() bool {
@@ -191,8 +184,12 @@ type authSettings struct {
 	OAuthScopes         []string `json:"oAuthScopes,omitempty"`
 }
 
-func (k *kubernetesAccountValidator) validateAccess(clientConfig *rest.Config) error {
-	clientset, err := kubernetes.NewForConfig(clientConfig)
+func (k *kubernetesAccountValidator) validateAccess(clientConfig clientcmd.ClientConfig) error {
+	cc, err := clientConfig.ClientConfig()
+	if err != nil {
+		return err
+	}
+	clientset, err := kubernetes.NewForConfig(cc)
 	if err != nil {
 		return err
 	}
