@@ -55,3 +55,56 @@ func TestGetArray(t *testing.T) {
 	_, err = GetObjectArray(m, "Int")
 	assert.NotNil(t, err)
 }
+
+func TestGetStringArray(t *testing.T) {
+	cases := []struct {
+		name        string
+		obj         interface{}
+		prop        string
+		errExpected bool
+		expected    []string
+	}{
+		{
+			"nested string array",
+			map[string]interface{}{
+				"test": []string{"a", "b"},
+			},
+			"test",
+			false,
+			[]string{"a", "b"},
+		},
+		{
+			"top level string array",
+			[]string{"a", "b"},
+			"",
+			false,
+			[]string{"a", "b"},
+		},
+		{
+			"not a string array",
+			map[string]interface{}{
+				"test": []int{1, 2},
+			},
+			"test",
+			true,
+			nil,
+		},
+		{
+			"empty nested string array",
+			map[string]interface{}{
+				"test": []string{},
+			},
+			"test",
+			false,
+			[]string{},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ar, err := GetStringArray(c.obj, c.prop)
+			if assert.Equal(t, c.errExpected, err != nil) {
+				assert.ElementsMatch(t, c.expected, ar)
+			}
+		})
+	}
+}

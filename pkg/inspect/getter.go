@@ -77,7 +77,34 @@ func GetObjectArray(obj interface{}, prop string) ([]map[string]interface{}, err
 	return result, nil
 }
 
+func GetStringArray(obj interface{}, prop string) ([]string, error) {
+	v, err := getObjectProp(obj, prop)
+	if err != nil {
+		return nil, err
+	}
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
+		return nil, fmt.Errorf("property %s does not resolve to an array", prop)
+	}
+	var result []string
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i)
+
+		if elem.Kind() == reflect.Interface {
+			elem = elem.Elem()
+		}
+
+		if elem.Kind() != reflect.String {
+			return nil, fmt.Errorf("unable to find string at %s", prop)
+		}
+		result = append(result, elem.String())
+	}
+	return result, nil
+}
+
 func getObjectProp(obj interface{}, prop string) (reflect.Value, error) {
+	if prop == "" {
+		return reflect.ValueOf(obj), nil
+	}
 	addr := strings.Split(prop, ".")
 	v, err := getObjectPropFromKeys(obj, addr)
 	if err != nil && len(addr) > 1 {
