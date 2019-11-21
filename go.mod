@@ -1,8 +1,8 @@
 module github.com/armory/spinnaker-operator
 
 require (
-	github.com/armory/go-yaml-tools v0.0.0-20190802212505-df014e75df27
-	github.com/aws/aws-sdk-go v1.23.18 // indirect
+	github.com/armory/go-yaml-tools v0.0.0-20191120233933-0620b6b7ea86
+	github.com/aws/aws-sdk-go v1.25.39 // indirect
 	github.com/emicklei/go-restful v2.9.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
@@ -10,10 +10,9 @@ require (
 	github.com/go-openapi/jsonreference v0.19.0 // indirect
 	github.com/go-openapi/spec v0.19.0
 	github.com/gogo/protobuf v1.3.0 // indirect
-	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
-	github.com/google/go-cmp v0.3.1 // indirect
+	github.com/google/btree v1.0.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/hashicorp/vault/api v1.0.4 // indirect
+	github.com/kr/pty v1.1.3 // indirect
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/openshift/origin v0.0.0-20160503220234-8f127d736703
@@ -28,10 +27,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/atomic v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
-	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
-	golang.org/x/tools v0.0.0-20190912185636-87d9f09c5d89 // indirect
-	google.golang.org/appengine v1.6.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f

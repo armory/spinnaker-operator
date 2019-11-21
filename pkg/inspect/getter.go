@@ -27,7 +27,8 @@ func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (str
 	}
 	switch c.Kind() {
 	case reflect.String:
-		return secrets.Decode(ctx, c.String())
+		s, _, err := secrets.Decode(ctx, c.String())
+		return s, err
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(c.Int(), 10), nil
 	case reflect.Float64:
