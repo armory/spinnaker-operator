@@ -52,6 +52,8 @@ $ kubectl -n spinnaker get spinsvc spinnaker -w
 - Monitor the health of Spinnaker via `kubectl`
 - Define Kubernetes accounts in `SpinnakerAccount` objects and store kubeconfig inline, in Kubernetes secrets, in s3, or gcs **[experimental]**
 
+See [managing Spinnnaker](doc/managing-spinnaker.md)
+
 ## Accounts CRD (experimental)
 The Spinnaker Operator introduces a new CRD for Spinnaker accounts. A `SpinnakerAccount` is defined in an object - separate
 from the main Spinnaker config - so its creation and maintenance can easily be automated.
