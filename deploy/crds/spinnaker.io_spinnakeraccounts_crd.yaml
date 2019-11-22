@@ -371,6 +371,10 @@ spec:
                   - key
                   - name
                   type: object
+                useServiceAccount:
+                  description: UseServiceAccount authenticate to the target cluster
+                    using the service account mounted in Spinnaker's pods
+                  type: boolean
               type: object
             permissions:
               additionalProperties:

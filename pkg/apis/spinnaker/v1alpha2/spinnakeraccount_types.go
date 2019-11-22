@@ -53,7 +53,7 @@ type KubernetesAuth struct {
 	Kubeconfig *v1.Config `json:"kubeconfig,omitempty"`
 	// UseServiceAccount authenticate to the target cluster using the service account mounted in Spinnaker's pods
 	// +optional
-	UseServiceAccount bool
+	UseServiceAccount bool `json:"useServiceAccount"`
 }
 
 // +k8s:openapi-gen=true

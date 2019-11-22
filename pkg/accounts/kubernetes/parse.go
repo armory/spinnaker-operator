@@ -38,8 +38,33 @@ func (k *AccountType) FromSpinnakerConfig(settings map[string]interface{}) (acco
 	} else {
 		return nil, fmt.Errorf("name is not a string")
 	}
+	auth, err := k.authFromSpinnakerConfig(a.Name, settings)
+	if err != nil {
+		return nil, err
+	}
+	a.Auth = auth
 	a.Settings = settings
 	return a, nil
+}
+
+func (k *AccountType) authFromSpinnakerConfig(name string, settings map[string]interface{}) (*v1alpha2.KubernetesAuth, error) {
+	kubeconfigFile, ok := settings["kubeconfigFile"]
+	if ok {
+		s, sok := kubeconfigFile.(string)
+		if !sok {
+			return nil, fmt.Errorf("kubeconfigFile is not a string: %s", kubeconfigFile)
+		}
+		return &v1alpha2.KubernetesAuth{KubeconfigFile: s}, nil
+	}
+	sa, ok := settings["serviceAccount"]
+	if ok {
+		s, sok := sa.(bool)
+		if !sok {
+			return nil, fmt.Errorf("serviceAccount is not a boolean: %s", sa)
+		}
+		return &v1alpha2.KubernetesAuth{UseServiceAccount: s}, nil
+	}
+	return nil, fmt.Errorf("unable to parse account %s: no valid kubeconfig file, kubeconfig content or service account information found", name)
 }
 
 // ToSpinnakerSettings outputs an account (either parsed from CRD or from settings) to Spinnaker settings
@@ -81,6 +106,10 @@ func (k *Account) kubeAuthToSpinnakerSettings(ctx context.Context, settings map[
 		}
 		// TODO change to a file, track it and add to secret
 		settings[KubeconfigFileContentSettings] = config
+		return nil
+	}
+	if k.Auth.UseServiceAccount {
+		settings[UseServiceAccount] = k.Auth.UseServiceAccount
 		return nil
 	}
 	return errors.New("auth method not implemented")

@@ -11,10 +11,14 @@ import (
 	"github.com/pkg/errors"
 	v13 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	certutil "k8s.io/client-go/util/cert"
+	"k8s.io/klog"
+	"net"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
@@ -32,21 +36,45 @@ type kubernetesAccountValidator struct {
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
-	if err := k.validateSettings(ctx, log); err != nil {
+	err := k.validateSettings(ctx, log)
+	if err != nil {
 		return err
 	}
-	if k.account.Auth != nil && k.account.Auth.UseServiceAccount && spinSvc == nil {
-		// don't validate if the spinnaker account needs a k8s service account to run validations, and there's no SpinnakerService yet
-		return nil
+	if k.account.Auth != nil && k.account.Auth.UseServiceAccount {
+		spinSvc, err = k.ensureSpinSvc(spinSvc, c)
+		if err != nil {
+			return err
+		}
+		if spinSvc == nil {
+			// don't validate if the spinnaker account needs a k8s service account to run validations, and there's no SpinnakerService yet
+			return nil
+		}
 	}
-	config, err := k.makeClient(ctx, spinSvc)
+	config, err := k.makeClient(ctx, spinSvc, c)
 	if err != nil {
 		return err
 	}
 	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface) (clientcmd.ClientConfig, error) {
+func (k *kubernetesAccountValidator) ensureSpinSvc(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (v1alpha2.SpinnakerServiceInterface, error) {
+	if spinSvc != nil {
+		return spinSvc, nil
+	}
+	i := SpinnakerServiceBuilder.NewList()
+	list, err := util.GetSpinnakerServices(i, k.account.CrdNamespace, c)
+	if err != nil {
+		return nil, err
+	}
+	if len(list) == 0 {
+		return nil, nil
+	} else {
+		// there's only one spinnaker service per namespace
+		return list[0], nil
+	}
+}
+
+func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (*rest.Config, error) {
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
@@ -62,13 +90,13 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1a
 		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
 	}
 	if auth.UseServiceAccount {
-		return makeClientFromServiceAccount(ctx, spinSvc)
+		return makeClientFromServiceAccount(ctx, spinSvc, c)
 	}
 	return nil, noAuthProvidedError
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings) (clientcmd.ClientConfig, error) {
+func makeClientFromFile(ctx context.Context, file string, settings *authSettings) (*rest.Config, error) {
 	file, err := secrets.DecodeAsFile(ctx, file)
 	if err != nil {
 		return nil, err
@@ -79,11 +107,11 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 		return nil, err
 	}
 
-	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)), nil
+	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (clientcmd.ClientConfig, error) {
+func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (*rest.Config, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
@@ -92,21 +120,25 @@ func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespac
 	if err != nil {
 		return nil, err
 	}
-	return clientcmd.NewClientConfigFromBytes([]byte(str))
+	config, err := clientcmd.NewClientConfigFromBytes([]byte(str))
+	if err != nil {
+		return nil, err
+	}
+	return config.ClientConfig()
 }
 
 // makeClientFromConfigAPI makes a client config from the v1 Config (the usual format for kubeconfig) inlined
 // into the CRD.
-func makeClientFromConfigAPI(config *clientcmdv1.Config) (clientcmd.ClientConfig, error) {
+func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
 	cfg := clientcmdapi.NewConfig()
 	if err := clientcmdlatest.Scheme.Convert(config, cfg, nil); err != nil {
 		return nil, nil
 	}
-	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}), nil
+	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}) (clientcmd.ClientConfig, error) {
+func makeClientFromSettings(ctx context.Context, settings map[string]interface{}) (*rest.Config, error) {
 	aSettings := &authSettings{}
 	if err := inspect.Source(aSettings, settings); err != nil {
 		return nil, err
@@ -119,26 +151,54 @@ func makeClientFromSettings(ctx context.Context, settings map[string]interface{}
 		if err != nil {
 			return nil, err
 		}
-		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)), nil
+		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)).ClientConfig()
 	}
 	return nil, noValidKubeconfigError
 }
 
-func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface) (clientcmd.ClientConfig, error) {
-	_, err := spinSvc.GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
+func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (*rest.Config, error) {
+	an, err := spinSvc.GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
 	if err != nil {
 		return nil, noServiceAccountName
 	}
-	// TODO: Create clientcmd.ClientConfig from a service account
-	return nil, nil
+	token, caPath, err := util.GetServiceAccountData(ctx, an, spinSvc.GetNamespace(), c)
+	if err != nil {
+		return nil, err
+	}
+	tlsClientConfig := rest.TLSClientConfig{}
+	if _, err := certutil.NewPool(caPath); err != nil {
+		klog.Errorf("Expected to load root CA config from %s, but got err: %v", caPath, err)
+	} else {
+		tlsClientConfig.CAFile = caPath
+	}
+	apiHost, err := getAPIServerHost()
+	if err != nil {
+		return nil, err
+	}
+	return &rest.Config{
+		Host:            apiHost,
+		TLSClientConfig: tlsClientConfig,
+		BearerToken:     token,
+	}, nil
 }
 
-func isRunningInCluster() bool {
+func getAPIServerHost() (string, error) {
 	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 	if len(host) == 0 || len(port) == 0 {
-		return false
+		// not running in cluster
+		rules := clientcmd.NewDefaultClientConfigLoadingRules()
+		cfg, err := rules.Load()
+		if err != nil {
+			return "", err
+		}
+		cc, err := clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
+		if err != nil {
+			return "", err
+		}
+		return cc.Host, nil
 	}
-	return true
+
+	return fmt.Sprintf("https://%s", net.JoinHostPort(host, port)), nil
 }
 
 func makeOverrideFromAuthSettings(config *clientcmdapi.Config, settings *authSettings) *clientcmd.ConfigOverrides {
@@ -187,11 +247,7 @@ type authSettings struct {
 	OAuthScopes         []string `json:"oAuthScopes,omitempty"`
 }
 
-func (k *kubernetesAccountValidator) validateAccess(clientConfig clientcmd.ClientConfig) error {
-	cc, err := clientConfig.ClientConfig()
-	if err != nil {
-		return err
-	}
+func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 	clientset, err := kubernetes.NewForConfig(cc)
 	if err != nil {
 		return err

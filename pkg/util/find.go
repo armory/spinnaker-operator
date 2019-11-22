@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/armory/go-yaml-tools/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/ghodss/yaml"
 	v12 "k8s.io/api/apps/v1"
@@ -84,4 +85,41 @@ func UpdateSecret(secret *v1.Secret, svc string, settings map[string]interface{}
 	}
 	secret.Data[k] = b
 	return nil
+}
+
+// GetServiceAccountData returns the service account token and temp path to root ca
+func GetServiceAccountData(ctx context.Context, name, ns string, c client.Client) (string, string, error) {
+	list := &v1.SecretList{}
+	opts := client.InNamespace(ns)
+	if err := c.List(ctx, list, opts); err != nil {
+		return "", "", err
+	}
+	for i := 0; i < len(list.Items); i++ {
+		s := list.Items[i]
+		if s.Type != v1.SecretTypeServiceAccountToken {
+			continue
+		}
+		saName := s.Annotations[v1.ServiceAccountNameKey]
+		if saName != name {
+			continue
+		}
+		token := string(s.Data[v1.ServiceAccountTokenKey])
+		caBytes := s.Data[v1.ServiceAccountRootCAKey]
+		caPath, err := secrets.ToTempFile(caBytes)
+		if err != nil {
+			return "", "", err
+		}
+		return token, caPath, nil
+	}
+	return "", "", fmt.Errorf("no secret for service account %s was found on namespace %s", name, ns)
+}
+
+func GetSpinnakerServices(list v1alpha2.SpinnakerServiceListInterface, ns string, c client.Client) ([]v1alpha2.SpinnakerServiceInterface, error) {
+	var opts client.ListOption
+	opts = client.InNamespace(ns)
+	err := c.List(context.TODO(), list, opts)
+	if err != nil {
+		return nil, err
+	}
+	return list.GetItems(), nil
 }

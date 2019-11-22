@@ -10,9 +10,7 @@ require (
 	github.com/go-openapi/jsonreference v0.19.0 // indirect
 	github.com/go-openapi/spec v0.19.0
 	github.com/gogo/protobuf v1.3.0 // indirect
-	github.com/google/btree v1.0.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/kr/pty v1.1.3 // indirect
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/openshift/origin v0.0.0-20160503220234-8f127d736703
@@ -35,6 +33,7 @@ require (
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
 	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a
+	k8s.io/klog v0.3.3
 	k8s.io/kube-openapi v0.0.0-20190401085232-94e1e7b7574c
 	sigs.k8s.io/controller-runtime v0.2.0
 	sigs.k8s.io/controller-tools v0.2.1 // indirect

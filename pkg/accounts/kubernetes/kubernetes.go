@@ -13,7 +13,10 @@ import (
 const (
 	KubeconfigFileSettings        = "kubeconfigFile"
 	KubeconfigFileContentSettings = "kubeconfigContents"
+	UseServiceAccount             = "serviceAccount"
 )
+
+var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
 
 type AccountType struct{}
 
@@ -63,10 +66,12 @@ type CustomKubernetesResource struct {
 
 type Account struct {
 	*account.BaseAccount
-	Name     string `json:"name,omitempty"`
-	Auth     *v1alpha2.KubernetesAuth
-	Env      Env               `json:"env,omitempty"`
-	Settings v1alpha2.FreeForm `json:"settings,omitempty"`
+	Name string `json:"name,omitempty"`
+	// if this account comes from a CRD, this field indicates its namespace
+	CrdNamespace string
+	Auth         *v1alpha2.KubernetesAuth
+	Env          Env               `json:"env,omitempty"`
+	Settings     v1alpha2.FreeForm `json:"settings,omitempty"`
 }
 
 func (k *Account) GetType() v1alpha2.AccountType {
