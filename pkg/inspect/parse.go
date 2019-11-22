@@ -164,11 +164,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		}
 		return nmv, nil
 	case reflect.Interface:
-		iv, err := sanitizeSecretsReflect(ctx, v.Elem(), stringHandler)
-		if err != nil {
-			return v, err
-		}
-		return iv, nil
+		return sanitizeSecretsReflect(ctx, v.Elem(), stringHandler)
 	}
 	return v, nil
 }
