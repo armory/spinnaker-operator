@@ -2,6 +2,7 @@ package halyard
 
 import (
 	"context"
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/ghodss/yaml"
@@ -123,7 +124,7 @@ spec:
 		}
 		// Check all files cached are being sent
 		for _, f := range c.FileCache {
-			fc, _, err := req.FormFile(path.Join(SecretRelativeFilenames, path.Base(f)))
+			fc, _, err := req.FormFile(fmt.Sprintf("%s__%s", SecretRelativeFilenames, path.Base(f)))
 			if assert.Nil(t, err) {
 				// Read content
 				b, err := ioutil.ReadAll(fc)

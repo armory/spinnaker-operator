@@ -69,7 +69,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.S
 
 	for _, f := range secCtx.FileCache {
 		// Get the key
-		k := path.Join(SecretRelativeFilenames, path.Base(f))
+		k := fmt.Sprintf("%s__%s", SecretRelativeFilenames, path.Base(f))
 		b, err := ioutil.ReadFile(f)
 		if err != nil {
 			return nil, err
