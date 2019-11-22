@@ -65,5 +65,5 @@ func DecodeAsFile(ctx context.Context, val string) (string, error) {
 
 func ShouldDecryptToValidate(val string) bool {
 	e, _, _ := secrets.GetEngine(val)
-	return e == "k8s"
+	return e == "k8s" || e == "noop"
 }
