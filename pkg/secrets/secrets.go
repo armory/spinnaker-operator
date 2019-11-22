@@ -63,7 +63,8 @@ func DecodeAsFile(ctx context.Context, val string) (string, error) {
 	return s, err
 }
 
+// ShouldDecryptToValidate should we decrypt that value before sending to Halyard for validation?
+// For now we decrypt everything so the operator has to be authorized to.
 func ShouldDecryptToValidate(val string) bool {
-	e, _, _ := secrets.GetEngine(val)
-	return e == "k8s" || e == "noop"
+	return true
 }

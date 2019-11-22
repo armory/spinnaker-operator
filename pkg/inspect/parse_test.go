@@ -2,10 +2,10 @@ package inspect
 
 import (
 	"context"
-	secrets2 "github.com/armory/go-yaml-tools/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/stretchr/testify/assert"
-	"reflect"
+	"path"
+	"strings"
 	"testing"
 )
 
@@ -93,7 +93,7 @@ func TestSanitizeSecrets(t *testing.T) {
 				MapVal2: true,
 			},
 			"test4": {
-				MapVal1: "encrypted:noop!val4",
+				MapVal1: "encryptedFile:noop!val4",
 				MapVal2: true,
 			},
 		},
@@ -104,11 +104,11 @@ func TestSanitizeSecrets(t *testing.T) {
 		SArray: []string{"sval1", "encrypted:noop!sval2"},
 	}
 
-	res, err := sanitizeSecretsReflect(secrets.NewContext(context.TODO(), nil, "ns"), reflect.ValueOf(tt), noopHandler)
+	ctx := secrets.NewContext(context.TODO(), nil, "ns")
+	tt2, err := SanitizeSecrets(ctx, "secrets", tt)
 	if !assert.Nil(t, err) {
 		return
 	}
-	tt2 := res.Interface()
 	assert.NotEqual(t, tt, tt2)
 	ttr, ok := tt2.(*test)
 	if assert.True(t, ok) {
@@ -117,18 +117,19 @@ func TestSanitizeSecrets(t *testing.T) {
 		assert.Equal(t, "val1", ttr.Map["test1"].MapVal1)
 		assert.Equal(t, "val2", ttr.Map["test2"].MapVal1)
 		assert.Equal(t, "val3", ttr.DMap["test3"].MapVal1)
-		assert.Equal(t, "val4", ttr.DMap["test4"].MapVal1)
 		assert.Equal(t, "vala", ttr.SMap["a"])
 		assert.Equal(t, "valb", ttr.SMap["b"])
 		assert.Equal(t, "sval2", ttr.SArray[1])
-	}
-}
 
-func noopHandler(ctx context.Context, val string) (string, error) {
-	e, _, _ := secrets2.GetEngine(val)
-	if e == "noop" {
-		s, _, err := secrets.Decode(ctx, val)
-		return s, err
+		secCtx, err := secrets.FromContextWithError(ctx)
+		if !assert.Nil(t, err) {
+			return
+		}
+		assert.True(t, strings.HasPrefix(ttr.DMap["test4"].MapVal1, "secrets"))
+		if assert.Equal(t, 1, len(secCtx.FileCache)) {
+			for _, f := range secCtx.FileCache {
+				assert.Equal(t, path.Base(f), path.Base(ttr.DMap["test4"].MapVal1))
+			}
+		}
 	}
-	return val, nil
 }

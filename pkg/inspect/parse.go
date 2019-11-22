@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"path"
 	"reflect"
 	"strings"
 )
@@ -63,7 +64,6 @@ func Source(i interface{}, settings map[string]interface{}) error {
 	return nil
 }
 
-
 // toSpecificArray converts an array of one type to an array of a desired type if it's assignable.
 func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, error) {
 	result := reflect.MakeSlice(reflect.SliceOf(target.Elem()), 0, array.Cap())
@@ -81,20 +81,27 @@ func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, e
 	return result, nil
 }
 
-
 // SanitizeSecrets visits all nodes and returns copies of the struct with secrets that are not passthrough
-// replaced
-func SanitizeSecrets(ctx context.Context, i interface{}) (interface{}, error) {
-	t, err := sanitizeSecretsReflect(ctx, reflect.ValueOf(i), secretHandler)
+// replaced. Regular token are replaced, files are replaced with the file name prefixed by relativeSecretPath
+// e.g.
+// a.b: encrypted:xxx -> a.b: <decrypted value>
+// a.b: encryptedFile:xxx -> a.b: relativeSecretPath + temp file name used
+func SanitizeSecrets(ctx context.Context, relativeSecretPath string, i interface{}) (interface{}, error) {
+	t, err := sanitizeSecretsReflect(ctx, reflect.ValueOf(i), makeSecretHandler(relativeSecretPath))
 	return t.Interface(), err
 }
 
-func secretHandler(ctx context.Context, val string) (string, error) {
-	if secrets.ShouldDecryptToValidate(val) {
-		s, _, err := secrets.Decode(ctx, val)
-		return s, err
+func makeSecretHandler(relativeSecretPath string) stringHandler {
+	return func(ctx context.Context, val string) (string, error) {
+		if secrets.ShouldDecryptToValidate(val) {
+			s, f, err := secrets.Decode(ctx, val)
+			if err == nil && f {
+				s = path.Join(relativeSecretPath, path.Base(s))
+			}
+			return s, err
+		}
+		return val, nil
 	}
-	return val, nil
 }
 
 type stringHandler func(ctx context.Context, val string) (string, error)
@@ -156,6 +163,12 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 			nmv.SetMapIndex(k, rv)
 		}
 		return nmv, nil
+	case reflect.Interface:
+		iv, err := sanitizeSecretsReflect(ctx, v.Elem(), stringHandler)
+		if err != nil {
+			return v, err
+		}
+		return iv, nil
 	}
 	return v, nil
 }
