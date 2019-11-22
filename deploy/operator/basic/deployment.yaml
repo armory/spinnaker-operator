@@ -38,3 +38,15 @@ spec:
           ports:
             - containerPort: 8064
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8064
+            failureThreshold: 20
+            periodSeconds: 5
+            initialDelaySeconds: 20
+          livenessProbe:
+            tcpSocket:
+              port: 8064
+            initialDelaySeconds: 30
+            periodSeconds: 20
