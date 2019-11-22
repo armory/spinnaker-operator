@@ -41,7 +41,7 @@ func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceI
 		return err
 	}
 	if k.account.Auth != nil && k.account.Auth.UseServiceAccount {
-		spinSvc, err = k.ensureSpinSvc(spinSvc, c)
+		spinSvc, err = k.ensureSpinSvc(spinSvc, c, ctx)
 		if err != nil {
 			return err
 		}
@@ -57,12 +57,16 @@ func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceI
 	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) ensureSpinSvc(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (v1alpha2.SpinnakerServiceInterface, error) {
+func (k *kubernetesAccountValidator) ensureSpinSvc(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context) (v1alpha2.SpinnakerServiceInterface, error) {
 	if spinSvc != nil {
 		return spinSvc, nil
 	}
 	i := SpinnakerServiceBuilder.NewList()
-	list, err := util.GetSpinnakerServices(i, k.account.CrdNamespace, c)
+	sc, err := secrets.FromContextWithError(ctx)
+	if err != nil {
+		return nil, err
+	}
+	list, err := util.GetSpinnakerServices(i, sc.Namespace, c)
 	if err != nil {
 		return nil, err
 	}
