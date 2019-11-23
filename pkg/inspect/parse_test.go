@@ -1,11 +1,8 @@
 package inspect
 
 import (
-	"context"
-	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"fmt"
 	"github.com/stretchr/testify/assert"
-	"path"
-	"strings"
 	"testing"
 )
 
@@ -65,71 +62,61 @@ func TestSanitizeSecrets(t *testing.T) {
 		SMap   map[string]string
 	}
 	tt := &test{
-		Name:  "encrypted:noop!v:name",
+		Name:  "name",
 		Count: 10,
 		Array: array{
 			{
-				Val1: "encrypted:noop!test1",
+				Val1: "test1",
 				Val2: "val12",
 			},
 			{
-				Val1: "encrypted:noop!test2",
+				Val1: "test2",
 				Val2: "val22",
 			},
 		},
 		Map: mymap{
 			"test1": {
-				MapVal1: "encrypted:noop!val1",
+				MapVal1: "val1",
 				MapVal2: true,
 			},
 			"test2": {
-				MapVal1: "encrypted:noop!val2",
+				MapVal1: "val2",
 				MapVal2: true,
 			},
 		},
 		DMap: directmap{
 			"test3": {
-				MapVal1: "encrypted:noop!val3",
+				MapVal1: "val3",
 				MapVal2: true,
 			},
 			"test4": {
-				MapVal1: "encryptedFile:noop!val4",
+				MapVal1: "val4",
 				MapVal2: true,
 			},
 		},
 		SMap: map[string]string{
 			"a": "vala",
-			"b": "encrypted:noop!valb",
+			"b": "valb",
 		},
-		SArray: []string{"sval1", "encrypted:noop!sval2"},
+		SArray: []string{"sval1", "sval2"},
 	}
 
-	ctx := secrets.NewContext(context.TODO(), nil, "ns")
-	tt2, err := SanitizeSecrets(ctx, "secrets", tt)
+	tt2, err := InspectStrings(tt, func(val string) (string, error) {
+		return fmt.Sprintf("inspected-%s", val), nil
+	})
 	if !assert.Nil(t, err) {
 		return
 	}
 	assert.NotEqual(t, tt, tt2)
 	ttr, ok := tt2.(*test)
 	if assert.True(t, ok) {
-		assert.Equal(t, "test1", ttr.Array[0].Val1)
-		assert.Equal(t, "test2", ttr.Array[1].Val1)
-		assert.Equal(t, "val1", ttr.Map["test1"].MapVal1)
-		assert.Equal(t, "val2", ttr.Map["test2"].MapVal1)
-		assert.Equal(t, "val3", ttr.DMap["test3"].MapVal1)
-		assert.Equal(t, "vala", ttr.SMap["a"])
-		assert.Equal(t, "valb", ttr.SMap["b"])
-		assert.Equal(t, "sval2", ttr.SArray[1])
-
-		secCtx, err := secrets.FromContextWithError(ctx)
-		if !assert.Nil(t, err) {
-			return
-		}
-		assert.True(t, strings.HasPrefix(ttr.DMap["test4"].MapVal1, "secrets"))
-		if assert.Equal(t, 1, len(secCtx.FileCache)) {
-			for _, f := range secCtx.FileCache {
-				assert.Equal(t, path.Base(f), path.Base(ttr.DMap["test4"].MapVal1))
-			}
-		}
+		assert.Equal(t, "inspected-test1", ttr.Array[0].Val1)
+		assert.Equal(t, "inspected-test2", ttr.Array[1].Val1)
+		assert.Equal(t, "inspected-val1", ttr.Map["test1"].MapVal1)
+		assert.Equal(t, "inspected-val2", ttr.Map["test2"].MapVal1)
+		assert.Equal(t, "inspected-val3", ttr.DMap["test3"].MapVal1)
+		assert.Equal(t, "inspected-vala", ttr.SMap["a"])
+		assert.Equal(t, "inspected-valb", ttr.SMap["b"])
+		assert.Equal(t, "inspected-sval2", ttr.SArray[1])
 	}
 }
