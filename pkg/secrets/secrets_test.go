@@ -8,6 +8,7 @@ import (
 
 func TestBadFormat(t *testing.T) {
 	ctx := NewContext(context.TODO(), nil, "")
+	defer Cleanup(ctx)
 
 	// calling real decrypter with bad syntax should return error
 	_, _, err := Decode(ctx, "encrypted:s3!r:us-west-2")
@@ -19,6 +20,8 @@ func TestBadFormat(t *testing.T) {
 func TestCaching(t *testing.T) {
 	// cache is empty to start
 	ctx := NewContext(context.TODO(), nil, "")
+	defer Cleanup(ctx)
+
 	c, ok := FromContext(ctx)
 	if !ok {
 		t.Fatalf("error getting context cache")

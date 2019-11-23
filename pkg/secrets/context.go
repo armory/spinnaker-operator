@@ -44,4 +44,13 @@ func (s *SecretContext) Cleanup() {
 	for _, f := range s.FileCache {
 		os.Remove(f)
 	}
+	s.FileCache = make(map[string]string)
+}
+
+// Attempt to clean up secret context if it exists
+func Cleanup(ctx context.Context) {
+	c, ok := FromContext(ctx)
+	if ok {
+		c.Cleanup()
+	}
 }
