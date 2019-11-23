@@ -17,7 +17,7 @@ var Generators []Generator
 func init() {
 	Generators = append(Generators, &ownerTransformerGenerator{}, &targetTransformerGenerator{},
 		&exposeLbTransformerGenerator{}, &serverPortTransformerGenerator{}, &x509TransformerGenerator{},
-		&accountsTransformerGenerator{})
+		&accountsTransformerGenerator{}, &secretsTransformerGenerator{})
 }
 
 // Transformer affects how Spinnaker is deployed.
