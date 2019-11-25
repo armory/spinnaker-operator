@@ -1,12 +1,9 @@
 package inspect
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/secrets"
-	"path"
 	"reflect"
 	"strings"
 )
@@ -81,35 +78,17 @@ func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, e
 	return result, nil
 }
 
-// SanitizeSecrets visits all nodes and returns copies of the struct with secrets that are not passthrough
-// replaced. Regular token are replaced, files are replaced with the file name prefixed by relativeSecretPath
-// e.g.
-// a.b: encrypted:xxx -> a.b: <decrypted value>
-// a.b: encryptedFile:xxx -> a.b: relativeSecretPath + temp file name used
-func SanitizeSecrets(ctx context.Context, relativeSecretPath string, i interface{}) (interface{}, error) {
-	t, err := sanitizeSecretsReflect(ctx, reflect.ValueOf(i), makeSecretHandler(relativeSecretPath))
+type stringHandler func(val string) (string, error)
+
+func InspectStrings(i interface{}, handler stringHandler) (interface{}, error) {
+	t, err := inspectStringReflect(reflect.ValueOf(i), handler)
 	return t.Interface(), err
 }
 
-func makeSecretHandler(relativeSecretPath string) stringHandler {
-	return func(ctx context.Context, val string) (string, error) {
-		if secrets.ShouldDecryptToValidate(val) {
-			s, f, err := secrets.Decode(ctx, val)
-			if err == nil && f {
-				s = path.Join(relativeSecretPath, path.Base(s))
-			}
-			return s, err
-		}
-		return val, nil
-	}
-}
-
-type stringHandler func(ctx context.Context, val string) (string, error)
-
-func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler stringHandler) (reflect.Value, error) {
+func inspectStringReflect(v reflect.Value, stringHandler stringHandler) (reflect.Value, error) {
 	switch v.Kind() {
 	case reflect.Ptr:
-		rv, err := sanitizeSecretsReflect(ctx, v.Elem(), stringHandler)
+		rv, err := inspectStringReflect(v.Elem(), stringHandler)
 		if err != nil {
 			return v, err
 		}
@@ -120,7 +99,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		nsv := reflect.New(v.Type())
 		for j := 0; j < v.NumField(); j++ {
 			f := v.Field(j)
-			rv, err := sanitizeSecretsReflect(ctx, f, stringHandler)
+			rv, err := inspectStringReflect(f, stringHandler)
 			if err != nil {
 				return v, err
 			}
@@ -134,7 +113,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		}
 		return nsv.Elem(), nil
 	case reflect.String:
-		s, err := stringHandler(ctx, v.String())
+		s, err := stringHandler(v.String())
 		if err != nil {
 			return v, err
 		}
@@ -145,7 +124,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		}
 		nsv := reflect.MakeSlice(v.Type(), v.Len(), v.Len())
 		for j := 0; j < v.Len(); j++ {
-			rv, err := sanitizeSecretsReflect(ctx, v.Index(j), stringHandler)
+			rv, err := inspectStringReflect(v.Index(j), stringHandler)
 			if err != nil {
 				return v, err
 			}
@@ -156,7 +135,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		nmv := reflect.MakeMap(v.Type())
 		keys := v.MapKeys()
 		for _, k := range keys {
-			rv, err := sanitizeSecretsReflect(ctx, v.MapIndex(k), stringHandler)
+			rv, err := inspectStringReflect(v.MapIndex(k), stringHandler)
 			if err != nil {
 				return v, err
 			}
@@ -164,7 +143,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		}
 		return nmv, nil
 	case reflect.Interface:
-		return sanitizeSecretsReflect(ctx, v.Elem(), stringHandler)
+		return inspectStringReflect(v.Elem(), stringHandler)
 	}
 	return v, nil
 }

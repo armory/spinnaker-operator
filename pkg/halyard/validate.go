@@ -47,7 +47,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.S
 
 	// Sanitize secrets before validating
 	// This will also serve as a secret validation step
-	sanitizedCfg, err := inspect.SanitizeSecrets(ctx, SecretRelativeFilenames, cfg.Config)
+	sanitizedCfg, err := sanitizeSecrets(ctx, cfg.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +91,23 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.S
 	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return req, nil
+}
+
+// sanitizeSecrets inspects the given interface and decrypt any secret
+// Tokens are decrypted, files are added to the secret context and replaced
+// with SecretRelativeFilenames/tempfilename
+func sanitizeSecrets(ctx context.Context, object interface{}) (interface{}, error) {
+	h := func(val string) (string, error) {
+		if secrets.ShouldDecryptToValidate(val) {
+			s, f, err := secrets.Decode(ctx, val)
+			if err == nil && f {
+				s = path.Join(SecretRelativeFilenames, path.Base(s))
+			}
+			return s, err
+		}
+		return val, nil
+	}
+	return inspect.InspectStrings(object, h)
 }
 
 func parseValidationResponse(d []byte, logger logr.Logger) error {
