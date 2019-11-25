@@ -10,6 +10,8 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/ghodss/yaml"
+	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	yamlk8s "sigs.k8s.io/yaml"
 )
 
 func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Account, error) {
@@ -63,6 +65,20 @@ func (k *AccountType) authFromSpinnakerConfig(name string, settings map[string]i
 			return nil, fmt.Errorf("serviceAccount is not a boolean: %s", sa)
 		}
 		return &v1alpha2.KubernetesAuth{UseServiceAccount: s}, nil
+	}
+	kubeContent, ok := settings["kubeconfig"]
+	if ok {
+		c := &v1.Config{}
+		sKube, sok := kubeContent.(string)
+		if !sok {
+			return nil, fmt.Errorf("kubeconfig is not a string: %s", kubeContent)
+		}
+		bytes := []byte(sKube)
+		err := yamlk8s.Unmarshal(bytes, c)
+		if err != nil {
+			return nil, err
+		}
+		return &v1alpha2.KubernetesAuth{Kubeconfig: c}, nil
 	}
 	return nil, fmt.Errorf("unable to parse account %s: no valid kubeconfig file, kubeconfig content or service account information found", name)
 }

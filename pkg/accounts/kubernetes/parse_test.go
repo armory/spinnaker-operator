@@ -119,6 +119,34 @@ func TestFromSpinnakerSettings(t *testing.T) {
 			},
 		},
 		{
+			name: "basic settings with kubeconfig inlined",
+			settings: map[string]interface{}{
+				"name": "test",
+				"kubeconfig": `
+apiVersion: v1
+kind: Config
+current-context: test-context
+clusters:
+- cluster:
+    api-version: v1
+    server: http://mycluster.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+users:
+- name: test-user
+  user:
+    token: test-token
+`,
+			},
+			expected: func(t *testing.T, _ account.Account, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
 			name: "but names are still required",
 			settings: map[string]interface{}{
 				"kubeconfigFile": "test",

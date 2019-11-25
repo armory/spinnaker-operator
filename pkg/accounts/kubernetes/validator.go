@@ -36,46 +36,17 @@ type kubernetesAccountValidator struct {
 }
 
 func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
-	err := k.validateSettings(ctx, log)
-	if err != nil {
+	if err := k.validateSettings(ctx, log); err != nil {
 		return err
-	}
-	if k.account.Auth != nil && k.account.Auth.UseServiceAccount {
-		spinSvc, err = k.ensureSpinSvc(spinSvc, c, ctx)
-		if err != nil {
-			return err
-		}
-		if spinSvc == nil {
-			// don't validate if the spinnaker account needs a k8s service account to run validations, and there's no SpinnakerService yet
-			return nil
-		}
 	}
 	config, err := k.makeClient(ctx, spinSvc, c)
 	if err != nil {
 		return err
 	}
+	if config == nil {
+		return nil
+	}
 	return k.validateAccess(config)
-}
-
-func (k *kubernetesAccountValidator) ensureSpinSvc(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context) (v1alpha2.SpinnakerServiceInterface, error) {
-	if spinSvc != nil {
-		return spinSvc, nil
-	}
-	i := SpinnakerServiceBuilder.NewList()
-	sc, err := secrets.FromContextWithError(ctx)
-	if err != nil {
-		return nil, err
-	}
-	list, err := util.GetSpinnakerServices(i, sc.Namespace, c)
-	if err != nil {
-		return nil, err
-	}
-	if len(list) == 0 {
-		return nil, nil
-	} else {
-		// there's only one spinnaker service per namespace
-		return list[0], nil
-	}
 }
 
 func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (*rest.Config, error) {
@@ -161,6 +132,10 @@ func makeClientFromSettings(ctx context.Context, settings map[string]interface{}
 }
 
 func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (*rest.Config, error) {
+	spinSvc, err := ensureSpinSvc(spinSvc, c, ctx)
+	if err != nil {
+		return nil, err
+	}
 	an, err := spinSvc.GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
 	if err != nil {
 		return nil, noServiceAccountName
@@ -184,6 +159,27 @@ func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.Spinnake
 		TLSClientConfig: tlsClientConfig,
 		BearerToken:     token,
 	}, nil
+}
+
+func ensureSpinSvc(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context) (v1alpha2.SpinnakerServiceInterface, error) {
+	if spinSvc != nil {
+		return spinSvc, nil
+	}
+	i := SpinnakerServiceBuilder.NewList()
+	sc, err := secrets.FromContextWithError(ctx)
+	if err != nil {
+		return nil, err
+	}
+	list, err := util.GetSpinnakerServices(i, sc.Namespace, c)
+	if err != nil {
+		return nil, err
+	}
+	if len(list) == 0 {
+		return nil, nil
+	} else {
+		// there should be only one spinnaker service per namespace
+		return list[0], nil
+	}
 }
 
 func getAPIServerHost() (string, error) {
