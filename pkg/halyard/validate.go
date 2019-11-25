@@ -6,13 +6,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	"github.com/ghodss/yaml"
+	"github.com/armory/spinnaker-operator/pkg/inspect"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"path"
 	"strings"
 )
+
+// Relative file path used to store secrets in the config sent to Halyard
+const SecretRelativeFilenames = "secrets"
 
 type validationResponse []struct {
 	Message  string `json:"message,omitempty"`
@@ -35,13 +41,18 @@ func (s *Service) Validate(ctx context.Context, spinsvc v1alpha2.SpinnakerServic
 func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.SpinnakerServiceInterface, failFast bool) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
+
 	// Add config
 	cfg := spinsvc.GetSpinnakerConfig()
-	b, err := yaml.Marshal(cfg.Config)
+
+	// Sanitize secrets before validating
+	// This will also serve as a secret validation step
+	sanitizedCfg, err := inspect.SanitizeSecrets(ctx, SecretRelativeFilenames, cfg.Config)
 	if err != nil {
 		return nil, err
 	}
-	if err = s.addPart(writer, "config", b); err != nil {
+
+	if err := s.addObjectToRequest(writer, "config", sanitizedCfg); err != nil {
 		return nil, err
 	}
 	// Add required files
@@ -50,8 +61,25 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.S
 			return nil, err
 		}
 	}
-	err = writer.Close()
+	// Add cached secret files
+	secCtx, err := secrets.FromContextWithError(ctx)
 	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range secCtx.FileCache {
+		// Get the key
+		k := fmt.Sprintf("%s__%s", SecretRelativeFilenames, path.Base(f))
+		b, err := ioutil.ReadFile(f)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.addPart(writer, k, b); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
 		return nil, err
 	}
 

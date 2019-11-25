@@ -2,9 +2,14 @@ package halyard
 
 import (
 	"context"
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/ghodss/yaml"
 	testing2 "github.com/go-logr/logr/testing"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"path"
 	"strings"
 	"testing"
 )
@@ -76,12 +81,56 @@ func TestValidationResult(t *testing.T) {
 }
 
 func TestValidationRequest(t *testing.T) {
+	s := `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+ name: test
+spec:
+ spinnakerConfig:
+   config:
+     providers:
+       token: encrypted:noop!mytoken
+       kubernetes:
+         accounts:
+         - name: acc1
+           kubeconfigFile: encryptedFile:noop!myfilecontent
+`
 	spinsvc := &v1alpha2.SpinnakerService{}
+	err := yaml.Unmarshal([]byte(s), spinsvc)
+	if !assert.Nil(t, err) {
+		return
+	}
 	h := &Service{url: "http://localhost:8064"}
-	req, err := h.buildValidationRequest(context.TODO(), spinsvc, true)
+
+	// Validation fails on a non initialized secret context
+	_, err = h.buildValidationRequest(context.TODO(), spinsvc, true)
+	if assert.NotNil(t, err) {
+		assert.Equal(t, "secret context not initialized", err.Error())
+	}
+
+	ctx := secrets.NewContext(context.TODO(), nil, "ns")
+	req, err := h.buildValidationRequest(ctx, spinsvc, true)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "localhost:8064", req.URL.Host)
 		assert.Equal(t, req.URL.Query().Get("failFast"), "true")
 		assert.NotEmpty(t, req.URL.Query().Get("skipValidators"))
+		_ = req.ParseMultipartForm(32 << 20)
+		// Check we're sending 2 parts: config and a secret
+		assert.Equal(t, len(req.MultipartForm.File), 2)
+		c, err := secrets.FromContextWithError(ctx)
+		if !assert.Nil(t, err) {
+			return
+		}
+		// Check all files cached are being sent
+		for _, f := range c.FileCache {
+			fc, _, err := req.FormFile(fmt.Sprintf("%s__%s", SecretRelativeFilenames, path.Base(f)))
+			if assert.Nil(t, err) {
+				// Read content
+				b, err := ioutil.ReadAll(fc)
+				assert.Nil(t, err)
+				assert.Equal(t, "myfilecontent", string(b))
+			}
+		}
 	}
 }
