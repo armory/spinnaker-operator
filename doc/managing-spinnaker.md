@@ -78,7 +78,7 @@ This method lets you store secrets externally. You can then manage access as any
 
 Please refer to [the Spinnaker's documentation](https://www.spinnaker.io/reference/halyard/secrets/) for more details.
 
-## Secrets in Kubernetes secrets
+## Secrets in Kubernetes secrets (under development)
 This method is only available via the Operator at this time. It is similar to the one above with a different syntax:
 
 `encrypted:k8s!n:<secret name>!k:<key under which the secret is stored>`

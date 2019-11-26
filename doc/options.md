@@ -136,7 +136,7 @@ We'd get the following `spec.spinnakerConfig`:
 spec:
   spinnakerConfig:
     config:
-      version: 1.15.1
+      version: 1.17.1
       persistentStorage:
         persistentStoreType: s3
         s3:
