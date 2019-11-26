@@ -38,7 +38,10 @@ users:
 	}
 	kv := &kubernetesAccountValidator{account: a}
 	ctx := secrets.NewContext(context.TODO(), nil, "ns1")
+	defer secrets.Cleanup(ctx)
+
 	c, err := kv.makeClient(ctx, nil)
+
 	if !assert.Nil(t, err) {
 		return
 	}

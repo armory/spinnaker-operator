@@ -63,6 +63,8 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		Halyard:     halyard.NewService(),
 		SpinBuilder: SpinnakerServiceBuilder,
 	}
+	defer secrets.Cleanup(opts.Ctx)
+
 	log.Info("Starting validation")
 	validationResult := validate.ValidateAll(svc, opts)
 	if validationResult.HasErrors() {

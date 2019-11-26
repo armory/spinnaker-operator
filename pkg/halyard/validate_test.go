@@ -110,6 +110,8 @@ spec:
 	}
 
 	ctx := secrets.NewContext(context.TODO(), nil, "ns")
+	defer secrets.Cleanup(ctx)
+
 	req, err := h.buildValidationRequest(ctx, spinsvc, true)
 	if assert.Nil(t, err) {
 		assert.Equal(t, "localhost:8064", req.URL.Host)

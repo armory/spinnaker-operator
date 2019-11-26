@@ -81,6 +81,8 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	// Fetch the SpinnakerService instance
 	instance := &v1alpha2.SpinnakerAccount{}
 	ctx := secrets.NewContext(context.TODO(), r.client, request.Namespace)
+	defer secrets.Cleanup(ctx)
+
 	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
