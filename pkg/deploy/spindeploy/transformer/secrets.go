@@ -19,7 +19,8 @@ import (
 	"strings"
 )
 
-// exposeLbTr changes hal configurations and manifest files to expose spinnaker using service load balancers
+// secretsTransformer maps Kubernetes secrets onto the deployment of the service that requires it
+// Either as a mounted file (encryptedFile) or an environment variable (tokens, passwords...)
 type secretsTransformer struct {
 	svc    v1alpha2.SpinnakerServiceInterface
 	log    logr.Logger
@@ -178,7 +179,7 @@ func (k *kubernetesSecretCollector) addVolume(secretName, key string) (string, b
 			p := k.getRelativeSecretFilePath(secretName, key)
 			v.Secret.Items = append(v.Secret.Items, v1.KeyToPath{
 				Key:  key,
-				Path: p,
+				Path: key,
 			})
 			return p, false
 		}
@@ -194,7 +195,7 @@ func (k *kubernetesSecretCollector) addVolume(secretName, key string) (string, b
 				Items: []v1.KeyToPath{
 					{
 						Key:  key,
-						Path: p,
+						Path: key,
 					},
 				},
 			},
