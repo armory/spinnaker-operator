@@ -66,7 +66,7 @@ func TestAddVolume(t *testing.T) {
 		return
 	}
 	assert.Equal(t, "key1", k.volumes[0].Secret.Items[0].Key)
-	assert.Equal(t, "mysecret/key1", k.volumes[0].Secret.Items[0].Path)
+	assert.Equal(t, "key1", k.volumes[0].Secret.Items[0].Path)
 	assert.Equal(t, "volume-mysecret", k.volumes[0].Name)
 }
 
