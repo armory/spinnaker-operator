@@ -1,11 +1,9 @@
 package inspect
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"reflect"
 	"strings"
 )
@@ -63,7 +61,6 @@ func Source(i interface{}, settings map[string]interface{}) error {
 	return nil
 }
 
-
 // toSpecificArray converts an array of one type to an array of a desired type if it's assignable.
 func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, error) {
 	result := reflect.MakeSlice(reflect.SliceOf(target.Elem()), 0, array.Cap())
@@ -81,28 +78,17 @@ func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, e
 	return result, nil
 }
 
+type stringHandler func(val string) (string, error)
 
-// SanitizeSecrets visits all nodes and returns copies of the struct with secrets that are not passthrough
-// replaced
-func SanitizeSecrets(ctx context.Context, i interface{}) (interface{}, error) {
-	t, err := sanitizeSecretsReflect(ctx, reflect.ValueOf(i), secretHandler)
+func InspectStrings(i interface{}, handler stringHandler) (interface{}, error) {
+	t, err := inspectStringReflect(reflect.ValueOf(i), handler)
 	return t.Interface(), err
 }
 
-func secretHandler(ctx context.Context, val string) (string, error) {
-	if secrets.ShouldDecryptToValidate(val) {
-		s, _, err := secrets.Decode(ctx, val)
-		return s, err
-	}
-	return val, nil
-}
-
-type stringHandler func(ctx context.Context, val string) (string, error)
-
-func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler stringHandler) (reflect.Value, error) {
+func inspectStringReflect(v reflect.Value, stringHandler stringHandler) (reflect.Value, error) {
 	switch v.Kind() {
 	case reflect.Ptr:
-		rv, err := sanitizeSecretsReflect(ctx, v.Elem(), stringHandler)
+		rv, err := inspectStringReflect(v.Elem(), stringHandler)
 		if err != nil {
 			return v, err
 		}
@@ -113,7 +99,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		nsv := reflect.New(v.Type())
 		for j := 0; j < v.NumField(); j++ {
 			f := v.Field(j)
-			rv, err := sanitizeSecretsReflect(ctx, f, stringHandler)
+			rv, err := inspectStringReflect(f, stringHandler)
 			if err != nil {
 				return v, err
 			}
@@ -127,7 +113,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		}
 		return nsv.Elem(), nil
 	case reflect.String:
-		s, err := stringHandler(ctx, v.String())
+		s, err := stringHandler(v.String())
 		if err != nil {
 			return v, err
 		}
@@ -138,7 +124,7 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		}
 		nsv := reflect.MakeSlice(v.Type(), v.Len(), v.Len())
 		for j := 0; j < v.Len(); j++ {
-			rv, err := sanitizeSecretsReflect(ctx, v.Index(j), stringHandler)
+			rv, err := inspectStringReflect(v.Index(j), stringHandler)
 			if err != nil {
 				return v, err
 			}
@@ -149,13 +135,15 @@ func sanitizeSecretsReflect(ctx context.Context, v reflect.Value, stringHandler 
 		nmv := reflect.MakeMap(v.Type())
 		keys := v.MapKeys()
 		for _, k := range keys {
-			rv, err := sanitizeSecretsReflect(ctx, v.MapIndex(k), stringHandler)
+			rv, err := inspectStringReflect(v.MapIndex(k), stringHandler)
 			if err != nil {
 				return v, err
 			}
 			nmv.SetMapIndex(k, rv)
 		}
 		return nmv, nil
+	case reflect.Interface:
+		return inspectStringReflect(v.Elem(), stringHandler)
 	}
 	return v, nil
 }

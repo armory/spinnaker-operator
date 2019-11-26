@@ -54,27 +54,36 @@ func GetSecretContent(c client.Client, namespace, name, key string) (string, err
 }
 
 func GetMountedSecretNameInDeployment(dep *v12.Deployment, containerName, path string) string {
-	for _, c := range dep.Spec.Template.Spec.Containers {
-		if c.Name != containerName {
+	container := GetContainerInDeployment(dep, containerName)
+	if container == nil {
+		return ""
+	}
+	// Look for the volume mount here
+	for _, vm := range container.VolumeMounts {
+		if vm.MountPath != path {
 			continue
 		}
-		// Look for the volume mount here
-		for _, vm := range c.VolumeMounts {
-			if vm.MountPath != path {
-				continue
-			}
-			// Look for the secret
-			for _, v := range dep.Spec.Template.Spec.Volumes {
-				if v.Name == vm.Name {
-					if v.Secret != nil {
-						return v.Secret.SecretName
-					}
-					return ""
+		// Look for the secret
+		for _, v := range dep.Spec.Template.Spec.Volumes {
+			if v.Name == vm.Name {
+				if v.Secret != nil {
+					return v.Secret.SecretName
 				}
+				return ""
 			}
 		}
 	}
 	return ""
+}
+
+func GetContainerInDeployment(dep *v12.Deployment, containerName string) *v1.Container {
+	for i := range dep.Spec.Template.Spec.Containers {
+		c := &dep.Spec.Template.Spec.Containers[i]
+		if c.Name == containerName {
+			return c
+		}
+	}
+	return nil
 }
 
 func UpdateSecret(secret *v1.Secret, svc string, settings map[string]interface{}, profileName string) error {

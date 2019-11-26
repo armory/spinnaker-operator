@@ -3,18 +3,15 @@ package secrets
 import (
 	"context"
 	"errors"
-	v1 "k8s.io/api/core/v1"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SecretContext struct {
-	Cache       map[string]string
-	FileCache   map[string]string
-	Client      client.Client
-	Namespace   string
-	EnvVars     []v1.EnvVarSource
-	Volume      []v1.SecretVolumeSource
-	VolumeMount []v1.VolumeMount
+	Cache     map[string]string
+	FileCache map[string]string
+	Client    client.Client
+	Namespace string
 }
 
 var errContextNotInitialized = errors.New("secret context not initialized")
@@ -39,4 +36,21 @@ func FromContextWithError(ctx context.Context) (*SecretContext, error) {
 		return c, nil
 	}
 	return nil, errContextNotInitialized
+}
+
+// Cleanup deletes any temporary file that was used
+// Errors are ignored
+func (s *SecretContext) Cleanup() {
+	for _, f := range s.FileCache {
+		os.Remove(f)
+	}
+	s.FileCache = make(map[string]string)
+}
+
+// Attempt to clean up secret context if it exists
+func Cleanup(ctx context.Context) {
+	c, ok := FromContext(ctx)
+	if ok {
+		c.Cleanup()
+	}
 }
