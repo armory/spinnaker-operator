@@ -18,7 +18,7 @@ type SpinnakerAccountType interface {
 	// Create account from CRD
 	FromCRD(account *v1alpha2.SpinnakerAccount) (Account, error)
 	// Create account from Spinnaker config
-	FromSpinnakerConfig(map[string]interface{}) (Account, error)
+	FromSpinnakerConfig(ctx context.Context, config map[string]interface{}) (Account, error)
 	// Affected services
 	GetServices() []string
 	// Key under which accounts are stored in service

@@ -122,7 +122,7 @@ func TestFromSpinnakerSettings(t *testing.T) {
 			name: "basic settings with kubeconfig inlined",
 			settings: map[string]interface{}{
 				"name": "test",
-				"kubeconfig": `
+				"kubeconfigContents": `
 apiVersion: v1
 kind: Config
 current-context: test-context
@@ -162,7 +162,7 @@ users:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			k := &AccountType{}
-			a, err := k.FromSpinnakerConfig(tt.settings)
+			a, err := k.FromSpinnakerConfig(context.TODO(), tt.settings)
 			tt.expected(t, a, err)
 		})
 	}

@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/ghodss/yaml"
@@ -24,7 +25,7 @@ spec:
 `
 	spinsvc := &v1alpha2.SpinnakerService{}
 	if assert.Nil(t, yaml.Unmarshal([]byte(s), spinsvc)) {
-		acc, err := getAccountsFromConfig(spinsvc, &kubernetes.AccountType{})
+		acc, err := getAccountsFromConfig(context.TODO(), spinsvc, &kubernetes.AccountType{})
 		if assert.Nil(t, err) {
 			assert.Equal(t, 2, len(acc))
 		}
@@ -41,7 +42,7 @@ func TestNoAccounts(t *testing.T) {
 			},
 		},
 	}
-	acc, err := getAccountsFromConfig(spinsvc, &kubernetes.AccountType{})
+	acc, err := getAccountsFromConfig(context.TODO(), spinsvc, &kubernetes.AccountType{})
 	if assert.Nil(t, err) {
 		assert.Equal(t, 0, len(acc))
 	}

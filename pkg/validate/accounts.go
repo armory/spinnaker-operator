@@ -43,13 +43,13 @@ func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, option
 
 func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType, options Options) ([]account.Account, error) {
 	// Get accounts from profile
-	acc, err := getAccountsFromProfile(spinSvc, accountType)
+	acc, err := getAccountsFromProfile(options.Ctx, spinSvc, accountType)
 	if err != nil {
 		return nil, err
 	}
 	// If not found get accounts from main config
 	if acc == nil {
-		acc, err = getAccountsFromConfig(spinSvc, accountType)
+		acc, err = getAccountsFromConfig(options.Ctx, spinSvc, accountType)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +63,7 @@ type accountValidator struct {
 	fatal bool
 }
 
-func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
+func getAccountsFromProfile(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	for _, svc := range accountType.GetServices() {
 		p, ok := spinSvc.GetSpinnakerConfig().Profiles[svc]
 		if !ok {
@@ -73,19 +73,19 @@ func getAccountsFromProfile(spinSvc v1alpha2.SpinnakerServiceInterface, accountT
 		if err != nil {
 			continue
 		}
-		return accounts.FromSpinnakerConfigSlice(accountType, arr, false)
+		return accounts.FromSpinnakerConfigSlice(ctx, accountType, arr, false)
 	}
 	return nil, nil
 }
 
-func getAccountsFromConfig(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
+func getAccountsFromConfig(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	cfg := spinSvc.GetSpinnakerConfig()
 	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetConfigAccountsKey())
 	if err != nil {
 		// Ignore, key or format don't match expectations
 		return nil, nil
 	}
-	return accounts.FromSpinnakerConfigSlice(accountType, arr, false)
+	return accounts.FromSpinnakerConfigSlice(ctx, accountType, arr, false)
 }
 
 func (a *accountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
