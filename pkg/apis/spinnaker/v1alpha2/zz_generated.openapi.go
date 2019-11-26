@@ -196,7 +196,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref common.ReferenceCallb
 							Ref:         ref("k8s.io/client-go/tools/clientcmd/api/v1.Config"),
 						},
 					},
-					"UseServiceAccount": {
+					"useServiceAccount": {
 						SchemaProps: spec.SchemaProps{
 							Description: "UseServiceAccount authenticate to the target cluster using the service account mounted in Spinnaker's pods",
 							Type:        []string{"boolean"},

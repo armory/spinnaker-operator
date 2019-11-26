@@ -39,18 +39,11 @@ users:
 	kv := &kubernetesAccountValidator{account: a}
 	ctx := secrets.NewContext(context.TODO(), nil, "ns1")
 	defer secrets.Cleanup(ctx)
-
-	c, err := kv.makeClient(ctx, nil)
-
+	c, err := kv.makeClient(ctx, nil, nil)
 	if !assert.Nil(t, err) {
 		return
 	}
-	r, err := c.RawConfig()
-	if !assert.Nil(t, err) {
-		return
-	}
-	assert.Equal(t, 1, len(r.Contexts))
-	assert.Equal(t, "http://mycluster.com", r.Clusters["test-cluster"].Server)
+	assert.Equal(t, "http://mycluster.com", c.Host)
 }
 
 func TestSettingsTest(t *testing.T) {

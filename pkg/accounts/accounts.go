@@ -65,10 +65,10 @@ func AllValidCRDAccounts(ctx context.Context, c client.Client, ns string) ([]acc
 }
 
 // FromSpinnakerConfigSlice builds accounts from a given slice of settings
-func FromSpinnakerConfigSlice(accountType account.SpinnakerAccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]account.Account, error) {
+func FromSpinnakerConfigSlice(ctx context.Context, accountType account.SpinnakerAccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]account.Account, error) {
 	ar := make([]account.Account, 0)
 	for _, s := range settingsSlice {
-		a, err := accountType.FromSpinnakerConfig(s)
+		a, err := accountType.FromSpinnakerConfig(ctx, s)
 		if err != nil {
 			if !ignoreInvalid {
 				return ar, err

@@ -13,7 +13,10 @@ import (
 const (
 	KubeconfigFileSettings        = "kubeconfigFile"
 	KubeconfigFileContentSettings = "kubeconfigContents"
+	UseServiceAccount             = "serviceAccount"
 )
+
+var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
 
 type AccountType struct{}
 

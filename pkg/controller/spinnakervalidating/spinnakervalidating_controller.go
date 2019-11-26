@@ -8,6 +8,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/validate"
+	"k8s.io/api/admission/v1beta1"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -73,9 +74,11 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		log.Error(err, errorMsg, "metadata.name", svc)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	// Update the status with any admission status change
-	if err := v.client.Status().Update(ctx, svc); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
+	// Update the status with any admission status change, only if there's already an existing SpinnakerService
+	if req.AdmissionRequest.Operation == v1beta1.Update {
+		if err := v.client.Status().Update(ctx, svc); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
 	}
 	log.Info("SpinnakerService is valid", "metadata.name", svc)
 	return admission.ValidationResponse(true, "")
