@@ -165,6 +165,7 @@ func (k *kubernetesSecretCollector) handleSecretFileReference(secretName, key st
 // addVolume adds a volume from the secret referenced and return the path under which it should be mounted
 // The boolean return value will be true if we've added a new volume
 func (k *kubernetesSecretCollector) addVolume(secretName, key string) (string, bool) {
+	p := k.getRelativeSecretFilePath(secretName, key)
 	for i := range k.volumes {
 		v := k.volumes[i]
 		if v.Secret.SecretName == secretName {
@@ -172,11 +173,10 @@ func (k *kubernetesSecretCollector) addVolume(secretName, key string) (string, b
 				// Secret already tracked?
 				if v.Secret.Items[j].Key == key {
 					// Let's reuse the same path
-					return v.Secret.Items[j].Path, false
+					return p, false
 				}
 			}
 			// Let's add the key we want to mount
-			p := k.getRelativeSecretFilePath(secretName, key)
 			v.Secret.Items = append(v.Secret.Items, v1.KeyToPath{
 				Key:  key,
 				Path: key,
@@ -186,7 +186,6 @@ func (k *kubernetesSecretCollector) addVolume(secretName, key string) (string, b
 	}
 
 	// Secret has not been declared as a volume, we're adding it here
-	p := k.getRelativeSecretFilePath(secretName, key)
 	k.volumes = append(k.volumes, v1.Volume{
 		Name: k.getVolumeName(secretName),
 		VolumeSource: v1.VolumeSource{

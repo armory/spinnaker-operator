@@ -115,8 +115,26 @@ spec:
 	assert.Nil(t, k.setInDeployment(dep))
 
 	// Collect env vars
-	k.handleSecretVarReference("secret1", "key1")
-	k.handleSecretFileReference("secret2", "key2")
+	sec := k.handleSecretVarReference("secret1", "key1")
+	assert.Equal(t, "${MY_SERVICE_SECRET1_KEY1}", sec)
+
+	// Second time should give the same result
+	sec = k.handleSecretVarReference("secret1", "key1")
+	assert.Equal(t, "${MY_SERVICE_SECRET1_KEY1}", sec)
+
+	sec, err := k.handleSecretFileReference("secret2", "key2")
+	if !assert.Nil(t, err) {
+		return
+	}
+	assert.Equal(t, "/opt/my-service/secrets/secret2/key2", sec)
+
+	// Second time - same secret
+	sec, err = k.handleSecretFileReference("secret2", "key2")
+	if !assert.Nil(t, err) {
+		return
+	}
+	assert.Equal(t, "/opt/my-service/secrets/secret2/key2", sec)
+
 	assert.Nil(t, k.setInDeployment(dep))
 	c := util.GetContainerInDeployment(dep, "my-service")
 	if !assert.NotNil(t, c) {
@@ -132,7 +150,7 @@ spec:
 		namespace: "spinnaker",
 	}
 	k.handleSecretFileReference("secret2", "key2")
-	err := k.setInDeployment(dep)
+	err = k.setInDeployment(dep)
 	if assert.NotNil(t, err) {
 		assert.Equal(t, "unable to find container my-service2 in deployment, cannot mount secrets", err.Error())
 	}
