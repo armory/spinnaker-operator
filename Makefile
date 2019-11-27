@@ -24,7 +24,7 @@ PWD = $(shell pwd)
 
 PKG             := github.com/armory/spinnaker-operator
 REGISTRY        := docker.io
-SRC_DIRS        := cmd pkg
+SRC_DIRS        := cmd pkg integration-tests
 COMMAND         := cmd/manager/main
 BUILD_DIR       := ${PWD}/bin/$(OS)_$(ARCH)
 BINARY 			:= ${BUILD_DIR}/spinnaker-operator
@@ -37,6 +37,10 @@ all: build test
 .PHONY: test
 test: build-dirs Makefile
 	@go test -cover -mod=vendor ./...
+
+.PHONY: integration-test
+integration-test: build-dirs Makefile
+	@go test -v -tags=integration ./integration_tests
 
 .PHONY: test-docker
 test-docker: build-dirs Makefile
