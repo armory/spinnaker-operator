@@ -28,7 +28,7 @@ SRC_DIRS        := cmd pkg integration-tests
 COMMAND         := cmd/manager/main
 BUILD_DIR       := ${PWD}/bin/$(OS)_$(ARCH)
 BINARY 			:= ${BUILD_DIR}/spinnaker-operator
-KUBECONFIG		:= ${HOME}/.kube/config
+KUBECONFIG		?= ${HOME}/.kube/config
 
 
 .PHONY: all

@@ -10,15 +10,20 @@ import (
 
 // TestMain is the entry point for all tests
 func TestMain(m *testing.M) {
-	Env = &TestEnv{
-		VaultPath:       "secret/integration-tests/operator",
-		VaultKey:        "kubeconfig",
-		LocalKubeconfig: "int-test-kubeconfig",
-		CRDpath:         "../deploy/crds",
+	k := os.Getenv("KUBECONFIG")
+	if k == "" {
+		println("KUBECONFIG variable not set, falling back to $HOME/.kube/config")
+		home, err := os.UserHomeDir()
+		if err != nil {
+			println("Error getting user home: %v", err)
+			os.Exit(1)
+		}
+		k = fmt.Sprintf("%s/.kube/config", home)
 	}
-	println("Grabbing kubeconfig from vault")
-	if o, err := Env.LoadKubeconfig(); err != nil {
-		println(fmt.Sprintf("Error loading kubeconfig from vault: %s, error: %v", o, err))
+	println(fmt.Sprintf("Using kubeconfig %s", k))
+	Env = &TestEnv{
+		KubeconfigPath: k,
+		CRDpath:        "../deploy/crds",
 	}
 	println("Installing CRDs")
 	if o, err := Env.InstallCrds(); err != nil {
