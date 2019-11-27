@@ -3,13 +3,28 @@ kind: CustomResourceDefinition
 metadata:
   name: spinnakeraccounts.spinnaker.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.type
+    description: Type
+    name: type
+    type: string
+  - JSONPath: .status.LastValidatedAt
+    description: Last Validated
+    name: lastValidated
+    type: date
+  - JSONPath: .status.InvalidReason
+    description: Invalid Reason
+    name: reason
+    type: string
   group: spinnaker.io
   names:
     kind: SpinnakerAccount
     listKind: SpinnakerAccountList
     plural: spinnakeraccounts
+    shortNames:
+    - spinaccount
     singular: spinnakeraccount
-  scope: ""
+  scope: Namespaced
   subresources:
     status: {}
   validation:

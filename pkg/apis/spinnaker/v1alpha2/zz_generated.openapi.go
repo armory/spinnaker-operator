@@ -11,18 +11,18 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha2_ExposeConfig(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigService(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.HashStatus":                   schema_pkg_apis_spinnaker_v1alpha2_HashStatus(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.KubernetesAuth":               schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SecretInNamespaceReference":   schema_pkg_apis_spinnaker_v1alpha2_SecretInNamespaceReference(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccount":             schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec":         schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus":       schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountStatus(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerService":             schema_pkg_apis_spinnaker_v1alpha2_SpinnakerService(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerServiceSpec":         schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerServiceStatus":       schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref),
+		"./pkg/apis/spinnaker/v1alpha2.ExposeConfig":                 schema_pkg_apis_spinnaker_v1alpha2_ExposeConfig(ref),
+		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigService":          schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigService(ref),
+		"./pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides": schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigServiceOverrides(ref),
+		"./pkg/apis/spinnaker/v1alpha2.HashStatus":                   schema_pkg_apis_spinnaker_v1alpha2_HashStatus(ref),
+		"./pkg/apis/spinnaker/v1alpha2.KubernetesAuth":               schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SecretInNamespaceReference":   schema_pkg_apis_spinnaker_v1alpha2_SecretInNamespaceReference(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccount":             schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec":         schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus":       schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountStatus(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerService":             schema_pkg_apis_spinnaker_v1alpha2_SpinnakerService(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerServiceSpec":         schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerServiceStatus":       schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref),
 	}
 }
 
@@ -41,14 +41,14 @@ func schema_pkg_apis_spinnaker_v1alpha2_ExposeConfig(ref common.ReferenceCallbac
 					},
 					"service": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfigService"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.ExposeConfigService"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfigService"},
+			"./pkg/apis/spinnaker/v1alpha2.ExposeConfigService"},
 	}
 }
 
@@ -92,7 +92,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigService(ref common.Reference
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides"),
+										Ref: ref("./pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides"),
 									},
 								},
 							},
@@ -102,7 +102,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_ExposeConfigService(ref common.Reference
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides"},
+			"./pkg/apis/spinnaker/v1alpha2.ExposeConfigServiceOverrides"},
 	}
 }
 
@@ -187,7 +187,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref common.ReferenceCallb
 					"kubeconfigSecret": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubeconfig referenced as a Kubernetes secret",
-							Ref:         ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SecretInNamespaceReference"),
+							Ref:         ref("./pkg/apis/spinnaker/v1alpha2.SecretInNamespaceReference"),
 						},
 					},
 					"kubeconfig": {
@@ -207,7 +207,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_KubernetesAuth(ref common.ReferenceCallb
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SecretInNamespaceReference", "k8s.io/client-go/tools/clientcmd/api/v1.Config"},
+			"./pkg/apis/spinnaker/v1alpha2.SecretInNamespaceReference", "k8s.io/client-go/tools/clientcmd/api/v1.Config"},
 	}
 }
 
@@ -264,19 +264,19 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref common.ReferenceCal
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountSpec", "./pkg/apis/spinnaker/v1alpha2.SpinnakerAccountStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -301,7 +301,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 					},
 					"validation": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ValidationSetting"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.ValidationSetting"),
 						},
 					},
 					"permissions": {
@@ -327,7 +327,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 					},
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.KubernetesAuth"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.KubernetesAuth"),
 						},
 					},
 					"settings": {
@@ -349,7 +349,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccountSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.KubernetesAuth", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ValidationSetting"},
+			"./pkg/apis/spinnaker/v1alpha2.KubernetesAuth", "./pkg/apis/spinnaker/v1alpha2.ValidationSetting"},
 	}
 }
 
@@ -408,19 +408,19 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerService(ref common.ReferenceCal
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerServiceSpec"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerServiceSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerServiceStatus"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerServiceStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerServiceSpec", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerServiceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/spinnaker/v1alpha2.SpinnakerServiceSpec", "./pkg/apis/spinnaker/v1alpha2.SpinnakerServiceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -433,22 +433,22 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"spinnakerConfig": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerConfig"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerConfig"),
 						},
 					},
 					"validation": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"),
 						},
 					},
 					"expose": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfig"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.ExposeConfig"),
 						},
 					},
 					"accounts": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.AccountConfig"),
+							Ref: ref("./pkg/apis/spinnaker/v1alpha2.AccountConfig"),
 						},
 					},
 				},
@@ -456,7 +456,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.AccountConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"},
+			"./pkg/apis/spinnaker/v1alpha2.AccountConfig", "./pkg/apis/spinnaker/v1alpha2.ExposeConfig", "./pkg/apis/spinnaker/v1alpha2.SpinnakerConfig", "./pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"},
 	}
 }
 
@@ -482,7 +482,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.HashStatus"),
+										Ref: ref("./pkg/apis/spinnaker/v1alpha2.HashStatus"),
 									},
 								},
 							},
@@ -501,7 +501,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus"),
+										Ref: ref("./pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus"),
 									},
 								},
 							},
@@ -546,6 +546,6 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.HashStatus", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus"},
+			"./pkg/apis/spinnaker/v1alpha2.HashStatus", "./pkg/apis/spinnaker/v1alpha2.SpinnakerDeploymentStatus"},
 	}
 }
