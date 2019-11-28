@@ -7,6 +7,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,32 +17,58 @@ import (
 )
 
 func TestAddSpringProfile(t *testing.T) {
-	c := v1alpha2.SpinnakerConfig{
-		ServiceSettings: make(map[string]v1alpha2.FreeForm),
-	}
-	if assert.Nil(t, addSpringProfile(&c, "clouddriver", "test")) {
-		s, err := inspect.GetObjectPropString(context.TODO(), c.ServiceSettings, "clouddriver.env.SPRING_PROFILES_ACTIVE")
-		if assert.Nil(t, err) {
-			assert.Equal(t, "test", s)
-		}
-	}
-}
-
-func TestAddSpringProfileExisting(t *testing.T) {
-	c := v1alpha2.SpinnakerConfig{
-		ServiceSettings: map[string]v1alpha2.FreeForm{
-			"clouddriver": {
-				"env": map[string]interface{}{
-					"SPRING_PROFILES_ACTIVE": "local",
+	d := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name: "clouddriver",
+							Env: []v1.EnvVar{
+								{
+									Name:  "SOME_ENV",
+									Value: "test",
+								},
+								{
+									Name:  "SPRING_PROFILES_ACTIVE",
+									Value: "local,test",
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 	}
-	if assert.Nil(t, addSpringProfile(&c, "clouddriver", "test")) {
-		s, err := inspect.GetObjectPropString(context.TODO(), c.ServiceSettings, "clouddriver.env.SPRING_PROFILES_ACTIVE")
-		if assert.Nil(t, err) {
-			assert.Equal(t, "local,test", s)
-		}
+	err := addSpringProfile(d, "clouddriver", "accounts")
+	assert.Nil(t, err)
+	c := util.GetContainerInDeployment(d, "clouddriver")
+	if assert.NotNil(t, c) {
+		assert.Equal(t, 2, len(c.Env))
+		assert.Equal(t, "local,test,accounts", c.Env[1].Value)
+	}
+}
+
+func TestAddSpringProfileExisting(t *testing.T) {
+	d := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name: "clouddriver",
+						},
+					},
+				},
+			},
+		},
+	}
+	err := addSpringProfile(d, "clouddriver", "accounts")
+	assert.Nil(t, err)
+	c := util.GetContainerInDeployment(d, "clouddriver")
+	if assert.NotNil(t, c) {
+		assert.Equal(t, 1, len(c.Env))
+		assert.Equal(t, "accounts", c.Env[0].Value)
 	}
 }
 
