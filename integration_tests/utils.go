@@ -13,6 +13,18 @@ import (
 	"time"
 )
 
+var SpinBaseSvcs []string
+
+func init() {
+	SpinBaseSvcs = append(SpinBaseSvcs, "spin-deck")
+	SpinBaseSvcs = append(SpinBaseSvcs, "spin-gate")
+	SpinBaseSvcs = append(SpinBaseSvcs, "spin-orca")
+	SpinBaseSvcs = append(SpinBaseSvcs, "spin-clouddriver")
+	SpinBaseSvcs = append(SpinBaseSvcs, "spin-echo")
+	SpinBaseSvcs = append(SpinBaseSvcs, "spin-front50")
+	SpinBaseSvcs = append(SpinBaseSvcs, "spin-rosco")
+}
+
 func SetupEnv(crdPath, operatorPath, ns string) (*TestEnv, error) {
 	k := os.Getenv("KUBECONFIG")
 	if k == "" {
@@ -108,7 +120,7 @@ func WaitForSpinnakerToStabilize(spinName, ns string, e *TestEnv, t *testing.T) 
 	c := fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, spinName)
 	println(fmt.Sprintf("Waiting for spinnaker to become ready (%s)", c))
 	errorCounter := 0
-	for counter := 0; counter < 150; counter++ {
+	for counter := 0; counter < 250; counter++ {
 		print(".")
 		o, err := RunCommandSilent(c)
 		if err != nil {
@@ -121,12 +133,26 @@ func WaitForSpinnakerToStabilize(spinName, ns string, e *TestEnv, t *testing.T) 
 		}
 		if strings.TrimSpace(o) == "OK" {
 			println("\n")
+			AssertSpinnakerHealthy(spinName, ns, e, t)
 			return
 		}
 		time.Sleep(2 * time.Second)
 	}
 	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns))
 	assert.Fail(t, fmt.Sprintf("\nWaited too much time for spinnaker to become ready. Pods:\n%s", o))
+}
+
+func AssertSpinnakerHealthy(spinName, ns string, e *TestEnv, t *testing.T) {
+	println("Asserting spinnaker pods are healthy")
+	for _, s := range SpinBaseSvcs {
+		o, err := RunCommandSilent(fmt.Sprintf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s))
+		if !assert.Nil(t, err, fmt.Sprintf("Expected %s deployment to have %d ready replicas, but was %s", s, 1, o)) {
+			return
+		}
+		if !assert.Equal(t, "1", strings.TrimSpace(o), fmt.Sprintf("Expected %s deployment to have %d ready replicas, but was %s", s, 1, o)) {
+			return
+		}
+	}
 }
 
 func WaitForManifestInNsToStabilize(kind, resName, ns string, e *TestEnv, t *testing.T) {

@@ -24,7 +24,6 @@ func (e *TestEnv) KubectlPrefix() string {
 
 func (e *TestEnv) Cleanup() {
 	e.DeleteOperator()
-	DeleteManifestWithError(e.CRDpath, e)
 }
 
 func (e *TestEnv) InstallCrds() (string, error) {
