@@ -1,0 +1,45 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnakersecrets
+spec:
+  spinnakerConfig:
+    config:
+      version: 1.17.1
+      persistentStorage:
+        persistentStoreType: s3
+        s3:
+          bucket: armory-dev-spinnaker-integration-tests
+          rootFolder: front50
+      providers:
+        kubernetes:
+          enabled: true
+          accounts:
+            - name: kube-sa-inline
+              requiredGroupMembership: []
+              serviceAccount: true
+              providerVersion: V2
+              permissions: {}
+              dockerRegistries: []
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              customResources: []
+              cachingPolicies: []
+              oAuthScopes: []
+              onlySpinnakerManaged: false
+          primaryAccount: kube-sa-inline
+
+    service-settings:
+      clouddriver:
+        kubernetes:
+          serviceAccountName: spin-sa
+
+  expose:
+    type: service
+    service:
+      type: LoadBalancer

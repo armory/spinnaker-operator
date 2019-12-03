@@ -2,15 +2,20 @@ package integration_tests
 
 import (
 	"fmt"
+	"strings"
 )
-
-// Shared variable for all tests
-var Env *TestEnv
 
 // TestEnv holds information about the kubernetes cluster used for tests
 type TestEnv struct {
 	KubeconfigPath string
 	CRDpath        string
+	Operator       Operator
+}
+
+// Operator holds information about the operator installation
+type Operator struct {
+	ManifestsPath string
+	Namespace     string
 }
 
 func (e *TestEnv) KubectlPrefix() string {
@@ -18,12 +23,34 @@ func (e *TestEnv) KubectlPrefix() string {
 }
 
 func (e *TestEnv) Cleanup() {
-	o, err := DeleteManifestWithError(e.CRDpath, e)
-	if err != nil {
-		println(fmt.Sprintf("Error deleting CRDs from cluster: %s, error: %v", o, err))
-	}
+	e.DeleteOperator()
+	DeleteManifestWithError(e.CRDpath, e)
 }
 
 func (e *TestEnv) InstallCrds() (string, error) {
-	return ApplyManifestWithError(e.CRDpath, e)
+	o, err := ApplyManifestWithError(e.CRDpath, e)
+	// sometimes installing CRDs fails with this error
+	if strings.Contains(o, "AlreadyExists") {
+		return "", nil
+	}
+	return o, err
+}
+
+func (e *TestEnv) InstallOperator() (string, error) {
+	println("Installing operator...")
+	if o, err := CreateNamespaceWithError(e.Operator.Namespace, e); err != nil {
+		return o, err
+	}
+	if o, err := ApplyManifestInNsWithError(e.Operator.ManifestsPath, e.Operator.Namespace, e); err != nil {
+		return o, err
+	}
+	return WaitForManifestInNsToStabilizeWithError("pods", "operator", e.Operator.Namespace, e)
+}
+
+func (e *TestEnv) DeleteOperator() (string, error) {
+	println("Deleting operator...")
+	if o, err := DeleteManifestInNsWithError(e.Operator.ManifestsPath, e.Operator.Namespace, e); err != nil {
+		return o, err
+	}
+	return DeleteNamespaceWithError(e.Operator.Namespace, e)
 }
