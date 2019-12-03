@@ -52,7 +52,11 @@ func DeploySpinnaker(spinName, manifest, spinNs string, e *TestEnv, t *testing.T
 		PrintOperatorLogs(e)
 		t.FailNow()
 	}
+	time.Sleep(3 * time.Second)
 	WaitForSpinnakerToStabilize(spinName, spinNs, e, t)
+	if t.Failed() {
+		return "", ""
+	}
 	gateUrl, err = RunCommandSilent(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.apiUrl}'", e.KubectlPrefix(), spinNs, spinName))
 	if err != nil {
 		println(fmt.Sprintf("Cannot get Gate public url: %s, error: %v", gateUrl, err))
@@ -103,11 +107,17 @@ func ApplyManifestInNsWithError(path, ns string, e *TestEnv) (string, error) {
 func WaitForSpinnakerToStabilize(spinName, ns string, e *TestEnv, t *testing.T) {
 	c := fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, spinName)
 	println(fmt.Sprintf("Waiting for spinnaker to become ready (%s)", c))
+	errorCounter := 0
 	for counter := 0; counter < 150; counter++ {
 		print(".")
 		o, err := RunCommandSilent(c)
-		if !assert.Nil(t, err, o) {
-			t.FailNow()
+		if err != nil {
+			// fail only in repeated failures of "kubectl get spinsvc" command to avoid sporadic comms errors
+			errorCounter++
+			if errorCounter > 3 {
+				assert.Fail(t, fmt.Sprintf("Error waiting for spinnaker to become ready: %s", o))
+				return
+			}
 		}
 		if strings.TrimSpace(o) == "OK" {
 			println("\n")
@@ -115,9 +125,8 @@ func WaitForSpinnakerToStabilize(spinName, ns string, e *TestEnv, t *testing.T) 
 		}
 		time.Sleep(2 * time.Second)
 	}
-	println("\nWaited too much time for spinnaker to become ready. Pods:")
-	RunCommand(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns))
-	t.Fail()
+	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns))
+	assert.Fail(t, fmt.Sprintf("\nWaited too much time for spinnaker to become ready. Pods:\n%s", o))
 }
 
 func WaitForManifestInNsToStabilize(kind, resName, ns string, e *TestEnv, t *testing.T) {

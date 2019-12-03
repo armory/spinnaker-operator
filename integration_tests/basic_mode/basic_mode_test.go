@@ -12,7 +12,7 @@ var Env *it.TestEnv
 var TestNs string
 
 func init() {
-	TestNs = "operator-basic"
+	TestNs = "test-spinnaker-basic-mode"
 }
 
 // TestMain is the entry point for all tests
@@ -32,8 +32,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestKubeAccountsWithSecrets(t *testing.T) {
-	it.ApplyManifestInNs("testdata/spinnakerservice.yml", TestNs, Env, t)
-	it.WaitForSpinnakerToStabilize("spinnakerservice", TestNs, Env, t)
+func TestInstallSpinnakerBasicMode(t *testing.T) {
+	it.DeploySpinnaker("spinnaker", "testdata/spinnakerservice.yml", TestNs, Env, t)
 	it.DeleteManifestInNs("testdata/spinnakerservice.yml", TestNs, Env, t)
 }

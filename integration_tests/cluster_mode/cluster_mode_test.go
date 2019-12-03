@@ -8,6 +8,7 @@ import (
 	it "github.com/armory/spinnaker-operator/integration_tests"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -30,14 +31,19 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestKubeAccountsWithSecrets(t *testing.T) {
+func TestInstallUpgradeUninstall(t *testing.T) {
 	// install spinnaker
-	ns := "test-secrets"
+	ns := "test-spinnaker-cluster-mode"
+	spinName := "spinnaker"
 	it.CreateNamespace(ns, Env, t)
+	defer it.DeleteNamespace(ns, Env, t)
 	it.ApplyManifestInNs("testdata/sa.yml", ns, Env, t)
-	_, gateUrl := it.DeploySpinnaker("spinnakersecrets", "testdata/spinnakerservice.yml", ns, Env, t)
+	_, gateUrl := it.DeploySpinnaker(spinName, "testdata/spinnakerservice.yml", ns, Env, t)
+	if t.Failed() {
+		return
+	}
 
-	// verify the right accounts exist
+	// verify the right accounts exist by querying gate credentials endpoint
 	o := it.ExecuteGetRequest(fmt.Sprintf("%s/credentials", gateUrl), t)
 	type c struct {
 		Name string `json:"name"`
@@ -46,6 +52,22 @@ func TestKubeAccountsWithSecrets(t *testing.T) {
 	if assert.Nil(t, json.Unmarshal([]byte(o), &credentials)) {
 		assert.Equal(t, "kube-sa-inline", credentials[0].Name)
 	}
-	it.DeleteManifestInNs("testdata/spinnakerservice.yml", ns, Env, t)
-	it.DeleteNamespace(ns, Env, t)
+
+	// upgrade
+	v, err := it.RunCommand(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", Env.KubectlPrefix(), ns, spinName))
+	if assert.Nil(t, err) {
+		assert.Equal(t, "1.17.0", strings.TrimSpace(v))
+	}
+	it.DeploySpinnaker(spinName, "testdata/spinnakerservice_upgrade.yml", ns, Env, t)
+	if t.Failed() {
+		return
+	}
+	v, err = it.RunCommand(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", Env.KubectlPrefix(), ns, spinName))
+	if assert.Nil(t, err) {
+		assert.Equal(t, "1.17.1", strings.TrimSpace(v))
+	}
+
+	// uninstall
+	o, err = it.RunCommand(fmt.Sprintf("%s -n %s delete spinsvc %s", Env.KubectlPrefix(), ns, spinName))
+	assert.Nil(t, err, o)
 }
