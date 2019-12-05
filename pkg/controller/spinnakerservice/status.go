@@ -2,6 +2,8 @@ package spinnakerservice
 
 import (
 	"context"
+	"fmt"
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 
 type statusChecker struct {
 	client client.Client
+	logger logr.Logger
 }
 
 const (
@@ -21,8 +24,8 @@ const (
 	Na          = "N/A"
 )
 
-func newStatusChecker(client client.Client) statusChecker {
-	return statusChecker{client: client}
+func newStatusChecker(client client.Client, logger logr.Logger) statusChecker {
+	return statusChecker{client: client, logger: logger}
 }
 
 func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterface) error {
@@ -37,6 +40,7 @@ func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterf
 	svc := instance.DeepCopyInterface()
 	status := svc.GetStatus()
 	if len(list.Items) == 0 {
+		log.Info("Status: NA, there are still no deployments owned by the operator")
 		status.Status = Na
 		status.Services = []spinnakerv1alpha2.SpinnakerDeploymentStatus{}
 	} else {
@@ -52,11 +56,14 @@ func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterf
 			}
 			// Spinnaker not ready if any of the services has zero pods
 			if it.Status.ReadyReplicas == 0 {
+				log.Info(fmt.Sprintf("Status: Unavailable, deployment %s has zero ready replicas", it.ObjectMeta.Name))
 				status.Status = Unavailable
 			}
 
 			// If number of replicas desired != number of replicas with the given spec, they're "deploying"
 			if it.Status.Replicas != it.Status.UpdatedReplicas {
+				log.Info(fmt.Sprintf("Status: Updating, deployment %s has %d replicas but %d updated replicas (should match)",
+					it.ObjectMeta.Name, it.Status.Replicas, it.Status.UpdatedReplicas))
 				status.Status = Updating
 			}
 			svcs = append(svcs, st)

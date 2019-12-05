@@ -5,17 +5,12 @@ metadata:
 spec:
   spinnakerConfig:
     config:
-      version: 1.17.1
+      version: 1.17.0
       persistentStorage:
         persistentStoreType: s3
         s3:
           bucket: armory-dev-spinnaker-integration-tests
           rootFolder: front50
-      providers:
-        kubernetes:
-          enabled: true
-          accounts: []
-
   expose:
     type: service
     service:

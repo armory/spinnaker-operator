@@ -40,7 +40,7 @@ test: build-dirs Makefile
 
 .PHONY: integration-test
 integration-test: build-dirs Makefile
-	@go test -v -tags=integration -timeout=30m ./integration_tests/...
+	@go test -tags=integration -timeout=30m ./integration_tests/...
 
 .PHONY: test-docker
 test-docker: build-dirs Makefile

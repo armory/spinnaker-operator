@@ -6,11 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
+)
+
+const (
+	MaxErrorsWaitingForStability           = 3
+	MaxChecksWaitingForDeploymentStability = 25
+	MaxChecksWaitingForSpinnakerStability  = 250
 )
 
 var SpinBaseSvcs []string
@@ -25,128 +30,77 @@ func init() {
 	SpinBaseSvcs = append(SpinBaseSvcs, "spin-rosco")
 }
 
-func SetupEnv(crdPath, operatorPath, ns string) (*TestEnv, error) {
-	k := os.Getenv("KUBECONFIG")
-	if k == "" {
-		println("KUBECONFIG variable not set, falling back to $HOME/.kube/config")
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("error getting user home: %v", err)
-		}
-		k = fmt.Sprintf("%s/.kube/config", home)
-	}
-	println(fmt.Sprintf("Using kubeconfig %s", k))
-	e := &TestEnv{
-		KubeconfigPath: k,
-		CRDpath:        crdPath,
-		Operator: Operator{
-			ManifestsPath: operatorPath,
-			Namespace:     ns,
-		},
-	}
-	println("Installing CRDs")
-	if o, err := e.InstallCrds(); err != nil {
-		e.Cleanup()
-		return nil, fmt.Errorf(fmt.Sprintf("Error installing CRDs: %s, error: %v", o, err))
-	}
-	if o, err := e.InstallOperator(); err != nil {
-		e.Cleanup()
-		return nil, fmt.Errorf(fmt.Sprintf("Error installing operator %s, error: %v", o, err))
-	}
-	return e, nil
-}
-
 // DeploySpinnaker returns spinnaker Deck and Gate public urls
-func DeploySpinnaker(spinName, manifest, spinNs string, e *TestEnv, t *testing.T) (deckUrl string, gateUrl string) {
-	o, err := ApplyManifestInNsWithError(manifest, spinNs, e)
-	if err != nil {
-		println(fmt.Sprintf("Error deploying spinnaker: %s, error: %v", o, err))
-		PrintOperatorLogs(e)
-		t.FailNow()
+func DeploySpinnaker(ns, name, kustPath string, e *TestEnv, t *testing.T) (deckUrl string, gateUrl string) {
+	if !ApplyKustomizeAndAssert(ns, kustPath, e, t) {
+		t.Logf("Error deploying spinnaker")
+		PrintOperatorLogs(e, t)
+		return
 	}
 	time.Sleep(3 * time.Second)
-	WaitForSpinnakerToStabilize(spinName, spinNs, e, t)
+	WaitForSpinnakerToStabilize(ns, name, e, t)
 	if t.Failed() {
-		return "", ""
+		return
 	}
-	gateUrl, err = RunCommandSilent(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.apiUrl}'", e.KubectlPrefix(), spinNs, spinName))
-	if err != nil {
-		println(fmt.Sprintf("Cannot get Gate public url: %s, error: %v", gateUrl, err))
-		t.FailNow()
+	gateUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.apiUrl}'", e.KubectlPrefix(), ns, name), t)
+	if t.Failed() {
+		t.Logf("Cannot get Gate public url: %s", gateUrl)
+		return
 	}
-	deckUrl, err = RunCommandSilent(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.uiUrl}'", e.KubectlPrefix(), spinNs, spinName))
-	if err != nil {
-		println(fmt.Sprintf("Cannot get Deck public url: %s, error: %v", deckUrl, err))
-		t.FailNow()
+	deckUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.uiUrl}'", e.KubectlPrefix(), ns, name), t)
+	if t.Failed() {
+		t.Logf("Cannot get Deck public url: %s", deckUrl)
+		return
 	}
 	return
 }
 
-func PrintOperatorLogs(e *TestEnv) {
-	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s logs deployment/spinnaker-operator spinnaker-operator", e.KubectlPrefix(), e.Operator.Namespace))
-	println("================ Operator logs start ================ ")
-	println(o)
-	println("================ Operator logs end ================== ")
+func PrintOperatorLogs(e *TestEnv, t *testing.T) {
+	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s logs deployment/spinnaker-operator spinnaker-operator", e.KubectlPrefix(), e.Operator.Namespace), t)
+	t.Logf("================ Operator logs start ================ ")
+	t.Logf(o)
+	t.Logf("================ Operator logs end ================== ")
 }
 
-func ApplyManifest(path string, e *TestEnv, t *testing.T) {
-	o, err := ApplyManifestWithError(path, e)
-	if !assert.Nil(t, err, o) {
-		t.FailNow()
-	}
+func ApplyManifest(ns, path string, e *TestEnv, t *testing.T) {
+	c := fmt.Sprintf("%s -n %s apply -f %s", e.KubectlPrefix(), ns, path)
+	RunCommand(c, t)
 }
 
-func ApplyManifestInNs(path, ns string, e *TestEnv, t *testing.T) {
-	o, err := ApplyManifestInNsWithError(path, ns, e)
-	if !assert.Nil(t, err, o) {
-		t.FailNow()
-	}
+func ApplyKustomizeAndAssert(ns, path string, e *TestEnv, t *testing.T) bool {
+	c := fmt.Sprintf("%s -n %s apply -k %s", e.KubectlPrefix(), ns, path)
+	RunCommandAndAssert(c, t)
+	return !t.Failed()
 }
 
-func ApplyManifestWithError(path string, e *TestEnv) (string, error) {
-	return ApplyManifestInNsWithError(path, "", e)
-}
-
-func ApplyManifestInNsWithError(path, ns string, e *TestEnv) (string, error) {
-	normalizedNs := ns
-	if normalizedNs == "" {
-		normalizedNs = "default"
-	}
-	c := fmt.Sprintf("%s -n %s apply -f %s", e.KubectlPrefix(), normalizedNs, path)
-	return RunCommand(c)
-}
-
-func WaitForSpinnakerToStabilize(spinName, ns string, e *TestEnv, t *testing.T) {
-	c := fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, spinName)
-	println(fmt.Sprintf("Waiting for spinnaker to become ready (%s)", c))
-	errorCounter := 0
-	for counter := 0; counter < 250; counter++ {
-		print(".")
-		o, err := RunCommandSilent(c)
+func WaitForSpinnakerToStabilize(ns, name string, e *TestEnv, t *testing.T) {
+	c := fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, name)
+	t.Logf("Waiting for spinnaker to become ready (%s)", c)
+	errCount := 0
+	for counter := 0; counter < MaxChecksWaitingForSpinnakerStability; counter++ {
+		o, err := RunCommandSilent(c, t)
 		if err != nil {
-			// fail only in repeated failures of "kubectl get spinsvc" command to avoid sporadic comms errors
-			errorCounter++
-			if errorCounter > 3 {
-				assert.Fail(t, fmt.Sprintf("Error waiting for spinnaker to become ready: %s", o))
+			errCount++
+			if !assert.NotEqual(t, MaxErrorsWaitingForStability, errCount,
+				fmt.Sprintf("Waiting for spinnaker to become ready produced too many errors. Last output: %s", o)) {
 				return
 			}
 		}
 		if strings.TrimSpace(o) == "OK" {
-			println("\n")
-			AssertSpinnakerHealthy(spinName, ns, e, t)
+			AssertSpinnakerHealthy(ns, name, e, t)
 			return
 		}
 		time.Sleep(2 * time.Second)
 	}
-	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns))
-	assert.Fail(t, fmt.Sprintf("\nWaited too much time for spinnaker to become ready. Pods:\n%s", o))
+	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
+	t.Errorf("Waited too much time for spinnaker to become ready (never saw status=OK). Pods:\n%s", o)
 }
 
-func AssertSpinnakerHealthy(spinName, ns string, e *TestEnv, t *testing.T) {
-	println("Asserting spinnaker pods are healthy")
+func AssertSpinnakerHealthy(ns, spinName string, e *TestEnv, t *testing.T) {
+	t.Logf("Asserting spinnaker pods are healthy")
 	for _, s := range SpinBaseSvcs {
-		o, err := RunCommandSilent(fmt.Sprintf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s))
-		if !assert.Nil(t, err, fmt.Sprintf("Expected %s deployment to have %d ready replicas, but was %s", s, 1, o)) {
+		o := RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s), t)
+		if t.Failed() {
 			return
 		}
 		if !assert.Equal(t, "1", strings.TrimSpace(o), fmt.Sprintf("Expected %s deployment to have %d ready replicas, but was %s", s, 1, o)) {
@@ -155,95 +109,54 @@ func AssertSpinnakerHealthy(spinName, ns string, e *TestEnv, t *testing.T) {
 	}
 }
 
-func WaitForManifestInNsToStabilize(kind, resName, ns string, e *TestEnv, t *testing.T) {
-	o, err := WaitForManifestInNsToStabilizeWithError(kind, resName, ns, e)
-	if !assert.Nil(t, err, o) {
-		t.FailNow()
-	}
-}
-
-func WaitForManifestInNsToStabilizeWithError(kind, resName, ns string, e *TestEnv) (string, error) {
-	normalizedNs := ns
-	if normalizedNs == "" {
-		normalizedNs = "default"
-	}
-	c := fmt.Sprintf("%s -n %s get %s | grep %s | awk '{print $2}'", e.KubectlPrefix(), normalizedNs, kind, resName)
-	println(fmt.Sprintf("Waiting for manifest to stabilize (%s)", c))
-
-	for counter := 0; counter < 20; counter++ {
-		print(".")
-		cont, err := RunCommandSilent(c)
+func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) bool {
+	c := fmt.Sprintf("%s -n %s get deployment %s -o=jsonpath='{.status.updatedReplicas}/{.status.replicas}/{.status.unavailableReplicas}'", e.KubectlPrefix(), ns, name)
+	t.Logf("Waiting for deployment %s to stabilize (command %s)", name, c)
+	errCount := 0
+	for counter := 0; counter < MaxChecksWaitingForDeploymentStability; counter++ {
+		cont, err := RunCommandSilent(c, t)
 		if err != nil {
-			return cont, err
+			errCount++
+			if !assert.NotEqual(t, MaxErrorsWaitingForStability, errCount,
+				fmt.Sprintf("waiting for deployment %s to become ready produced too many errors. Last output: %s", name, cont)) {
+				return t.Failed()
+			}
 		}
 		parts := strings.Split(cont, "/")
-		if len(parts) == 2 && strings.TrimSpace(parts[0]) == strings.TrimSpace(parts[1]) {
-			println("\n")
-			return "", nil
+		if len(parts) == 3 && strings.TrimSpace(parts[0]) == strings.TrimSpace(parts[1]) && strings.TrimSpace(parts[2]) == "" {
+			return t.Failed()
 		}
 		time.Sleep(2 * time.Second)
 	}
-	return "", fmt.Errorf("\nwaited too much for %s to become ready, giving up", resName)
+	pods, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
+	t.Errorf("Waited too much for deployment %s to become ready, giving up. Pods: %s", name, pods)
+	return t.Failed()
 }
 
-func DeleteManifest(path string, e *TestEnv, t *testing.T) {
-	o, err := DeleteManifestWithError(path, e)
-	if !assert.Nil(t, err, o) {
-		t.FailNow()
-	}
+func DeleteManifest(ns, path string, e *TestEnv, t *testing.T) (string, error) {
+	return RunCommand(fmt.Sprintf("%s -n %s delete -f %s", e.KubectlPrefix(), ns, path), t)
 }
 
-func DeleteManifestInNs(path, ns string, e *TestEnv, t *testing.T) {
-	o, err := DeleteManifestInNsWithError(path, ns, e)
-	if !assert.Nil(t, err, o) {
-		t.FailNow()
-	}
-}
-
-func DeleteManifestWithError(path string, e *TestEnv) (string, error) {
-	return DeleteManifestInNsWithError(path, "", e)
-}
-
-func DeleteManifestInNsWithError(path, ns string, e *TestEnv) (string, error) {
+func DeleteKustomizeInNsWithError(path, ns string, e *TestEnv) (string, error) {
 	normalizedNs := ns
 	if normalizedNs == "" {
 		normalizedNs = "default"
 	}
-	c := fmt.Sprintf("%s -n %s delete -f %s", e.KubectlPrefix(), normalizedNs, path)
-	return RunCommand(c)
+	c := fmt.Sprintf("%s -n %s delete -k %s", e.KubectlPrefix(), normalizedNs, path)
+	return RunCommandOld(c)
 }
 
-func CreateNamespace(name string, e *TestEnv, t *testing.T) {
-	o, err := CreateNamespaceWithError(name, e)
-	if !assert.Nil(t, err, o) {
-		t.FailNow()
-	}
-}
-
-func CreateNamespaceWithError(name string, e *TestEnv) (string, error) {
-	c := fmt.Sprintf("%s get namespace %s", e.KubectlPrefix(), name)
-	_, err := RunCommand(c)
-	if err == nil {
-		// namespace already exists
-		return "", nil
-	}
-	c = fmt.Sprintf("%s create namespace %s", e.KubectlPrefix(), name)
-	return RunCommand(c)
+func CreateNamespace(name string, e *TestEnv, t *testing.T) bool {
+	RunCommandAndAssert(fmt.Sprintf("%s get ns %s || %s create ns %s", e.KubectlPrefix(), name, e.KubectlPrefix(), name), t)
+	return !t.Failed()
 }
 
 func DeleteNamespace(name string, e *TestEnv, t *testing.T) {
-	o, err := DeleteNamespaceWithError(name, e)
-	if !assert.Nil(t, err, o) {
-		t.FailNow()
-	}
+	c := fmt.Sprintf("%s delete namespace %s --force --grace-period=0", e.KubectlPrefix(), name)
+	RunCommand(c, t)
 }
 
-func DeleteNamespaceWithError(name string, e *TestEnv) (string, error) {
-	c := fmt.Sprintf("%s delete namespace %s", e.KubectlPrefix(), name)
-	return RunCommand(c)
-}
-
-func RunCommand(c string) (string, error) {
+func RunCommandOld(c string) (string, error) {
 	println(c)
 	o, err := exec.Command("sh", "-c", c).CombinedOutput()
 	s := string(o)
@@ -251,10 +164,34 @@ func RunCommand(c string) (string, error) {
 	return s, err
 }
 
-func RunCommandSilent(c string) (string, error) {
+func RunCommandSilent(c string, t *testing.T) (string, error) {
 	o, err := exec.Command("sh", "-c", c).CombinedOutput()
 	s := string(o)
 	return s, err
+}
+
+func RunCommand(c string, t *testing.T) (string, error) {
+	t.Logf("%s", c)
+	o, err := exec.Command("sh", "-c", c).CombinedOutput()
+	s := string(o)
+	t.Logf("%s", s)
+	return s, err
+}
+
+func RunCommandAndAssert(c string, t *testing.T) string {
+	t.Logf("%s", c)
+	o, err := exec.Command("sh", "-c", c).CombinedOutput()
+	assert.Nil(t, err, fmt.Sprintf("command \"%s\" failed. Output: %s", c, o))
+	s := string(o)
+	t.Logf("%s", s)
+	return s
+}
+
+func RunCommandSilentAndAssert(c string, t *testing.T) string {
+	o, err := exec.Command("sh", "-c", c).CombinedOutput()
+	assert.Nil(t, err, fmt.Sprintf("command \"%s\" failed. Output: %s", c, o))
+	s := string(o)
+	return s
 }
 
 func ExecuteGetRequest(reqUrl string, t *testing.T) string {
@@ -270,4 +207,12 @@ func ExecuteGetRequest(reqUrl string, t *testing.T) string {
 		}
 	}
 	return ""
+}
+
+func LogMainStep(t *testing.T, msg string, args ...interface{}) {
+	if args == nil {
+		t.Logf(fmt.Sprintf("================================ %s", msg))
+	} else {
+		t.Logf(fmt.Sprintf("================================ %s", msg), args)
+	}
 }

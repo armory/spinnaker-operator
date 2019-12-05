@@ -1,0 +1,3 @@
+resources:
+- sa.yml
+- spinnakerservice.yml
