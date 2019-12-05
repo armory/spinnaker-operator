@@ -8,17 +8,30 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"sync"
 	"testing"
 )
 
 const (
+	NsOperatorCluster = "test-operator-cluster-mode" // This value needs to be in sync with operator RoleBinding manifest
+	NsOperatorBasic   = "test-spinnaker-basic-mode"
+	NsSpinnaker1      = "test-spinnaker-cluster-mode"
+
+	KubeconfigVar        = "KUBECONFIG"
+	OperatorImageVar     = "OPERATOR_IMAGE"
+	OperatorImageDefault = "armory/spinnaker-operator:dev"
+	HalyardImageVar      = "HALYARD_IMAGE"
+	HalyardImageDefault  = "armory/halyard:operator-0.3.x"
+	CleanStartVar        = "CLEAN_START"
+
 	OperatorKustomizeBase   = "testdata/operator/base"
 	OperatorSourceManifests = "../deploy/operator/cluster"
 	CRDManifests            = "../deploy/crds"
 )
 
-var kustomizeBaseRan = false
-var crdsRan = false
+var envLock sync.Mutex
+var envInitialized = false
 var operatorRunsByNamespace = map[string]bool{}
 
 // TestEnv holds information about the kubernetes cluster used for tests
@@ -45,13 +58,11 @@ type Account struct {
 // NewEnv creates a new environment context, with the given operator namespace and path pointing to a kustomize folder
 // with operator manifests
 func NewEnv(opNs, opKust string, t *testing.T) *TestEnv {
-	generateKustomizeBase(t)
-	if t.Failed() {
-		return nil
-	}
-	k := os.Getenv("KUBECONFIG")
+	envLock.Lock()
+	defer envLock.Unlock()
+	k := os.Getenv(KubeconfigVar)
 	if k == "" {
-		t.Logf("KUBECONFIG env var not set, using default")
+		t.Logf("%s env var not set, using default", KubeconfigVar)
 		home, err := os.UserHomeDir()
 		if !assert.Nil(t, err, "error getting user home") {
 			return nil
@@ -59,21 +70,44 @@ func NewEnv(opNs, opKust string, t *testing.T) *TestEnv {
 		k = fmt.Sprintf("%s/.kube/config", home)
 	}
 	t.Logf("Using kubeconfig %s", k)
-	return &TestEnv{
+	e := &TestEnv{
 		KubeconfigPath: k,
 		Operator: Operator{
 			Namespace:         opNs,
 			KustomizationPath: opKust,
 		},
 	}
+	if envInitialized {
+		t.Logf("Environment already initialized")
+		return e
+	}
+	envInitialized = true
+	generateKustomizeBase(t)
+	if t.Failed() {
+		return nil
+	}
+	cleanEnvIfNeeded(e, t)
+	return e
+}
+
+func cleanEnvIfNeeded(e *TestEnv, t *testing.T) {
+	c := os.Getenv(CleanStartVar)
+	if c == "" {
+		return
+	}
+	b, err := strconv.ParseBool(c)
+	if err != nil {
+		t.Logf("Unable to parse a bool from env var %s: %s, ignoring and not cleaning environment", CleanStartVar, c)
+		return
+	}
+	if b {
+		DeleteNamespace(NsOperatorCluster, e, t)
+		DeleteNamespace(NsOperatorBasic, e, t)
+		DeleteNamespace(NsSpinnaker1, e, t)
+	}
 }
 
 func generateKustomizeBase(t *testing.T) {
-	if kustomizeBaseRan {
-		t.Logf("Base kustomization setup already executed")
-		return
-	}
-	kustomizeBaseRan = true
 	generateBaseKustomization(t)
 	if t.Failed() {
 		return
@@ -118,16 +152,16 @@ resources:
 }
 
 func addKustomizationBaseImages(t *testing.T) {
-	opImg := os.Getenv("OPERATOR_IMAGE")
+	opImg := os.Getenv(OperatorImageVar)
 	if opImg == "" {
-		t.Logf("OPERATOR_IMAGE env var not set, using default")
-		opImg = "armory/spinnaker-operator:dev"
+		t.Logf("%s env var not set, using default", OperatorImageVar)
+		opImg = OperatorImageDefault
 	}
 	t.Logf("Using operator image %s", opImg)
-	halyardImg := os.Getenv("HALYARD_IMAGE")
+	halyardImg := os.Getenv(HalyardImageVar)
 	if halyardImg == "" {
-		t.Logf("HALYARD_IMAGE env var not set, using default")
-		halyardImg = "armory/halyard:operator-0.3.x"
+		t.Logf("%s env var not set, using default", HalyardImageVar)
+		halyardImg = HalyardImageDefault
 	}
 	t.Logf("Using halyard image %s", halyardImg)
 	RunCommandAndAssert(fmt.Sprintf("cd %s && kustomize edit set image spinnaker-operator=%s", OperatorKustomizeBase, opImg), t)
@@ -160,11 +194,6 @@ func InstallCrdsAndOperator(opNs, opKustPath string, t *testing.T) (e *TestEnv) 
 }
 
 func (e *TestEnv) InstallCrds(t *testing.T) bool {
-	if crdsRan {
-		t.Logf("CRDs already installed")
-		return true
-	}
-	crdsRan = true
 	ApplyManifest("default", CRDManifests, e, t)
 	RunCommandAndAssert(fmt.Sprintf("%s get spinsvc", e.KubectlPrefix()), t)
 	RunCommandAndAssert(fmt.Sprintf("%s get spinnakeraccounts", e.KubectlPrefix()), t)

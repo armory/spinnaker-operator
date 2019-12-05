@@ -133,35 +133,14 @@ func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) boo
 	return t.Failed()
 }
 
-func DeleteManifest(ns, path string, e *TestEnv, t *testing.T) (string, error) {
-	return RunCommand(fmt.Sprintf("%s -n %s delete -f %s", e.KubectlPrefix(), ns, path), t)
-}
-
-func DeleteKustomizeInNsWithError(path, ns string, e *TestEnv) (string, error) {
-	normalizedNs := ns
-	if normalizedNs == "" {
-		normalizedNs = "default"
-	}
-	c := fmt.Sprintf("%s -n %s delete -k %s", e.KubectlPrefix(), normalizedNs, path)
-	return RunCommandOld(c)
-}
-
 func CreateNamespace(name string, e *TestEnv, t *testing.T) bool {
 	RunCommandAndAssert(fmt.Sprintf("%s get ns %s || %s create ns %s", e.KubectlPrefix(), name, e.KubectlPrefix(), name), t)
 	return !t.Failed()
 }
 
 func DeleteNamespace(name string, e *TestEnv, t *testing.T) {
-	c := fmt.Sprintf("%s delete namespace %s --force --grace-period=0", e.KubectlPrefix(), name)
+	c := fmt.Sprintf("%s delete namespace %s", e.KubectlPrefix(), name)
 	RunCommand(c, t)
-}
-
-func RunCommandOld(c string) (string, error) {
-	println(c)
-	o, err := exec.Command("sh", "-c", c).CombinedOutput()
-	s := string(o)
-	println(s)
-	return s, err
 }
 
 func RunCommandSilent(c string, t *testing.T) (string, error) {
