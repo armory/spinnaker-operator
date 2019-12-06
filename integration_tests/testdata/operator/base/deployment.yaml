@@ -12,7 +12,7 @@ spec:
       labels:
         name: spinnaker-operator
     spec:
-      serviceAccountName: spinnaker-operator
+      serviceAccountName: spin-operator-sa
       containers:
         - name: spinnaker-operator
           image: armory/spinnaker-operator:dev

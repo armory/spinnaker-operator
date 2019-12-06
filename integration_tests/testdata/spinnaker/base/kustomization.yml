@@ -1,3 +1,5 @@
 resources:
-- sa.yml
 - spinnakerservice.yml
+
+patchesStrategicMerge:
+- persistence.yml

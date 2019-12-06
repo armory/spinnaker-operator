@@ -80,3 +80,8 @@ bin/
 # Intellij
 .idea
 *.iml
+
+# Generated files by integration tests
+integration_tests/testdata/operator/base/kustomization.yml
+integration_tests/testdata/**/role_binding.yml
+integration_tests/testdata/spinnaker/base/persistence.yml

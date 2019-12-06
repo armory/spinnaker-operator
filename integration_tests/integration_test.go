@@ -10,35 +10,41 @@ import (
 )
 
 // - Operator in basic mode
-// - Minimal spinnaker manifest
-func TestSuccessfulInstall_1(t *testing.T) {
+// - Minimal spinnaker manifest (exposed)
+func TestSpinnakerBase(t *testing.T) {
 	// setup
 	t.Parallel()
-	e := InstallCrdsAndOperator(NsOperatorBasic, "testdata/operator/overlay_basicmode", t)
+	e := InstallCrdsAndOperator(false, t)
 	if t.Failed() {
 		return
 	}
 
 	// install
-	spinName := "spinnaker"
-	e.InstallSpinnaker(NsOperatorBasic, spinName, "testdata/spinnaker/base", t)
+	e.InstallSpinnaker(e.Operator.Namespace, "testdata/spinnaker/base", t)
 }
 
 // - Operator in cluster mode
 // - Spinnaker with kubernetes accounts
 // - Upgrade spinnaker
 // - Uninstall spinnaker
-func TestSuccessfulInstall_2(t *testing.T) {
+func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
-	e := InstallCrdsAndOperator(NsOperatorCluster, "testdata/operator/overlay_clustermode", t)
+	spinOverlay := "testdata/spinnaker/overlay_kubernetes"
+	ns := RandomString("spin-kubernetes-test")
+	e := InstallCrdsAndOperator(true, t)
 	if t.Failed() {
 		return
 	}
 
+	// prepare overlay dynamic files
+	LogMainStep(t, "Preparing overlay dynamic files for namespace %s", ns)
+	if !e.GenerateSpinnakerRoleBinding(ns, spinOverlay, t) {
+		return
+	}
+
 	// install
-	spinName := "spinnaker"
-	if !e.InstallSpinnaker(NsSpinnaker1, spinName, "testdata/spinnaker/overlay_kubernetes", t) {
+	if !e.InstallSpinnaker(ns, spinOverlay, t) {
 		return
 	}
 
@@ -50,14 +56,14 @@ func TestSuccessfulInstall_2(t *testing.T) {
 
 	// upgrade
 	LogMainStep(t, "Upgrading spinnaker")
-	v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), NsSpinnaker1, spinName), t)
+	v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), ns, SpinServiceName), t)
 	if t.Failed() || !assert.Equal(t, "1.17.0", strings.TrimSpace(v)) {
 		return
 	}
-	if !e.InstallSpinnaker(NsSpinnaker1, spinName, "testdata/spinnaker/overlay_upgrade", t) {
+	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_upgrade", t) {
 		return
 	}
-	v = RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), NsSpinnaker1, spinName), t)
+	v = RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), ns, SpinServiceName), t)
 	if t.Failed() || !assert.Equal(t, "1.17.1", strings.TrimSpace(v)) {
 		return
 	}
@@ -65,5 +71,5 @@ func TestSuccessfulInstall_2(t *testing.T) {
 
 	// uninstall
 	LogMainStep(t, "Uninstalling spinnaker")
-	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), NsSpinnaker1, spinName), t)
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -13,6 +14,7 @@ import (
 )
 
 const (
+	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 25
 	MaxChecksWaitingForSpinnakerStability  = 250
@@ -31,23 +33,23 @@ func init() {
 }
 
 // DeploySpinnaker returns spinnaker Deck and Gate public urls
-func DeploySpinnaker(ns, name, kustPath string, e *TestEnv, t *testing.T) (deckUrl string, gateUrl string) {
+func DeploySpinnaker(ns, kustPath string, e *TestEnv, t *testing.T) (deckUrl string, gateUrl string) {
 	if !ApplyKustomizeAndAssert(ns, kustPath, e, t) {
 		t.Logf("Error deploying spinnaker")
 		PrintOperatorLogs(e, t)
 		return
 	}
 	time.Sleep(3 * time.Second)
-	WaitForSpinnakerToStabilize(ns, name, e, t)
+	WaitForSpinnakerToStabilize(ns, e, t)
 	if t.Failed() {
 		return
 	}
-	gateUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.apiUrl}'", e.KubectlPrefix(), ns, name), t)
+	gateUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.apiUrl}'", e.KubectlPrefix(), ns, SpinServiceName), t)
 	if t.Failed() {
 		t.Logf("Cannot get Gate public url: %s", gateUrl)
 		return
 	}
-	deckUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.uiUrl}'", e.KubectlPrefix(), ns, name), t)
+	deckUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.uiUrl}'", e.KubectlPrefix(), ns, SpinServiceName), t)
 	if t.Failed() {
 		t.Logf("Cannot get Deck public url: %s", deckUrl)
 		return
@@ -73,8 +75,8 @@ func ApplyKustomizeAndAssert(ns, path string, e *TestEnv, t *testing.T) bool {
 	return !t.Failed()
 }
 
-func WaitForSpinnakerToStabilize(ns, name string, e *TestEnv, t *testing.T) {
-	c := fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, name)
+func WaitForSpinnakerToStabilize(ns string, e *TestEnv, t *testing.T) {
+	c := fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName)
 	t.Logf("Waiting for spinnaker to become ready (%s)", c)
 	errCount := 0
 	for counter := 0; counter < MaxChecksWaitingForSpinnakerStability; counter++ {
@@ -87,7 +89,7 @@ func WaitForSpinnakerToStabilize(ns, name string, e *TestEnv, t *testing.T) {
 			}
 		}
 		if strings.TrimSpace(o) == "OK" {
-			AssertSpinnakerHealthy(ns, name, e, t)
+			AssertSpinnakerHealthy(ns, SpinServiceName, e, t)
 			return
 		}
 		time.Sleep(2 * time.Second)
@@ -194,4 +196,9 @@ func LogMainStep(t *testing.T, msg string, args ...interface{}) {
 	} else {
 		t.Logf(fmt.Sprintf("================================ %s", msg), args)
 	}
+}
+
+func RandomString(prefix string) string {
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("%s-%d", prefix, rand.Intn(999))
 }

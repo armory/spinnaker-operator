@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: test-spinnaker-operator-role
+  name: spin-operator-role
 rules:
 - apiGroups:
   - ""
@@ -69,21 +69,3 @@ rules:
   - validatingwebhookconfigurations
   verbs:
   - '*'
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: test-spinnaker-operator-binding
-subjects:
-  - kind: ServiceAccount
-    name: spin-sa
-    namespace: test-spinnaker-cluster-mode
-roleRef:
-  kind: ClusterRole
-  name: test-spinnaker-operator-role
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: spin-sa

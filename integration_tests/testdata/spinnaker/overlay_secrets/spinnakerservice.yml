@@ -1,0 +1,11 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    config:
+      providers:
+        kubernetes:
+          enabled: true
+          accounts: []

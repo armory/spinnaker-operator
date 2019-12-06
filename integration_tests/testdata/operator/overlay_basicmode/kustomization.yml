@@ -2,8 +2,8 @@ bases:
   - ../base
 
 resources:
-  - role.yaml
-  - role_binding.yaml
+  - role.yml
+  - role_binding.yml
 
 patchesStrategicMerge:
   - deployment.yaml
