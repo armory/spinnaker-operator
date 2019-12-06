@@ -24,7 +24,7 @@ ENV OPERATOR=/usr/local/bin/spinnaker-operator \
 
 EXPOSE 8383
 RUN apk update                        \
-	&& apk add ca-certificates bash curl  \
+	&& apk add ca-certificates bash curl wget unzip 'python2>2.7.9' \
 	&& adduser -D -u ${USER_UID} ${USER_NAME}
 
 # Install aws iam authenticator
@@ -32,6 +32,14 @@ RUN curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/
   chmod +x ./aws-iam-authenticator && \
   mv ./aws-iam-authenticator /usr/local/bin/aws-iam-authenticator
 ENV PATH "$PATH:/usr/local/bin/aws-iam-authenticator"
+
+# Install gcloud
+RUN wget -nv https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.zip && \
+    unzip -qq google-cloud-sdk.zip -d /opt && \
+    rm google-cloud-sdk.zip && \
+    CLOUDSDK_PYTHON="python2.7" /opt/google-cloud-sdk/install.sh --usage-reporting=false --bash-completion=false && \
+    rm -rf ~/.config/gcloud
+ENV PATH=$PATH:/opt/google-cloud-sdk/bin/
 
 COPY --from=builder /opt/spinnaker-operator/build/$OPERATOR_PATH ${OPERATOR}
 COPY --from=builder /opt/spinnaker-operator/build/build/entrypoint /usr/local/bin/entrypoint
