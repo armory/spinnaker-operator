@@ -9,7 +9,7 @@ spec:
         kubernetes:
           enabled: true
           accounts:
-            - name: kube-sa-inline
+            - name: kube-sa
               requiredGroupMembership: []
               serviceAccount: true
               providerVersion: V2
@@ -26,7 +26,24 @@ spec:
               cachingPolicies: []
               oAuthScopes: []
               onlySpinnakerManaged: false
-          primaryAccount: kube-sa-inline
+            - name: kube-file-reference
+              requiredGroupMembership: []
+              providerVersion: V2
+              kubeconfigFile: kubecfg
+              permissions: {}
+              dockerRegistries: []
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              customResources: []
+              cachingPolicies: []
+              oAuthScopes: []
+              onlySpinnakerManaged: false
+          primaryAccount: kube-sa
 
     service-settings:
       clouddriver:

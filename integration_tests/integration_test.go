@@ -14,6 +14,8 @@ import (
 func TestSpinnakerBase(t *testing.T) {
 	// setup
 	t.Parallel()
+	LogMainStep(t, `Test goals:
+- Install spinnaker with operator running in basic mode`)
 	e := InstallCrdsAndOperator(false, t)
 	if t.Failed() {
 		return
@@ -23,13 +25,16 @@ func TestSpinnakerBase(t *testing.T) {
 	e.InstallSpinnaker(e.Operator.Namespace, "testdata/spinnaker/base", t)
 }
 
-// - Operator in cluster mode
-// - Spinnaker with kubernetes accounts
-// - Upgrade spinnaker
-// - Uninstall spinnaker
 func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
+	LogMainStep(t, `Test goals:
+- Install spinnaker with Kubernetes accounts:
+  * Auth with service account
+  * Auth with kubeconfigFile referencing a file inside inside spinConfig.files
+- Upgrade spinnaker to a newer version
+- Uninstall with kubectl delete spinsvc <name>`)
+
 	spinOverlay := "testdata/spinnaker/overlay_kubernetes"
 	ns := RandomString("spin-kubernetes-test")
 	e := InstallCrdsAndOperator(true, t)
@@ -42,6 +47,10 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	if !e.GenerateSpinnakerRoleBinding(ns, spinOverlay, t) {
 		return
 	}
+	if !e.GenerateSpinFiles(spinOverlay, "kubecfg", e.KubeconfigPath, t) {
+		return
+	}
+	defer RunCommand(fmt.Sprintf("rm %s/files.yml", spinOverlay), t)
 
 	// install
 	if !e.InstallSpinnaker(ns, spinOverlay, t) {
@@ -49,7 +58,9 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	}
 
 	// verify accounts
-	e.VerifyAccountsExist(t, Account{Name: "kube-sa-inline", Type: "kubernetes"})
+	e.VerifyAccountsExist(t,
+		Account{Name: "kube-sa", Type: "kubernetes"},
+		Account{Name: "kube-file-reference", Type: "kubernetes"})
 	if t.Failed() {
 		return
 	}
@@ -72,4 +83,38 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	// uninstall
 	LogMainStep(t, "Uninstalling spinnaker")
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
+}
+
+func TestSecretsOverlay(t *testing.T) {
+	// setup
+	t.Parallel()
+	LogMainStep(t, `Test goals:
+- Install spinnaker with:
+  * S3 secret values
+  * S3 secret files
+  * Kubernetes secret values
+  * Kubernetes secret files
+`)
+
+	spinOverlay := "testdata/spinnaker/overlay_secrets"
+	ns := RandomString("spin-secrets-test")
+	e := InstallCrdsAndOperator(true, t)
+	if t.Failed() {
+		return
+	}
+
+	// prepare overlay dynamic files
+	LogMainStep(t, "Preparing overlay dynamic files for namespace %s", ns)
+	RunCommandAndAssert(fmt.Sprintf("cp %s %s/kubecfg", e.KubeconfigPath, spinOverlay), t)
+	defer RunCommand(fmt.Sprintf("rm %s/kubecfg", spinOverlay), t)
+	if t.Failed() {
+		return
+	}
+	e.GenerateS3SecretsFile(t)
+	if t.Failed() {
+		return
+	}
+
+	// install
+	e.InstallSpinnaker(ns, spinOverlay, t)
 }

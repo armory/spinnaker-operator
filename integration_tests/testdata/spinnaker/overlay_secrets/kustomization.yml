@@ -2,7 +2,8 @@ bases:
   - ../base
 
 patchesStrategicMerge:
-  - spinnakerservice.yml
+  - s3_secrets.yml
+  - k8s_secrets.yml
 
 secretGenerator:
   - name: testsecrets
