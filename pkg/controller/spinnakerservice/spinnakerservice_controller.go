@@ -123,7 +123,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{Requeue: true}, nil
 		}
 	}
-	sc := newStatusChecker(r.client)
+	sc := newStatusChecker(r.client, reqLogger)
 	if err = sc.checks(instance); err != nil {
 		return reconcile.Result{}, err
 	}
