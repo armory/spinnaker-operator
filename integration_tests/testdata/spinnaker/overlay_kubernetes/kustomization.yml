@@ -3,7 +3,7 @@ bases:
 
 resources:
   - sa.yml
-  - role_binding.yml
+  - role_binding-generated.yml
 
 patchesStrategicMerge:
   - spinnakerservice.yml

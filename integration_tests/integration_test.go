@@ -16,13 +16,13 @@ func TestSpinnakerBase(t *testing.T) {
 	t.Parallel()
 	LogMainStep(t, `Test goals:
 - Install spinnaker with operator running in basic mode`)
-	e := InstallCrdsAndOperator(false, t)
+	e := InstallCrdsAndOperator("", false, t)
 	if t.Failed() {
 		return
 	}
 
 	// install
-	e.InstallSpinnaker(e.Operator.Namespace, "testdata/spinnaker/base", t)
+	e.InstallSpinnaker(e.Vars.OperatorNamespace, "testdata/spinnaker/base", t)
 }
 
 func TestKubernetesAndUpgradeOverlay(t *testing.T) {
@@ -37,17 +37,18 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 
 	spinOverlay := "testdata/spinnaker/overlay_kubernetes"
 	ns := RandomString("spin-kubernetes-test")
-	e := InstallCrdsAndOperator(true, t)
+	e := InstallCrdsAndOperator(ns, true, t)
 	if t.Failed() {
 		return
 	}
 
 	// prepare overlay dynamic files
 	LogMainStep(t, "Preparing overlay dynamic files for namespace %s", ns)
-	if !e.GenerateSpinnakerRoleBinding(ns, spinOverlay, t) {
+	e.SubstituteOverlayVars(spinOverlay, t)
+	if t.Failed() {
 		return
 	}
-	if !e.GenerateSpinFiles(spinOverlay, "kubecfg", e.KubeconfigPath, t) {
+	if !e.GenerateSpinFiles(spinOverlay, "kubecfg", e.Vars.Kubeconfig, t) {
 		return
 	}
 	defer RunCommand(fmt.Sprintf("rm %s/files.yml", spinOverlay), t)
@@ -98,19 +99,19 @@ func TestSecretsOverlay(t *testing.T) {
 
 	spinOverlay := "testdata/spinnaker/overlay_secrets"
 	ns := RandomString("spin-secrets-test")
-	e := InstallCrdsAndOperator(true, t)
+	e := InstallCrdsAndOperator(ns, true, t)
 	if t.Failed() {
 		return
 	}
 
 	// prepare overlay dynamic files
 	LogMainStep(t, "Preparing overlay dynamic files for namespace %s", ns)
-	RunCommandAndAssert(fmt.Sprintf("cp %s %s/kubecfg", e.KubeconfigPath, spinOverlay), t)
+	RunCommandAndAssert(fmt.Sprintf("cp %s %s/kubecfg", e.Vars.Kubeconfig, spinOverlay), t)
 	defer RunCommand(fmt.Sprintf("rm %s/kubecfg", spinOverlay), t)
 	if t.Failed() {
 		return
 	}
-	e.GenerateS3SecretsFile(t)
+	e.SubstituteOverlayVars(spinOverlay, t)
 	if t.Failed() {
 		return
 	}

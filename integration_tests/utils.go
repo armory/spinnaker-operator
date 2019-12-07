@@ -58,7 +58,7 @@ func DeploySpinnaker(ns, kustPath string, e *TestEnv, t *testing.T) (deckUrl str
 }
 
 func PrintOperatorLogs(e *TestEnv, t *testing.T) {
-	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s logs deployment/spinnaker-operator spinnaker-operator", e.KubectlPrefix(), e.Operator.Namespace), t)
+	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s logs deployment/spinnaker-operator spinnaker-operator", e.KubectlPrefix(), e.Vars.OperatorNamespace), t)
 	t.Logf("================ Operator logs start ================ ")
 	t.Logf(o)
 	t.Logf("================ Operator logs end ================== ")

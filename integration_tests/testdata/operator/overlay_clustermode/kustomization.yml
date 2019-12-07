@@ -3,4 +3,4 @@ bases:
 
 resources:
   - role.yml
-  - role_binding.yml
+  - role_binding-generated.yml

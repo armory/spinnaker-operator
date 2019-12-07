@@ -2,4 +2,4 @@ resources:
 - spinnakerservice.yml
 
 patchesStrategicMerge:
-- persistence.yml
+- persistence-generated.yml

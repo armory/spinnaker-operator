@@ -26,4 +26,22 @@ spec:
               cachingPolicies: []
               oAuthScopes: []
               onlySpinnakerManaged: false
+            - name: kube-s3-secret
+              providerVersion: V2
+              kubeconfigFile: encryptedFile:s3!b:{{.S3Bucket}}!f:secrets/kubeconfig!r:{{.S3BucketRegion}}
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              onlySpinnakerManaged: false
           primaryAccount: kube-k8s-secret
+
+      artifacts:
+        github:
+          enabled: false
+          accounts:
+            - name: test-github-account
+              token: encrypted:s3!b:{{.S3Bucket}}!f:secrets/secrets.yml!r:{{.S3BucketRegion}}!k:github.account.token

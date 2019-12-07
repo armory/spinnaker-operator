@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"html/template"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -33,16 +35,15 @@ var operatorRunsByNamespace = map[string]bool{}
 
 // TestEnv holds information about the kubernetes cluster used for tests
 type TestEnv struct {
-	KubeconfigPath string
-	Operator       Operator
-	SpinDeckUrl    string
-	SpinGateUrl    string
+	Operator    Operator
+	SpinDeckUrl string
+	SpinGateUrl string
+	Vars        *Vars
 }
 
 // Operator holds information about the operator installation
 type Operator struct {
 	KustomizationPath string
-	Namespace         string
 	OperatorImage     string
 	HalyardImage      string
 }
@@ -52,25 +53,26 @@ type Account struct {
 	Type string `json:"type"`
 }
 
+// Vars are variables used in kustomize templates
+type Vars struct {
+	Kubeconfig        string
+	OperatorImage     string
+	HalyardImage      string
+	S3Bucket          string
+	S3BucketRegion    string
+	SpinNamespace     string
+	OperatorNamespace string
+}
+
 // NewEnv creates a new environment context, with the given operator namespace and path pointing to a kustomize folder
 // with operator manifests
-func NewEnv(opNs, opKust string, t *testing.T) *TestEnv {
+func NewEnv(opKust string, t *testing.T) *TestEnv {
 	envLock.Lock()
 	defer envLock.Unlock()
-	k := os.Getenv(KubeconfigVar)
-	if k == "" {
-		t.Logf("%s env var not set, using default", KubeconfigVar)
-		home, err := os.UserHomeDir()
-		if !assert.Nil(t, err, "error getting user home") {
-			return nil
-		}
-		k = fmt.Sprintf("%s/.kube/config", home)
-	}
-	t.Logf("Using kubeconfig %s", k)
+	vars := resolveEnvVars(t)
 	e := &TestEnv{
-		KubeconfigPath: k,
+		Vars: vars,
 		Operator: Operator{
-			Namespace:         opNs,
 			KustomizationPath: opKust,
 		},
 	}
@@ -86,13 +88,60 @@ func NewEnv(opNs, opKust string, t *testing.T) *TestEnv {
 	return e
 }
 
+func resolveEnvVars(t *testing.T) *Vars {
+	k := os.Getenv(KubeconfigVar)
+	if k == "" {
+		t.Logf("%s env var not set, using default", KubeconfigVar)
+		home, err := os.UserHomeDir()
+		if !assert.Nil(t, err, "error getting user home") {
+			return nil
+		}
+		k = fmt.Sprintf("%s/.kube/config", home)
+	}
+	t.Logf("Using kubeconfig %s", k)
+
+	op := os.Getenv(OperatorImageVar)
+	if op == "" {
+		t.Logf("%s env var not set, using default", OperatorImageVar)
+		op = OperatorImageDefault
+	}
+	t.Logf("Using operator image %s", op)
+
+	h := os.Getenv(HalyardImageVar)
+	if h == "" {
+		t.Logf("%s env var not set, using default", HalyardImageVar)
+		h = HalyardImageDefault
+	}
+	t.Logf("Using halyard image %s", h)
+
+	b := os.Getenv(BucketVar)
+	if b == "" {
+		t.Logf("%s env var not set, using default", BucketVar)
+		b = BucketDefault
+	}
+	t.Logf("Using bucekt %s", b)
+
+	r := os.Getenv(BucketRegionVar)
+	if r == "" {
+		t.Logf("%s env var not set, using default", BucketRegionDefault)
+		r = BucketRegionDefault
+	}
+	t.Logf("Using bucekt region %s", r)
+	return &Vars{
+		Kubeconfig:     k,
+		OperatorImage:  op,
+		HalyardImage:   h,
+		S3Bucket:       b,
+		S3BucketRegion: r,
+	}
+}
+
 func generateKustomizeBase(t *testing.T) {
 	generateBaseKustomization(t)
 	if t.Failed() {
 		return
 	}
 	addKustomizationBaseImages(t)
-	generateSpinPersistenceConfig(t)
 }
 
 func generateBaseKustomization(t *testing.T) {
@@ -131,25 +180,36 @@ func addKustomizationBaseImages(t *testing.T) {
 }
 
 func (e *TestEnv) KubectlPrefix() string {
-	return fmt.Sprintf("kubectl --kubeconfig=%s", e.KubeconfigPath)
+	return fmt.Sprintf("kubectl --kubeconfig=%s", e.Vars.Kubeconfig)
 }
 
 func (e *TestEnv) Cleanup(t *testing.T) {
 	e.DeleteOperator(t)
 }
 
-func InstallCrdsAndOperator(isClusterMode bool, t *testing.T) (e *TestEnv) {
+func InstallCrdsAndOperator(spinNs string, isClusterMode bool, t *testing.T) (e *TestEnv) {
 	ns := RandomString("operator")
+	if spinNs == "" {
+		spinNs = ns
+	}
 	LogMainStep(t, "Installing CRDs and operator in namespace %s", ns)
 	opKustPath := "testdata/operator/overlay_basicmode"
 	if isClusterMode {
 		opKustPath = "testdata/operator/overlay_clustermode"
 	}
-	e = NewEnv(ns, opKustPath, t)
+	e = NewEnv(opKustPath, t)
 	if t.Failed() {
-		return e
+		return
 	}
-	if !e.GenerateOperatorRoleBinding(ns, opKustPath, isClusterMode, t) {
+	e.Vars.SpinNamespace = spinNs
+	e.Vars.OperatorNamespace = ns
+	if isClusterMode {
+		e.SubstituteOverlayVars("testdata/operator/overlay_clustermode", t)
+	} else {
+		e.SubstituteOverlayVars("testdata/operator/overlay_basicmode", t)
+	}
+	e.SubstituteOverlayVars("testdata/spinnaker/base", t)
+	if t.Failed() {
 		return
 	}
 	if !e.InstallCrds(t) {
@@ -168,24 +228,24 @@ func (e *TestEnv) InstallCrds(t *testing.T) bool {
 }
 
 func (e *TestEnv) InstallOperator(t *testing.T) bool {
-	ran, ok := operatorRunsByNamespace[e.Operator.Namespace]
+	ran, ok := operatorRunsByNamespace[e.Vars.OperatorNamespace]
 	if ok && ran {
 		t.Logf("Operator already installed")
 		return true
 	}
-	operatorRunsByNamespace[e.Operator.Namespace] = true
-	if !CreateNamespace(e.Operator.Namespace, e, t) {
+	operatorRunsByNamespace[e.Vars.OperatorNamespace] = true
+	if !CreateNamespace(e.Vars.OperatorNamespace, e, t) {
 		return !t.Failed()
 	}
-	if !ApplyKustomizeAndAssert(e.Operator.Namespace, e.Operator.KustomizationPath, e, t) {
+	if !ApplyKustomizeAndAssert(e.Vars.OperatorNamespace, e.Operator.KustomizationPath, e, t) {
 		return !t.Failed()
 	}
-	return WaitForDeploymentToStabilize(e.Operator.Namespace, "spinnaker-operator", e, t)
+	return WaitForDeploymentToStabilize(e.Vars.OperatorNamespace, "spinnaker-operator", e, t)
 }
 
 func (e *TestEnv) DeleteOperator(t *testing.T) {
 	t.Logf("Deleting operator...")
-	DeleteNamespace(e.Operator.Namespace, e, t)
+	DeleteNamespace(e.Vars.OperatorNamespace, e, t)
 }
 
 func (e *TestEnv) InstallSpinnaker(ns, kustPath string, t *testing.T) bool {
@@ -223,81 +283,6 @@ func (e *TestEnv) VerifyAccountsExist(t *testing.T, accts ...Account) bool {
 	return !t.Failed()
 }
 
-func (e *TestEnv) GenerateOperatorRoleBinding(ns, kustPath string, isClusterMode bool, t *testing.T) bool {
-	rb := `
-# This file is automatically generated by integration tests (env.go), any changes will be lost
-kind: %sBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: spin-operator-role-binding
-subjects:
-  - kind: ServiceAccount
-    name: spin-operator-sa
-    %s
-roleRef:
-  kind: %s
-  name: spin-operator-role
-  apiGroup: rbac.authorization.k8s.io
-`
-	kind := "Role"
-	nsLine := ""
-	if isClusterMode {
-		kind = "ClusterRole"
-		nsLine = fmt.Sprintf("namespace: %s", ns)
-	}
-	rb = fmt.Sprintf(rb, kind, nsLine, kind)
-	err := ioutil.WriteFile(filepath.Join(kustPath, "role_binding.yml"), []byte(rb), os.ModePerm)
-	assert.Nil(t, err, "unable to generate role_binding file")
-	return !t.Failed()
-}
-
-func (e *TestEnv) GenerateSpinnakerRoleBinding(ns, kustPath string, t *testing.T) bool {
-	rb := `
-# This file is automatically generated by integration tests (env.go), any changes will be lost
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: spin-role-binding
-subjects:
-  - kind: ServiceAccount
-    name: spin-sa
-    namespace: %s
-roleRef:
-  kind: ClusterRole
-  name: spin-role
-  apiGroup: rbac.authorization.k8s.io
-`
-	rb = fmt.Sprintf(rb, ns)
-	err := ioutil.WriteFile(filepath.Join(kustPath, "role_binding.yml"), []byte(rb), os.ModePerm)
-	assert.Nil(t, err, "unable to generate role_binding file")
-	return !t.Failed()
-}
-
-func generateSpinPersistenceConfig(t *testing.T) bool {
-	p := `
-# This file is automatically generated by integration tests (env.go), any changes will be lost
-apiVersion: spinnaker.io/v1alpha2
-kind: SpinnakerService
-metadata:
-  name: spinnaker
-spec:
-  spinnakerConfig:
-    config:
-      persistentStorage:
-        s3:
-          bucket: %s
-`
-	b := os.Getenv(BucketVar)
-	if b == "" {
-		t.Logf("%s env var not set, using default", BucketVar)
-		b = BucketDefault
-	}
-	p = fmt.Sprintf(p, b)
-	err := ioutil.WriteFile(filepath.Join("testdata/spinnaker/base", "persistence.yml"), []byte(p), os.ModePerm)
-	assert.Nil(t, err, "unable to generate persistence.yml file")
-	return !t.Failed()
-}
-
 func (e *TestEnv) GenerateSpinFiles(kustPath, name, filePath string, t *testing.T) bool {
 	f := `
 # This file is automatically generated by integration tests (env.go), any changes will be lost
@@ -308,7 +293,7 @@ metadata:
 spec:
   spinnakerConfig:
     files:
-          %s: |
+      %s: |
 %s
 `
 	// read and indent file
@@ -319,7 +304,7 @@ spec:
 	s := bufio.NewScanner(h)
 	indentedFile := ""
 	for s.Scan() {
-		indentedFile += fmt.Sprintf("            %s\n", s.Text())
+		indentedFile += fmt.Sprintf("        %s\n", s.Text())
 	}
 	if !assert.Nil(t, s.Err()) {
 		return !t.Failed()
@@ -331,48 +316,29 @@ spec:
 	return !t.Failed()
 }
 
-func (e *TestEnv) GenerateS3SecretsFile(t *testing.T) bool {
-	f := `
-# This file is automatically generated by integration tests (env.go), any changes will be lost
-apiVersion: spinnaker.io/v1alpha2
-kind: SpinnakerService
-metadata:
-  name: spinnaker
-spec:
-  spinnakerConfig:
-    config:
-      providers:
-        kubernetes:
-          enabled: true
-          accounts:
-            - name: kube-s3-secret
-              providerVersion: V2
-              kubeconfigFile: encryptedFile:s3!b:%s!f:secrets/kubeconfig!r:%s
-              configureImagePullSecrets: true
-              cacheThreads: 1
-              namespaces:
-                - default
-              omitNamespaces: []
-              kinds: []
-              omitKinds: []
-              onlySpinnakerManaged: false
-      artifacts:
-        github:
-          enabled: false
-          accounts:
-            - name: test-github-account
-              token: encrypted:s3!b:%s!f:secrets/secrets.yml!r:%s!k:github.account.token
-`
-	bucket := os.Getenv(BucketVar)
-	if bucket == "" {
-		bucket = BucketDefault
+func (e *TestEnv) SubstituteOverlayVars(overlayHome string, t *testing.T) bool {
+	fs, err := ioutil.ReadDir(overlayHome)
+	if !assert.Nil(t, err) {
+		return !t.Failed()
 	}
-	region := os.Getenv(BucketRegionVar)
-	if region == "" {
-		region = BucketRegionDefault
+	for _, f := range fs {
+		if !strings.Contains(f.Name(), "-template") {
+			continue
+		}
+		tmpl, err := template.New(f.Name()).ParseFiles(filepath.Join(overlayHome, f.Name()))
+		if !assert.Nil(t, err) {
+			return !t.Failed()
+		}
+		n := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
+		n = strings.ReplaceAll(n, "-template", "")
+		p := filepath.Join(overlayHome, fmt.Sprintf("%s-generated%s", n, filepath.Ext(f.Name())))
+		gf, err := os.Create(p)
+		if !assert.Nil(t, err) {
+			return !t.Failed()
+		}
+		if !assert.Nil(t, tmpl.ExecuteTemplate(gf, f.Name(), e.Vars)) {
+			return !t.Failed()
+		}
 	}
-	f = fmt.Sprintf(f, bucket, region, bucket, region)
-	err := ioutil.WriteFile(filepath.Join("testdata/spinnaker/overlay_secrets", "s3_secrets.yml"), []byte(f), os.ModePerm)
-	assert.Nil(t, err, "unable to generate s3_secrets.yml file")
 	return !t.Failed()
 }
