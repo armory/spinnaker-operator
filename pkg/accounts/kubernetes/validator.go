@@ -252,11 +252,21 @@ func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 	if err != nil {
 		return err
 	}
-	// Get namespaces. The test is analogous to what is done in Halyard
-	// We want to keep it short so any improvement should remain short (e.g. not a request per namespace)
-	_, err = clientset.CoreV1().Namespaces().List(v13.ListOptions{})
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("unable to verify access to account %s", k.account.Name))
+	// We want to keep the validation short (ideally just one request), so any improvement should remain short (e.g. not a request per namespace)
+	ns, err := inspect.GetStringArray(k.account.Settings, "namespaces")
+	if err != nil || len(ns) == 0 {
+		// If namespaces are not defined, a list namespaces call should be successful
+		// The test is analogous to what is done in Halyard
+		_, err = clientset.CoreV1().Namespaces().List(v13.ListOptions{})
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("unable to verify access to account %s", k.account.Name))
+		}
+	} else {
+		// Otherwise read resources just for the first namespace configured
+		_, err = clientset.CoreV1().Pods(ns[0]).List(v13.ListOptions{})
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("unable to verify access to account %s", k.account.Name))
+		}
 	}
 	return nil
 }
