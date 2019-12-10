@@ -37,11 +37,11 @@ spec:
               kinds: []
               omitKinds: []
               onlySpinnakerManaged: false
-          primaryAccount: kube-k8s-secret
+          primaryAccount: kube-s3-secret
 
       artifacts:
         github:
-          enabled: false
+          enabled: true
           accounts:
             - name: test-github-account
               token: encrypted:s3!b:{{.S3Bucket}}!f:secrets/secrets.yml!r:{{.S3BucketRegion}}!k:github.account.token

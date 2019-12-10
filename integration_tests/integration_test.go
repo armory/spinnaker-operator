@@ -57,7 +57,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	}
 
 	// verify accounts
-	e.VerifyAccountsExist(t,
+	e.VerifyAccountsExist("/credentials", t,
 		Account{Name: "kube-sa", Type: "kubernetes"},
 		Account{Name: "kube-file-reference", Type: "kubernetes"})
 	if t.Failed() {
@@ -126,6 +126,14 @@ func TestSecretsAndDuplicateOverlay(t *testing.T) {
 
 	// install
 	if !e.InstallSpinnaker(ns, spinOverlay, t) {
+		return
+	}
+
+	// verify accounts
+	e.VerifyAccountsExist("/artifacts/credentials", t,
+		Account{Name: "kube-s3-secret", Type: "kubernetes"},
+		Account{Name: "test-github-account", Type: "github/file"})
+	if t.Failed() {
 		return
 	}
 

@@ -50,8 +50,9 @@ type Operator struct {
 }
 
 type Account struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name  string   `json:"name,omitempty"`
+	Type  string   `json:"type,omitempty"`
+	Types []string `json:"types,omitempty"`
 }
 
 // Vars are variables used in kustomize templates
@@ -267,9 +268,9 @@ func (e *TestEnv) InstallSpinnaker(ns, kustPath string, t *testing.T) bool {
 	return !t.Failed()
 }
 
-func (e *TestEnv) VerifyAccountsExist(t *testing.T, accts ...Account) bool {
+func (e *TestEnv) VerifyAccountsExist(endpoint string, t *testing.T, accts ...Account) bool {
 	LogMainStep(t, "Verifying spinnaker accounts")
-	o := ExecuteGetRequest(fmt.Sprintf("%s/credentials", e.SpinGateUrl), t)
+	o := ExecuteGetRequest(fmt.Sprintf("%s%s", e.SpinGateUrl, endpoint), t)
 	if t.Failed() {
 		return !t.Failed()
 	}
@@ -278,7 +279,11 @@ func (e *TestEnv) VerifyAccountsExist(t *testing.T, accts ...Account) bool {
 	if assert.Nil(t, json.Unmarshal([]byte(o), &credentials)) {
 		for _, a := range accts {
 			for _, c := range credentials {
-				if a.Type == c.Type && a.Name == c.Name {
+				if a.Type != "" && a.Type == c.Type && a.Name == c.Name {
+					found++
+					break
+				}
+				if a.Types != nil && len(a.Types) > 0 && a.Types[0] == c.Type && a.Name == c.Name {
 					found++
 					break
 				}
