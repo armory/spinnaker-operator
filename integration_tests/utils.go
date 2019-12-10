@@ -69,6 +69,11 @@ func ApplyManifest(ns, path string, e *TestEnv, t *testing.T) {
 	RunCommand(c, t)
 }
 
+func ApplyKustomize(ns, path string, e *TestEnv, t *testing.T) (string, error) {
+	c := fmt.Sprintf("%s -n %s apply -k %s", e.KubectlPrefix(), ns, path)
+	return RunCommand(c, t)
+}
+
 func ApplyKustomizeAndAssert(ns, path string, e *TestEnv, t *testing.T) bool {
 	c := fmt.Sprintf("%s -n %s apply -k %s", e.KubectlPrefix(), ns, path)
 	RunCommandAndAssert(c, t)
@@ -121,18 +126,18 @@ func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) boo
 			errCount++
 			if !assert.NotEqual(t, MaxErrorsWaitingForStability, errCount,
 				fmt.Sprintf("waiting for deployment %s to become ready produced too many errors. Last output: %s", name, cont)) {
-				return t.Failed()
+				return !t.Failed()
 			}
 		}
 		parts := strings.Split(cont, "/")
 		if len(parts) == 3 && strings.TrimSpace(parts[0]) == strings.TrimSpace(parts[1]) && strings.TrimSpace(parts[2]) == "" {
-			return t.Failed()
+			return !t.Failed()
 		}
 		time.Sleep(2 * time.Second)
 	}
 	pods, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
 	t.Errorf("Waited too much for deployment %s to become ready, giving up. Pods: %s", name, pods)
-	return t.Failed()
+	return !t.Failed()
 }
 
 func CreateNamespace(name string, e *TestEnv, t *testing.T) bool {
@@ -201,4 +206,26 @@ func LogMainStep(t *testing.T, msg string, args ...interface{}) {
 func RandomString(prefix string) string {
 	rand.Seed(time.Now().UnixNano())
 	return fmt.Sprintf("%s-%d", prefix, rand.Intn(999))
+}
+
+func InstallAwsCli(e *TestEnv, t *testing.T) bool {
+	c := "wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python /tmp/get-pip.py --user && /home/spinnaker-operator/.local/bin/pip install --user --upgrade awscli==1.16.208"
+	RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s exec -c spinnaker-operator %s -- bash -c \"%s\"",
+		e.KubectlPrefix(), e.Vars.OperatorNamespace, e.Operator.PodName, c), t)
+	return !t.Failed()
+}
+
+func RunCommandInOperatorAndAssert(c string, e *TestEnv, t *testing.T) bool {
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s exec -c spinnaker-operator %s -- bash -c \"%s\"",
+		e.KubectlPrefix(), e.Vars.OperatorNamespace, e.Operator.PodName, c), t)
+	return !t.Failed()
+}
+
+func CopyFileToS3Bucket(f, dest string, e *TestEnv, t *testing.T) bool {
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s cp %s %s:/tmp/fileToCopy", e.KubectlPrefix(), e.Vars.OperatorNamespace, f, e.Operator.PodName), t)
+	if t.Failed() {
+		return !t.Failed()
+	}
+	c := fmt.Sprintf("/home/spinnaker-operator/.local/bin/aws s3 mv /tmp/fileToCopy s3://%s/%s", e.Vars.S3Bucket, dest)
+	return RunCommandInOperatorAndAssert(c, e, t)
 }

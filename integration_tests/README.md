@@ -10,4 +10,8 @@ The following environment variables are needed:
 |S3_BUCKET |S3 bucket name used for spinnaker persistence. Worker nodes should have access to it. |`operator-int-tests`|
 |S3_BUCKET_REGION |Region used by the S3 bucket. |`us-west-2`|
 
-Run tests with `make integration_test`
+Run tests with `make integration_test`.
+
+Tests create dynamic namespaces, they are not deleted after finishing tests. There are two reasons for this:
+1. Deleting a namespace can take a lot of time, and usually this can be done as part of regular maintenance tasks outside of test execution.
+2. If a test fails, it's useful to have the namespaces available to be able to inspect the state of the operator and spinnaker, like detailed log files.

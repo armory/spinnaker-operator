@@ -46,6 +46,7 @@ type Operator struct {
 	KustomizationPath string
 	OperatorImage     string
 	HalyardImage      string
+	PodName           string
 }
 
 type Account struct {
@@ -204,11 +205,11 @@ func InstallCrdsAndOperator(spinNs string, isClusterMode bool, t *testing.T) (e 
 	e.Vars.SpinNamespace = spinNs
 	e.Vars.OperatorNamespace = ns
 	if isClusterMode {
-		e.SubstituteOverlayVars("testdata/operator/overlay_clustermode", t)
+		e.SubstituteOverlayVars("testdata/operator/overlay_clustermode", e.Vars, t)
 	} else {
-		e.SubstituteOverlayVars("testdata/operator/overlay_basicmode", t)
+		e.SubstituteOverlayVars("testdata/operator/overlay_basicmode", e.Vars, t)
 	}
-	e.SubstituteOverlayVars("testdata/spinnaker/base", t)
+	e.SubstituteOverlayVars("testdata/spinnaker/base", e.Vars, t)
 	if t.Failed() {
 		return
 	}
@@ -240,7 +241,12 @@ func (e *TestEnv) InstallOperator(t *testing.T) bool {
 	if !ApplyKustomizeAndAssert(e.Vars.OperatorNamespace, e.Operator.KustomizationPath, e, t) {
 		return !t.Failed()
 	}
-	return WaitForDeploymentToStabilize(e.Vars.OperatorNamespace, "spinnaker-operator", e, t)
+	if !WaitForDeploymentToStabilize(e.Vars.OperatorNamespace, "spinnaker-operator", e, t) {
+		return !t.Failed()
+	}
+	p := RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep spinnaker-operator | awk '{print $1}'", e.KubectlPrefix(), e.Vars.OperatorNamespace), t)
+	e.Operator.PodName = strings.TrimSpace(p)
+	return !t.Failed()
 }
 
 func (e *TestEnv) DeleteOperator(t *testing.T) {
@@ -316,7 +322,7 @@ spec:
 	return !t.Failed()
 }
 
-func (e *TestEnv) SubstituteOverlayVars(overlayHome string, t *testing.T) bool {
+func (e *TestEnv) SubstituteOverlayVars(overlayHome string, vars interface{}, t *testing.T) bool {
 	fs, err := ioutil.ReadDir(overlayHome)
 	if !assert.Nil(t, err) {
 		return !t.Failed()
@@ -336,7 +342,7 @@ func (e *TestEnv) SubstituteOverlayVars(overlayHome string, t *testing.T) bool {
 		if !assert.Nil(t, err) {
 			return !t.Failed()
 		}
-		if !assert.Nil(t, tmpl.ExecuteTemplate(gf, f.Name(), e.Vars)) {
+		if !assert.Nil(t, tmpl.ExecuteTemplate(gf, f.Name(), vars)) {
 			return !t.Failed()
 		}
 	}

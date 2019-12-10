@@ -9,8 +9,6 @@ import (
 	"testing"
 )
 
-// - Operator in basic mode
-// - Minimal spinnaker manifest (exposed)
 func TestSpinnakerBase(t *testing.T) {
 	// setup
 	t.Parallel()
@@ -44,7 +42,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 
 	// prepare overlay dynamic files
 	LogMainStep(t, "Preparing overlay dynamic files for namespace %s", ns)
-	e.SubstituteOverlayVars(spinOverlay, t)
+	e.SubstituteOverlayVars(spinOverlay, e.Vars, t)
 	if t.Failed() {
 		return
 	}
@@ -86,7 +84,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }
 
-func TestSecretsOverlay(t *testing.T) {
+func TestSecretsAndDuplicateOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
@@ -95,6 +93,7 @@ func TestSecretsOverlay(t *testing.T) {
   * S3 secret files
   * Kubernetes secret values
   * Kubernetes secret files
+- Try to install a second spinnaker in the same namespace, should fail
 `)
 
 	spinOverlay := "testdata/spinnaker/overlay_secrets"
@@ -111,11 +110,26 @@ func TestSecretsOverlay(t *testing.T) {
 	if t.Failed() {
 		return
 	}
-	e.SubstituteOverlayVars(spinOverlay, t)
+	e.SubstituteOverlayVars(spinOverlay, e.Vars, t)
 	if t.Failed() {
 		return
 	}
 
+	// store needed secrets in S3 bucket
+	if !InstallAwsCli(e, t) {
+		return
+	}
+	CopyFileToS3Bucket(fmt.Sprintf("%s/kubecfg", spinOverlay), "secrets/kubeconfig", e, t)
+	if !CopyFileToS3Bucket(fmt.Sprintf("%s/secrets.yml", spinOverlay), "secrets/secrets.yml", e, t) {
+		return
+	}
+
 	// install
-	e.InstallSpinnaker(ns, spinOverlay, t)
+	if !e.InstallSpinnaker(ns, spinOverlay, t) {
+		return
+	}
+
+	// try to install a second spinnaker in the same namespace
+	o, err := ApplyKustomize(e.Vars.OperatorNamespace, "testdata/spinnaker/overlay_duplicate", e, t)
+	assert.NotNil(t, err, fmt.Sprintf("expected error but was %s", o))
 }
