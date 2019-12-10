@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"path"
 
 	"gopkg.in/yaml.v2"
 
@@ -47,9 +50,32 @@ func (s *Service) parseGenManifestsResponse(d []byte) (*generated.SpinnakerGener
 func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	if err := s.addObjectToRequest(writer, "config", spinConfig.Config); err != nil {
+
+	// Sanitize secrets before sending to Halyard
+	sanitizedCfg, err := sanitizeSecrets(ctx, spinConfig.Config)
+	if err != nil {
 		return nil, err
 	}
+	if err := s.addObjectToRequest(writer, "config", sanitizedCfg); err != nil {
+		return nil, err
+	}
+	// Add cached secret files
+	secCtx, err := secrets.FromContextWithError(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range secCtx.FileCache {
+		// Get the key
+		k := fmt.Sprintf("%s__%s", SecretRelativeFilenames, path.Base(f))
+		b, err := ioutil.ReadFile(f)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.addPart(writer, k, b); err != nil {
+			return nil, err
+		}
+	}
+
 	//Add service settings
 	for k := range spinConfig.ServiceSettings {
 		if err := s.addObjectToRequest(writer, fmt.Sprintf("service-settings__%s.yml", k), spinConfig.ServiceSettings[k]); err != nil {

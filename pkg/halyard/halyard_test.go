@@ -3,6 +3,7 @@ package halyard
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -183,7 +184,8 @@ hello:
 			s := &Service{
 				url: tt.fields.url,
 			}
-			got, err := s.buildGenManifestsRequest(tt.args.ctx, tt.args.spinConfig)
+			ctx := secrets.NewContext(tt.args.ctx, nil, "")
+			got, err := s.buildGenManifestsRequest(ctx, tt.args.spinConfig)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newHalyardRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
