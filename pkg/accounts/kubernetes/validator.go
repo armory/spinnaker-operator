@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	tools "github.com/armory/go-yaml-tools/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
@@ -53,10 +54,10 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1a
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, k.account.Settings)
+		return makeClientFromSettings(ctx, k.account.Settings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.KubeconfigFile != "" {
-		return makeClientFromFile(ctx, auth.KubeconfigFile, nil)
+		return makeClientFromFile(ctx, auth.KubeconfigFile, nil, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.Kubeconfig != nil {
 		return makeClientFromConfigAPI(auth.Kubeconfig)
@@ -71,18 +72,25 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1a
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings) (*rest.Config, error) {
-	file, err := secrets.DecodeAsFile(ctx, file)
-	if err != nil {
-		return nil, err
+func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg *v1alpha2.SpinnakerConfig) (*rest.Config, error) {
+	if tools.IsEncryptedSecret(file) {
+		file, err := secrets.DecodeAsFile(ctx, file)
+		if err != nil {
+			return nil, err
+		}
+		cfg, err := clientcmd.LoadFromFile(file)
+		if err != nil {
+			return nil, err
+		}
+		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
+	} else {
+		b := spinCfg.GetFileContent(file)
+		cfg, err := clientcmd.Load(b)
+		if err != nil {
+			return nil, err
+		}
+		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 	}
-
-	cfg, err := clientcmd.LoadFromFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
@@ -113,13 +121,13 @@ func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}) (*rest.Config, error) {
+func makeClientFromSettings(ctx context.Context, settings map[string]interface{}, spinCfg *v1alpha2.SpinnakerConfig) (*rest.Config, error) {
 	aSettings := &authSettings{}
 	if err := inspect.Source(aSettings, settings); err != nil {
 		return nil, err
 	}
 	if aSettings.KubeconfigFile != "" {
-		return makeClientFromFile(ctx, aSettings.KubeconfigFile, aSettings)
+		return makeClientFromFile(ctx, aSettings.KubeconfigFile, aSettings, spinCfg)
 	}
 	if aSettings.KubeconfigContents != "" {
 		cfg, err := clientcmd.Load([]byte(aSettings.KubeconfigContents))
