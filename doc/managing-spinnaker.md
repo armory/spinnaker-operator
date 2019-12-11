@@ -6,7 +6,7 @@
 kubectl -n spinnaker apply -f spinnakerservice.yml 
 ```
 
-You can manage your Spinnaker installations with `kubectl`. [Detailed information about the SpinnakerService CRD fields](./options.md)
+Operator allows you to manage your Spinnaker installations with `kubectl`. [Detailed information about the SpinnakerService CRD fields](./options.md)
 
 ### Listing Spinnaker instances
 ```bash
@@ -61,30 +61,28 @@ Events:              <none>
 ```
 
 ### Deleting Spinnaker instances
-Delete:
 
 ```bash
 $ kubectl -n mynamespace delete spinnakerservice spinnaker
 spinnakerservice.spinnaker.io "spinnaker" deleted
 ```
 
-
 # Secrets
-When it comes to storing secrets, you have several options each with their own pros and cons. Generally speaking, 
-you should pick the method that matches your workflow the best. There's no significant performance differences between each option:
+When it comes to storing secrets, you have several options, each with their own pros and cons. Pick the method that matches your workflow the best. There's no significant performance differences between each option:
 
-## Secrets in a cloud provider storage (s3, s3-like, gcs)
-This method lets you store secrets externally. You can then manage access as any other bucket you manage.
+## Secrets in a cloud provider storage 
+
+Examples of cloud provider storage are S3 and S3-like storage and GCS. This method lets you store secrets externally, allowing you to manage access as like any other bucket you manage.
 
 Please refer to [the Spinnaker's documentation](https://www.spinnaker.io/reference/halyard/secrets/) for more details.
 
 ## Secrets in Kubernetes secrets (under development)
-This method is only available via the Operator at this time. It is similar to the one above with a different syntax:
+This method is only available with the Operator at this time. It is similar to storing secrets in cloud provider storage but with a different syntax:
 
 `encrypted:k8s!n:<secret name>!k:<key under which the secret is stored>`
 
-Note that for security reason, Spinnaker can only access secrets stored in its own namespace (which could be different
-than the operator's).
+Note that for security reasons, Spinnaker can only access secrets stored in its own namespace (which may be different
+from Operator's namespace).
 
 Example:
 
@@ -103,5 +101,3 @@ spec:
             kubeconfigFile: encrypted:k8s!n:spinnaker-secrets!k:myaccount-kubeconfig
             ... 
 ``` 
-
-

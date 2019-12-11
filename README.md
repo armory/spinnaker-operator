@@ -15,7 +15,7 @@ Note: If you can't use the validation webhook, pass the `--disable-admission-con
 
 ## Spinnaker installed in under a minute (or two)
 
-For the impatient, more explanation can be found below.
+This is a high-level view of the commands you need to run for those who want to jump right in. More explanation can be found in the sections after this one.
 
 ```bash
 # For a stable release (https://github.com/armory/spinnaker-operator/releases)
@@ -44,40 +44,40 @@ $ kubectl -n spinnaker get spinsvc spinnaker -w
 
 - Stop using Halyard commands: just `kubectl apply` your Spinnaker configuration. This includes support for local files.
 - Expose Spinnaker to the outside world (via `LoadBalancer`). You can still disable that behavior if you prefer to manage ingresses and LBs yourself. 
-- Deploy any version of Spinnaker. The operator is not tied to a particular version of Spinnaker. 
-- Keep secrets separate from your config, store your config in `git`, and have an easy Gitops workflow.
-- Validate your configuration before applying it (with webhook validation) 
-- Store Spinnaker secrets in Kubernetes secrets
+- Deploy any version of Spinnaker. Operator is not tied to a particular version of Spinnaker. 
+- Keep secrets separate from your config. Store your config in `git` and have an easy Gitops workflow.
+- Validate your configuration before applying it (with webhook validation).
+- Store Spinnaker secrets in Kubernetes secrets.
 - Patch versions, accounts or any setting with `kustomize`. 
-- Monitor the health of Spinnaker via `kubectl`
-- Define Kubernetes accounts in `SpinnakerAccount` objects and store kubeconfig inline, in Kubernetes secrets, in s3, or gcs **[experimental]**
+- Monitor the health of Spinnaker through `kubectl`.
+- Define Kubernetes accounts in `SpinnakerAccount` objects and store kubeconfig inline, in Kubernetes secrets, in S3, or GCS **[experimental]**.
 
 See [managing Spinnnaker](doc/managing-spinnaker.md)
 
 ## Accounts CRD (experimental)
-The Spinnaker Operator introduces a new CRD for Spinnaker accounts. A `SpinnakerAccount` is defined in an object - separate
-from the main Spinnaker config - so its creation and maintenance can easily be automated.
+The Spinnaker Operator introduces a new CRD for Spinnaker accounts. A `SpinnakerAccount` is defined in an object -- separate
+from the main Spinnaker config -- so creation and maintenance can easily be automated.
 
-The long term goal is to support all accounts (providers, CI, notifications, ...) but the first implementation deals with
+The long term goal is to support all accounts (providers, CI, notifications, ...), but the first implementation deals with
 Kubernetes accounts.
 
 | Account type | Status |
 |------------|----------|
 | `Kubernetes` | alpha |
 
-Read more at [Spinnaker accounts](doc/spinnaker-accounts.md)
+Read more at [Spinnaker accounts](doc/spinnaker-accounts.md).
 
 
 ## Operator Installation (detailed)
 Download CRDs and example manifests from the [latest stable release](https://github.com/armory/spinnaker-operator/releases).
-CRD and examples on `master` are unstable and subject to change but feedback is greatly appreciated.
+CRD and examples on `master` are unstable and subject to change, but feedback is greatly appreciated.
 
 **Breaking Change**: In 0.2.x+, the CRD no longer references a `configMap` but contains the whole configuration. 
 It allows users to use `kustomize` to layer their Spinnaker changes and makes validation easier.    
 
 ### Step 1: Install CRDs
 
-First we'll install the `SpinnakerService` and `SpinnakerAccount` CRDs:
+First, we'll install the `SpinnakerService` and `SpinnakerAccount` CRDs:
 
 ```bash
 $ mkdir -p spinnaker-operator && cd spinnaker-operator
@@ -91,15 +91,15 @@ Note: `SpinnakerAccount` CRD is optional.
 ### Step 2: Install Operator
 
 There are two modes for the operator:
-- **basic mode** to install Spinnaker in a single namespace without validating admission webhook
-- **cluster mode** works across namespaces and requires a `ClusterRole` to perform validation
+- **Basic mode** installs Spinnaker in a single namespace without validating admission webhook.
+- **Cluster mode** works across namespaces and requires a `ClusterRole` to perform validation.
 
 The main difference between the two modes is that basic only requires a `Role` (vs a `ClusterRole`) and has no validating webhook.
 
-Once installed you should see a new deployment representing the operator. The operator watches for changes to the `SpinnakerService` objects. You can check on the status of the operator using `kubectl`.
+Once installed, you should see a new deployment representing the operator. The operator watches for changes to the `SpinnakerService` objects. You can check on the status of the operator using `kubectl`.
 
 #### Basic install (no validating webhook)
-To install the operator run:
+To install Operator run:
 
 ```bash
 $ kubectl apply -n <namespace> -f deploy/operator/basic
@@ -108,8 +108,8 @@ $ kubectl apply -n <namespace> -f deploy/operator/basic
 `namespace` is the namespace where you want the operator to live and deploy to.
 
 #### Cluster install
-To install the operator:
-1. Decide and create the namespace the operator should live in. We suggest `spinnaker-operator`.
+To install Operator:
+1. Decide what namespace you want to use for Operator and create that namespace. We suggest `spinnaker-operator`.
 2. If you pick a different namespace than `spinnaker-operator`, edit the namespace in `deploy/operator/cluster/role_binding.yml`.
 3. Run:
 
@@ -117,18 +117,20 @@ To install the operator:
 $ kubectl apply -n spinnaker-operator -f deploy/operator/cluster
 ```
 
+If you use a namespace other than `spinnaker-operator`, replace `spinnaker-operator` with your namespace.
+
 ## Spinnaker Installation
 
-Once you've installed CRDs and operator, check out examples in `deploy/spinnaker/`. Below the 
+Once you've installed CRDs and Operator, check out examples in `deploy/spinnaker/`. Below the 
 `spinnaker-namespace` parameter refers to the namespace where you want to install
 Spinnaker. It is likely different from  the operator's namespace.
 
 
 ### Example 1: Basic Install
 
-**Important**: In `deploy/spinnaker/basic/spinnakerservice.yml`, change the `config.persistentStorage` section to point to an s3 bucket you own or use a different persistent storage.
+**Important**: In `deploy/spinnaker/basic/spinnakerservice.yml`, change the `config.persistentStorage` section to point to an S3 bucket you own or use a different persistent storage.
 
-`spinnakerservice.yml` currently points to version `1.17.1` but you can install any version of Spinnaker with the operator. Just change the version in the manifest.  
+`spinnakerservice.yml` currently points to version `1.17.1`, but you can install any version of Spinnaker. Change the version in `spinnakerservice.yml` to the version you want to install.
 
 ```bash
 $ kubectl create ns <spinnaker-namespace>

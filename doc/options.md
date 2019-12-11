@@ -8,38 +8,38 @@ kind: SpinnakerService
 metadata:
   name: spinnaker
 spec:
-  # spec.spinnakerConfig - This section is how to specify configuration spinnaker
+  # spec.spinnakerConfig - This section describes how to specify configurations spinnaker.
   spinnakerConfig:
-    # spec.spinnakerConfig.config - This section contains the contents of a deployment found in a halconfig .deploymentConfigurations[0]
+    # spec.spinnakerConfig.config - This section contains the contents of a deployment found in a halconfig .deploymentConfigurations[0].
     config:
-      version: 1.17.1   # the version of Spinnaker to be deployed
+      version: 1.17.1   # - The version of Spinnaker that gets deployed.
       persistentStorage:
         persistentStoreType: s3
         s3:
-          bucket: mybucket # change me
+          bucket: mybucket # - Change this to your bucket.
           rootFolder: front50
 
-    # spec.spinnakerConfig.profiles - This section contains the YAML of each service's profile
+    # spec.spinnakerConfig.profiles - This section contains the YAML for each service's profile.
     profiles:
-      clouddriver: {} # is the contents of ~/.hal/default/profiles/clouddriver.yml
-      # deck has a special key "settings-local.js" for the contents of settings-local.js
+      clouddriver: {} # The contents of ~/.hal/default/profiles/clouddriver.yml
+      # Deck has a special key "settings-local.js" for the contents of settings-local.js.
       deck:
-        # settings-local.js - contents of ~/.hal/default/profiles/settings-local.js
-        # Use the | YAML symbol to indicate a block-style multiline string
+        # settings-local.js - Contents of ~/.hal/default/profiles/settings-local.js.
+        # Use the | YAML symbol to indicate a block-style multiline string.
         settings-local.js: |
           window.spinnakerSettings.feature.kustomizeEnabled = true;
           window.spinnakerSettings.feature.artifactsRewrite = true;
-      echo: {}    # is the contents of ~/.hal/default/profiles/echo.yml
-      fiat: {}    # is the contents of ~/.hal/default/profiles/fiat.yml
-      front50: {} # is the contents of ~/.hal/default/profiles/front50.yml
-      gate: {}    # is the contents of ~/.hal/default/profiles/gate.yml
-      igor: {}    # is the contents of ~/.hal/default/profiles/igor.yml
-      kayenta: {} # is the contents of ~/.hal/default/profiles/kayenta.yml
-      orca: {}    # is the contents of ~/.hal/default/profiles/orca.yml
-      rosco: {}   # is the contents of ~/.hal/default/profiles/rosco.yml
+      echo: {}    # Contents of ~/.hal/default/profiles/echo.yml.
+      fiat: {}    # Contents of ~/.hal/default/profiles/fiat.yml.
+      front50: {} # Contents of ~/.hal/default/profiles/front50.yml.
+      gate: {}    # Contents of ~/.hal/default/profiles/gate.yml.
+      igor: {}    # Contents of ~/.hal/default/profiles/igor.yml.
+      kayenta: {} # Contents of ~/.hal/default/profiles/kayenta.yml.
+      orca: {}    # Contents of ~/.hal/default/profiles/orca.yml.
+      rosco: {}   # Contents of ~/.hal/default/profiles/rosco.yml.
 
-    # spec.spinnakerConfig.service-settings - This section contains the YAML of the service's service-setting
-    # see https://www.spinnaker.io/reference/halyard/custom/#tweakable-service-settings for available settings
+    # spec.spinnakerConfig.service-settings - This section contains the YAML of the service's service-setting.
+    # See https://www.spinnaker.io/reference/halyard/custom/#tweakable-service-settings for available settings.
     service-settings:
       clouddriver: {}
       deck: {}
@@ -52,14 +52,14 @@ spec:
       orca: {}
       rosco: {}
 
-    # spec.spinnakerConfig.files - This section allows you to include any other raw string files not handle above.
-    # The KEY is the filepath and filename of where it should be placed
-    #   - Files here will be placed into ~/.hal/default/ on halyard
-    #   - __ is used in place of / for the path separator
-    # The VALUE is the contents of the file.
-    #   - Use the | YAML symbol to indicate a block-style multiline string
-    #   - We currently only support string files
-    #   - NOTE: Kubernetes has a manifest size limitation of 1MB
+    # spec.spinnakerConfig.files - This section allows you to include any other raw string files not handled above.
+    # The KEY is the filepath and filename of where it should be placed.
+    #   - Files here will be placed into ~/.hal/default/ on halyard.
+    #   - __ (double underscore) is used in place of / for the path separator.
+    # The VALUE Contents of the file.
+    #   - Use the | YAML symbol to indicate a block-style multiline string.
+    #   - We currently only support string files.
+    #   - NOTE: Kubernetes has a manifest size limitation of 1MB.
     files:
   #      profiles__rosco__packer__example-packer-config.json: |
   #        {
@@ -70,22 +70,22 @@ spec:
   #        echo "hello world!"
 
 
-  # spec.expose - This section defines how Spinnaker should be publicly exposed
+  # spec.expose - This section defines how Spinnaker should be publicly exposed.
   expose:
-    type: service  # Kubernetes LoadBalancer type (service/ingress), note: only "service" is supported for now
+    type: service  # Kubernetes LoadBalancer type (service/ingress). Note that only "service" is supported currently.
     service:
       type: LoadBalancer
 
-      # annotations to be set on Kubernetes LoadBalancer type
-      # they will only apply to spin-gate, spin-gate-x509, or spin-deck
+      # Annotations to be set on Kubernetes LoadBalancer type
+      # They only apply to spin-gate, spin-gate-x509, or spin-deck.
       annotations:
         service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
-        # uncomment the line below to provide an AWS SSL certificate to terminate SSL at the LoadBalancer
+        # Uncomment the line below to provide an AWS SSL certificate to terminate SSL at the LoadBalancer.
         #service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:9999999:certificate/abc-123-abc
 
-      # provide an override to the exposing KubernetesService
+      # Provide an override to the exposing KubernetesService
       overrides:
-      # Provided below is the example config for the Gate-X509 configuration
+      # The following example is an example config for the Gate-X509 configuration
 #        deck:
 #          annotations:
 #            service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:9999999:certificate/abc-123-abc
@@ -102,7 +102,7 @@ spec:
 ```
 
 ## `metadata.name`
-This is the name of your Spinnaker service. You'll use that name to view, edit, or delete Spinnaker.
+Name of your Spinnaker service. You'll use that name to view, edit, or delete Spinnaker.
 
 Example with a `prod` name:
 ```bash
@@ -113,7 +113,7 @@ Note: We use `spinsvc` for brevity. You can also use `spinnakerservices.spinnake
 
 ## `.spec.spinnakerConfig.config`
 
-It supported the deployment content found in a halconfig `.deploymentConfigurations[0]`.
+Same as the deployment content found in a halconfig `.deploymentConfigurations[0]`.
 
 For instance, given the following:
 
@@ -130,7 +130,7 @@ deploymentConfigurations:
       rootFolder: front50
 ```
 
-We'd get the following `spec.spinnakerConfig`:
+We get the following `spec.spinnakerConfig`:
 
 ```yaml
 spec:
@@ -146,7 +146,7 @@ spec:
 
 ## `.spec.spinnakerConfig.profiles`
 
-This section contains each service profile. This is the equivalent of a `~/.hal/default/profiles/<service>-local.yml`
+Configuration for each service profile. This is the equivalent of a `~/.hal/default/profiles/<service>-local.yml`
 
 For example:
 ```yaml
@@ -173,12 +173,11 @@ spec:
 ```
 
 ## `spec.expose`
-This section contains configuration for exposing Spinnaker. It is optional, if you omit it
-no load balancer will be created (or deleted if you remove it). 
+Optional. Controls how Spinnaker gets exposed. If you omit this section, no load balancer gets created. If this section is removed, the Load Balancer gets deleted. 
 
 
 ### `spec.expose.type`
-This defines how How Spinnaker will be exposed. Only `service` is currently supported for using Kubernetes services.
+How Spinnaker gets exposed. Only `service` is currently supported for using Kubernetes services.
 
 #### `spec.expose.service`
 Service Configuration
@@ -189,38 +188,38 @@ Matches a valid kubernetes service type (i.e. `LoadBalancer`, `NodePort`, `Clust
 IMPORTANT: `LoadBalancer` is the only supported type currently.
 
 ##### `spec.expose.service.annotations`
-Map containing any annotation to be added to Gate (API) and Deck (UI) services.
+Map containing any annotation to be added to Gate (API) and Deck (UI).
 
 ##### `spec.expose.service.overrides`
-Map with key: Spinnaker service name (`gate` or `deck`), and value: structure for overriding the service type and specifying extra annotations.
-By default, all services will receive the same annotations.
-You can override annotations for a Deck (UI) or Gate (API) services.
+Map with key: Spinnaker service name (`gate` or `deck`) and value: structure for overriding the service type and specifying extra annotations.
+By default, all services receive the same annotations.
+You can override annotations for Deck (UI) or Gate (API).
 
 ## `spec.validation`
 
-Contains validation options that apply to all validations performed by the operator:
+Validation options that apply to all validations performed by the operator.
 
 ### `spec.validation.failOnError`
-Defaults to true. If false, the validation is run and its result logged but the service is always valid
+Boolean. Defaults to `true`. If `false`, the validation runs and result get logged, but the service is always considered valid.
 
 ### `spec.validation.failFast`
-Defaults to false, if true, validation will stop at the first error
+Boolean. Defaults to `false`. If `true`, validation stops at the first error.
 
 ### `spec.validation.frequencySeconds`
-Optional parameter. Defines a grace period before a validation is re-run.
+Integer. Optional. Defines a grace period before a validation is re-run.
 
-For instance, if you define a value of `120` and edit the `SpinnakerService` without changing an account within 120 seconds,
-the validation on that account won't be run again.
+For instance, if you define a value of `120` and edit the `SpinnakerService` without changing an account within a 120 second window,
+the validation on that account does not run again.
 
 Note: In the future, this will run validation while Spinnaker is running.
 
 ### `spec.validation.providers`, `spec.validation.ci`, `spec.validation.metricStores`, `spec.validation.persistentStorage`, `spec.validation.notifications`
-Optional maps of validation settings specific to certain providers/CI/etc. Supported settings are:
+Optional. Maps of validation settings specific to certain providers/CI/etc. Supported settings are:
 - `enabled`: to turn off validation
 - `failOnError`
 - `frequencySeconds` 
 
-Example to disable all Kubernetes account validation:
+Example that disables all Kubernetes account validation:
 ```yaml
 spec:
   validation:
@@ -233,14 +232,12 @@ spec:
 Support for `SpinnakerAccount` CRD
 
 ### `spec.accounts.enabled`
-Defaults ot `false`. If `true`, the `SpinnakerService` will use all `SpinnakerAccount` objects enabled.
+Defaults to `false`. If `true`, the `SpinnakerService` uses all `SpinnakerAccount` objects enabled.
 
-Note: For now, accounts can be defined either in the config or as `SpinnakerAccount`. For instance,
-if you add a `SpinnakerAccount` of type `kubernetes`, accounts you've defined elsewhere won't be loaded.
+Note: For now, accounts can be defined either in the config or as `SpinnakerAccount`. For instance, if you add a `SpinnakerAccount` of type `kubernetes`, accounts you've defined elsewhere won't be loaded.
 
 ### `spec.accounts.dynamic` (experimental)
-Defaults to `false`. If `true`, `SpinnakerAccount` objects will be made available to 
-Spinnaker as the account is applied - without redeploying any service.
+Boolean. Defaults to `false`. If `true`, `SpinnakerAccount` objects available to Spinnaker as the account is applied - without redeploying any service.
 
 
 # Expose Examples
@@ -263,7 +260,7 @@ spec:
         "service.beta.kubernetes.io/aws-load-balancer-ssl-cert": "arn:aws:acm:us-west-2:xxxxxxxxxxxx:certificate/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-Above manifest file will generate these two services:
+Above manifest file generates these two services:
 
 ```yaml
 apiVersion: v1
@@ -339,7 +336,7 @@ spec:
           type: NodePort
 ```
 
-Above manifest file will generate these two services:
+Above manifest file generates these two services:
 
 ```yaml
 apiVersion: v1
@@ -415,7 +412,7 @@ spec:
             "service.beta.kubernetes.io/aws-load-balancer-internal": "true"
 ```
 
-Above manifest file will generate these two services:
+Above manifest file generates these two services:
 
 ```yaml
 apiVersion: v1
