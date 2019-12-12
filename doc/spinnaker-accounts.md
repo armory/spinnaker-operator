@@ -3,8 +3,8 @@
 `SpinnakerAccount` lets us define and manage accounts outside of Spinnaker's configuration and with Kubernetes native
 tools. The main use case is to automate the discovery of accounts by Spinnaker that are provisioned automatically.
 
-For example, you may already have a pipeline that provisions a Kubernetes cluster with Terraform, if you want that 
-new cluster to be available you'd just need to create a `SpinnakerAccount` of type `Kubernetes` in Spinnaker's namespace.
+For example, you may already have a pipeline that provisions a Kubernetes cluster with Terraform. If you want that 
+new cluster to be available, you can just create a `SpinnakerAccount` of type `Kubernetes` in Spinnaker's namespace.
    
 ## Format
 
@@ -21,11 +21,10 @@ spec:
 ```
 
 ### `metadata.name`
-This is the name of the `SpinnakerAccount`. It needs to be unique across all 
-accounts - not just type of account as in Spinnaker.
+This is the name of the `SpinnakerAccount`. It needs to be unique across all accounts - not just type of account as in Spinnaker.
 
 ### `spec.type`
-Account type, see below for current support:
+Account type. See below for current support:
 
 | Account type | Status | Notes |
 |------------|----------|-------|
@@ -33,7 +32,7 @@ Account type, see below for current support:
 
 
 ### `spec.enabled`
-Is the account enabled? If not enabled, it will not be used by `SpinnakerService`.
+Determines if the account is enabled. If not enabled, it will not be used by `SpinnakerService`.
 
 ### `spec.permissions`
 Map of authorizations similar to most accounts in Spinnaker.
@@ -47,7 +46,7 @@ spec:
 
 ### `spec.settings`
 
-This is a map of settings that are supported by Halyard. For instance:
+Map of settings that are supported by Halyard. For instance:
 
 ```yaml
 spec:
@@ -64,8 +63,7 @@ Note: We are working on a documentation, stay tuned.
 Auth options for Kubernetes account type. Pick only one of the options below:
 
 #### `spec.kubernetes.kubeconfigFile`
-References a file loaded either out of band to Clouddriver or most likely
-[stored in a secret](./managing-spinnaker.md).
+References a file loaded either out of band to Clouddriver or (more likely) [stored in a secret](./managing-spinnaker.md).
 
 #### `spec.kubernetes.kubeconfigSecret`
 Reference to a Kubernetes secret in the same namespace that contains the kubeconfig file:

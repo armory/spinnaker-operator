@@ -1,8 +1,9 @@
 # Uninstalling the Operator
 
-If for some reason the operator needs to be uninstalled/deleted, there are still two ways in which Spinnaker itself can be prevented from being deleted, explained in the following sections.
+If Operator needs to be uninstalled or deleted, you can keep the Spinnaker deployments from being deleted in one of two ways: [replacing Operator with Halyard](#replacing-the-operator-with-halyard) or [removing Operator ownership of Spinnaker resources](#removing-operator-ownership-of-spinnaker-resources).
 
-### Replacing the operator with Halyard
+
+### Replacing Operator with Halyard
 
 First you need to export Spinnaker configuration settings to a format that Halyard understands: 
 1. From the `SpinnakerService` manifest, copy the contents of `spec.spinnakerConfig.config` to its own file named `config`, and save it with the following structure:
@@ -33,7 +34,7 @@ $ kubectl delete -n <namespace> -f deploy/operator/<installation type>
 $ kubectl delete -f deploy/crds/
 ```
 
-### Removing operator ownership from Spinnaker resources
+### Removing Operator ownership of Spinnaker resources
 
 You can execute the following script to remove ownership of Spinnaker resources, where `NAMESPACE` is the namespace where Spinnaker is installed:
 ```bash
