@@ -56,16 +56,29 @@ func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterf
 				Image:         s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec),
 			}
 
-			if len(it.Status.Conditions) == 0 {
-				log.Info(fmt.Sprintf("Status: Unavailable, deployment %s still has not reported any conditions", it.ObjectMeta.Name))
-				status.Status = Unavailable
-			} else {
-				latestCondition := it.Status.Conditions[0]
-				log.Info(fmt.Sprintf("Latest condition for deployment %s: %s. Message: %s", it.ObjectMeta.Name, latestCondition.Type, latestCondition.Message))
-				if latestCondition.Type == appsv1.DeploymentProgressing {
-					status.Status = Updating
-				} else if latestCondition.Type == appsv1.DeploymentReplicaFailure {
+			var ac appsv1.DeploymentCondition
+			var fc appsv1.DeploymentCondition
+			for _, c := range it.Status.Conditions {
+				if c.Type == appsv1.DeploymentAvailable {
+					ac = c
+				} else if c.Type == appsv1.DeploymentReplicaFailure {
+					fc = c
+				}
+			}
+			if string(ac.Type) == "" {
+				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
+					log.Info(fmt.Sprintf("Status: Failure, deployment %s has no available condition but has failure condition: %s", it.ObjectMeta.Name, fc.Message))
 					status.Status = Failure
+				} else {
+					log.Info(fmt.Sprintf("Status: Unavailable, deployment %s still has not reported available condition", it.ObjectMeta.Name))
+					status.Status = Unavailable
+				}
+			} else if ac.Status != v1.ConditionTrue {
+				log.Info(fmt.Sprintf("Deployment %s is available: %s. Message: %s", it.ObjectMeta.Name, ac.Status, ac.Message))
+				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
+					status.Status = Failure
+				} else {
+					status.Status = Updating
 				}
 			}
 			svcs = append(svcs, st)
