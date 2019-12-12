@@ -22,6 +22,7 @@ const (
 	Updating    = "Updating"
 	Unavailable = "Unavailable"
 	Na          = "N/A"
+	Failure     = "Failure"
 )
 
 func newStatusChecker(client client.Client, logger logr.Logger) statusChecker {
@@ -54,17 +55,31 @@ func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterf
 				ReadyReplicas: it.Status.ReadyReplicas,
 				Image:         s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec),
 			}
-			// Spinnaker not ready if any of the services has zero pods
-			if it.Status.ReadyReplicas == 0 {
-				log.Info(fmt.Sprintf("Status: Unavailable, deployment %s has zero ready replicas", it.ObjectMeta.Name))
-				status.Status = Unavailable
-			}
 
-			// If number of replicas desired != number of replicas with the given spec, they're "deploying"
-			if it.Status.Replicas != it.Status.UpdatedReplicas {
-				log.Info(fmt.Sprintf("Status: Updating, deployment %s has %d replicas but %d updated replicas (should match)",
-					it.ObjectMeta.Name, it.Status.Replicas, it.Status.UpdatedReplicas))
-				status.Status = Updating
+			var ac appsv1.DeploymentCondition
+			var fc appsv1.DeploymentCondition
+			for _, c := range it.Status.Conditions {
+				if c.Type == appsv1.DeploymentAvailable {
+					ac = c
+				} else if c.Type == appsv1.DeploymentReplicaFailure {
+					fc = c
+				}
+			}
+			if string(ac.Type) == "" {
+				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
+					log.Info(fmt.Sprintf("Status: Failure, deployment %s has no available condition but has failure condition: %s", it.ObjectMeta.Name, fc.Message))
+					status.Status = Failure
+				} else {
+					log.Info(fmt.Sprintf("Status: Unavailable, deployment %s still has not reported available condition", it.ObjectMeta.Name))
+					status.Status = Unavailable
+				}
+			} else if ac.Status != v1.ConditionTrue {
+				log.Info(fmt.Sprintf("Deployment %s is available: %s. Message: %s", it.ObjectMeta.Name, ac.Status, ac.Message))
+				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
+					status.Status = Failure
+				} else {
+					status.Status = Updating
+				}
 			}
 			svcs = append(svcs, st)
 		}
