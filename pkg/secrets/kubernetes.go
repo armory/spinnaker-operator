@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/go-yaml-tools/pkg/secrets"
-	v1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"strings"
 )
 
 type KubernetesDecrypter struct {
 	name      string
 	key       string
-	client    client.Client
+	client    *kubernetes.Clientset
 	namespace string
 	isFile    bool
 }
@@ -30,8 +30,8 @@ func NewKubernetesSecretDecrypter(ctx context.Context, isFile bool, params strin
 }
 
 func (k *KubernetesDecrypter) Decrypt() (string, error) {
-	sec := &v1.Secret{}
-	if err := k.client.Get(context.TODO(), client.ObjectKey{Name: k.name, Namespace: k.namespace}, sec); err != nil {
+	sec, err := k.client.CoreV1().Secrets(k.namespace).Get(k.name, metav1.GetOptions{})
+	if err != nil {
 		return "", err
 	}
 	if d, ok := sec.Data[k.key]; ok {
