@@ -22,6 +22,7 @@ const (
 	Updating    = "Updating"
 	Unavailable = "Unavailable"
 	Na          = "N/A"
+	Failure     = "Failure"
 )
 
 func newStatusChecker(client client.Client, logger logr.Logger) statusChecker {
@@ -54,17 +55,18 @@ func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterf
 				ReadyReplicas: it.Status.ReadyReplicas,
 				Image:         s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec),
 			}
-			// Spinnaker not ready if any of the services has zero pods
-			if it.Status.ReadyReplicas == 0 {
-				log.Info(fmt.Sprintf("Status: Unavailable, deployment %s has zero ready replicas", it.ObjectMeta.Name))
-				status.Status = Unavailable
-			}
 
-			// If number of replicas desired != number of replicas with the given spec, they're "deploying"
-			if it.Status.Replicas != it.Status.UpdatedReplicas {
-				log.Info(fmt.Sprintf("Status: Updating, deployment %s has %d replicas but %d updated replicas (should match)",
-					it.ObjectMeta.Name, it.Status.Replicas, it.Status.UpdatedReplicas))
-				status.Status = Updating
+			if len(it.Status.Conditions) == 0 {
+				log.Info(fmt.Sprintf("Status: Unavailable, deployment %s still has not reported any conditions", it.ObjectMeta.Name))
+				status.Status = Unavailable
+			} else {
+				latestCondition := it.Status.Conditions[0]
+				log.Info(fmt.Sprintf("Latest condition for deployment %s: %s. Message: %s", it.ObjectMeta.Name, latestCondition.Type, latestCondition.Message))
+				if latestCondition.Type == appsv1.DeploymentProgressing {
+					status.Status = Updating
+				} else if latestCondition.Type == appsv1.DeploymentReplicaFailure {
+					status.Status = Failure
+				}
 			}
 			svcs = append(svcs, st)
 		}
