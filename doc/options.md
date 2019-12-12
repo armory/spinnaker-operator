@@ -173,7 +173,7 @@ spec:
 ```
 
 ## `spec.expose`
-Optional. Controls how Spinnaker gets exposed. If you omit this section, no load balancer gets created. If this section is removed, the Load Balancer gets deleted. 
+Optional. Controls how Spinnaker gets exposed. If you omit this section, no load balancer gets created. If this section is removed, the Load Balancer does not deleted. 
 
 
 ### `spec.expose.type`

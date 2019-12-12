@@ -1,6 +1,6 @@
 # Uninstalling the Operator
 
-If Operator needs to be uninstalled or deleted, you can keep the Spinnaker deployments from being deleted in one of two ways: [replace Operator with Halyard](#replacing-the-operator-with-halyard) or [remove Operator ownership of Spinnaker resources](#removing-operator-ownership-of-spinnaker-resources).
+If Operator needs to be uninstalled or deleted, you can keep the Spinnaker deployments from being deleted in one of two ways: [replacing Operator with Halyard](#replacing-the-operator-with-halyard) or [removing Operator ownership of Spinnaker resources](#removing-operator-ownership-of-spinnaker-resources).
 
 
 ### Replacing Operator with Halyard
