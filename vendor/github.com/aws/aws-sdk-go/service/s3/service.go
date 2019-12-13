@@ -39,8 +39,6 @@ const (
 // aws.Config parameter to add your extra config.
 //
 // Example:
-//     mySession := session.Must(session.NewSession())
-//
 //     // Create a S3 client from just a session.
 //     svc := s3.New(mySession)
 //

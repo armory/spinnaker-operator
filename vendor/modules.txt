@@ -16,7 +16,7 @@ github.com/PuerkitoBio/purell
 github.com/PuerkitoBio/urlesc
 # github.com/armory/go-yaml-tools v0.0.0-20191120233933-0620b6b7ea86
 github.com/armory/go-yaml-tools/pkg/secrets
-# github.com/aws/aws-sdk-go v1.25.39
+# github.com/aws/aws-sdk-go v1.25.39 => github.com/aws/aws-sdk-go v1.25.37
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/awserr
 github.com/aws/aws-sdk-go/aws/awsutil
