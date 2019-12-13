@@ -9,7 +9,6 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"k8s.io/api/admission/v1beta1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,9 +23,9 @@ import (
 
 // spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
-	client    client.Client
-	decoder   *admission.Decoder
-	rawClient *kubernetes.Clientset
+	client     client.Client
+	decoder    *admission.Decoder
+	restConfig *rest.Config
 }
 
 // NewSpinnakerService instantiates the type we're going to validate
@@ -64,7 +63,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 
 	opts := validate.Options{
-		Ctx:         secrets.NewContext(ctx, v.rawClient, req.Namespace),
+		Ctx:         secrets.NewContext(ctx, v.restConfig, req.Namespace),
 		Client:      v.client,
 		Req:         req,
 		Log:         log,
@@ -105,10 +104,6 @@ func (v *spinnakerValidatingController) InjectDecoder(d *admission.Decoder) erro
 
 // InjectConfig injects the rest config for creating raw kubernetes clients.
 func (v *spinnakerValidatingController) InjectConfig(c *rest.Config) error {
-	rawClient, err := kubernetes.NewForConfig(c)
-	if err != nil {
-		return err
-	}
-	v.rawClient = rawClient
+	v.restConfig = c
 	return nil
 }

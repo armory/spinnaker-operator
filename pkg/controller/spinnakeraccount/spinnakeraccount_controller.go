@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -32,11 +32,10 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	rawClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	return &ReconcileSpinnakerAccount{
-		client:    mgr.GetClient(),
-		rawClient: rawClient,
-		scheme:    mgr.GetScheme(),
+		client:     mgr.GetClient(),
+		restConfig: mgr.GetConfig(),
+		scheme:     mgr.GetScheme(),
 	}
 }
 
@@ -68,9 +67,9 @@ var _ reconcile.Reconciler = &ReconcileSpinnakerAccount{}
 type ReconcileSpinnakerAccount struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client    client.Client
-	rawClient *kubernetes.Clientset
-	scheme    *runtime.Scheme
+	client     client.Client
+	restConfig *rest.Config
+	scheme     *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a SpinnakerService object and makes changes based on the state read
@@ -84,7 +83,7 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 
 	// Fetch the SpinnakerService instance
 	instance := &v1alpha2.SpinnakerAccount{}
-	ctx := secrets.NewContext(context.TODO(), r.rawClient, request.Namespace)
+	ctx := secrets.NewContext(context.TODO(), r.restConfig, request.Namespace)
 	defer secrets.Cleanup(ctx)
 
 	err := r.client.Get(ctx, request.NamespacedName, instance)

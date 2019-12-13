@@ -112,7 +112,7 @@ func (k *Account) kubeAuthToSpinnakerSettings(ctx context.Context, settings map[
 		if err != nil {
 			return err
 		}
-		config, err := util.GetSecretContent(sc.Client, sc.Namespace, k.Auth.KubeconfigSecret.Name, k.Auth.KubeconfigSecret.Key)
+		config, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, k.Auth.KubeconfigSecret.Name, k.Auth.KubeconfigSecret.Key)
 		if err != nil {
 			return err
 		}

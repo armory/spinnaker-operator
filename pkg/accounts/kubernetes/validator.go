@@ -108,7 +108,7 @@ func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespac
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
 	}
-	str, err := util.GetSecretContent(sc.Client, sc.Namespace, ref.Name, ref.Key)
+	str, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, ref.Name, ref.Key)
 	if err != nil {
 		return nil, err
 	}
