@@ -61,4 +61,7 @@ replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.2-0.20
 
 replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.10.1-0.20191004014855-dc713e4d7890
 
+// Remove once this bug is fixed: https://github.com/aws/aws-sdk-go/issues/2972 (slow decrypting of S3 secrets)
+replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.25.37
+
 go 1.13
