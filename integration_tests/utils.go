@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"html/template"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -58,7 +61,7 @@ func DeploySpinnaker(ns, kustPath string, e *TestEnv, t *testing.T) (deckUrl str
 }
 
 func PrintOperatorLogs(e *TestEnv, t *testing.T) {
-	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s logs deployment/spinnaker-operator spinnaker-operator", e.KubectlPrefix(), e.Vars.OperatorNamespace), t)
+	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s logs deployment/spinnaker-operator spinnaker-operator", e.KubectlPrefix(), e.Operator.Namespace), t)
 	t.Logf("================ Operator logs start ================ ")
 	t.Logf(o)
 	t.Logf("================ Operator logs end ================== ")
@@ -136,7 +139,7 @@ func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) boo
 		time.Sleep(2 * time.Second)
 	}
 	pods, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
-	t.Errorf("Waited too much for deployment %s to become ready, giving up. Pods: %s", name, pods)
+	t.Errorf("Waited too much for deployment %s to become ready, giving up. Pods: \n%s", name, pods)
 	return !t.Failed()
 }
 
@@ -186,11 +189,11 @@ func ExecuteGetRequest(reqUrl string, t *testing.T) string {
 		req = req.WithContext(context.TODO())
 		client := &http.Client{}
 		resp, err := client.Do(req)
-		if assert.Nil(t, err) {
-			defer resp.Body.Close()
-			b, _ := ioutil.ReadAll(resp.Body)
-			return string(b)
-		}
+		defer resp.Body.Close()
+		b, _ := ioutil.ReadAll(resp.Body)
+		o := string(b)
+		assert.Nil(t, err, fmt.Sprintf("GET %s failed: %s", reqUrl, o))
+		return o
 	}
 	return ""
 }
@@ -211,21 +214,48 @@ func RandomString(prefix string) string {
 func InstallAwsCli(e *TestEnv, t *testing.T) bool {
 	c := "wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python /tmp/get-pip.py --user && /home/spinnaker-operator/.local/bin/pip install --user --upgrade awscli==1.16.208"
 	RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s exec -c spinnaker-operator %s -- bash -c \"%s\"",
-		e.KubectlPrefix(), e.Vars.OperatorNamespace, e.Operator.PodName, c), t)
+		e.KubectlPrefix(), e.Operator.Namespace, e.Operator.PodName, c), t)
 	return !t.Failed()
 }
 
 func RunCommandInOperatorAndAssert(c string, e *TestEnv, t *testing.T) bool {
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s exec -c spinnaker-operator %s -- bash -c \"%s\"",
-		e.KubectlPrefix(), e.Vars.OperatorNamespace, e.Operator.PodName, c), t)
+		e.KubectlPrefix(), e.Operator.Namespace, e.Operator.PodName, c), t)
 	return !t.Failed()
 }
 
 func CopyFileToS3Bucket(f, dest string, e *TestEnv, t *testing.T) bool {
-	RunCommandAndAssert(fmt.Sprintf("%s -n %s cp %s %s:/tmp/fileToCopy", e.KubectlPrefix(), e.Vars.OperatorNamespace, f, e.Operator.PodName), t)
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s cp %s %s:/tmp/fileToCopy", e.KubectlPrefix(), e.Operator.Namespace, f, e.Operator.PodName), t)
 	if t.Failed() {
 		return !t.Failed()
 	}
 	c := fmt.Sprintf("/home/spinnaker-operator/.local/bin/aws s3 mv /tmp/fileToCopy s3://%s/%s", e.Vars.S3Bucket, dest)
 	return RunCommandInOperatorAndAssert(c, e, t)
+}
+
+func SubstituteOverlayVars(overlayHome string, vars interface{}, t *testing.T) bool {
+	fs, err := ioutil.ReadDir(overlayHome)
+	if !assert.Nil(t, err) {
+		return !t.Failed()
+	}
+	for _, f := range fs {
+		if !strings.Contains(f.Name(), "-template") {
+			continue
+		}
+		tmpl, err := template.New(f.Name()).ParseFiles(filepath.Join(overlayHome, f.Name()))
+		if !assert.Nil(t, err) {
+			return !t.Failed()
+		}
+		n := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
+		n = strings.ReplaceAll(n, "-template", "")
+		p := filepath.Join(overlayHome, fmt.Sprintf("%s-generated%s", n, filepath.Ext(f.Name())))
+		gf, err := os.Create(p)
+		if !assert.Nil(t, err) {
+			return !t.Failed()
+		}
+		if !assert.Nil(t, tmpl.ExecuteTemplate(gf, f.Name(), vars)) {
+			return !t.Failed()
+		}
+	}
+	return !t.Failed()
 }

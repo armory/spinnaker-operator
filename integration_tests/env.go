@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"html/template"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -30,22 +29,22 @@ const (
 )
 
 var envLock sync.Mutex
-var envInitialized = false
-var operatorRunsByNamespace = map[string]bool{}
+var baseEnv = TestEnv{}
+var opClusterLock sync.Mutex
+var opCluster = Operator{}
 
 // TestEnv holds information about the kubernetes cluster used for tests
 type TestEnv struct {
 	Operator    Operator
 	SpinDeckUrl string
 	SpinGateUrl string
-	Vars        *Vars
+	Vars        Vars
 }
 
 // Operator holds information about the operator installation
 type Operator struct {
 	KustomizationPath string
-	OperatorImage     string
-	HalyardImage      string
+	Namespace         string
 	PodName           string
 }
 
@@ -57,46 +56,43 @@ type Account struct {
 
 // Vars are variables used in kustomize templates
 type Vars struct {
-	Kubeconfig        string
-	OperatorImage     string
-	HalyardImage      string
-	S3Bucket          string
-	S3BucketRegion    string
-	SpinNamespace     string
-	OperatorNamespace string
+	Kubeconfig     string
+	OperatorImage  string
+	HalyardImage   string
+	S3Bucket       string
+	S3BucketRegion string
+	SpinNamespace  string
 }
 
-// NewEnv creates a new environment context, with the given operator namespace and path pointing to a kustomize folder
-// with operator manifests
-func NewEnv(opKust string, t *testing.T) *TestEnv {
+// CommonSetup creates a new environment context, initializing common settings for all tests
+func CommonSetup(t *testing.T) *TestEnv {
 	envLock.Lock()
 	defer envLock.Unlock()
-	vars := resolveEnvVars(t)
-	e := &TestEnv{
-		Vars: vars,
-		Operator: Operator{
-			KustomizationPath: opKust,
-		},
-	}
-	if envInitialized {
+	if baseEnv.Vars.Kubeconfig != "" {
 		t.Logf("Environment already initialized")
-		return e
+	} else {
+		generateKustomizeBase(t)
+		if t.Failed() {
+			return nil
+		}
+		baseEnv = TestEnv{
+			Vars: resolveEnvVars(t),
+		}
+		baseEnv.InstallCrds(t)
+		SubstituteOverlayVars("testdata/spinnaker/base", baseEnv.Vars, t)
 	}
-	envInitialized = true
-	generateKustomizeBase(t)
-	if t.Failed() {
-		return nil
+	return &TestEnv{
+		Vars: baseEnv.Vars,
 	}
-	return e
 }
 
-func resolveEnvVars(t *testing.T) *Vars {
+func resolveEnvVars(t *testing.T) Vars {
 	k := os.Getenv(KubeconfigVar)
 	if k == "" {
 		t.Logf("%s env var not set, using default", KubeconfigVar)
 		home, err := os.UserHomeDir()
 		if !assert.Nil(t, err, "error getting user home") {
-			return nil
+			return Vars{}
 		}
 		k = fmt.Sprintf("%s/.kube/config", home)
 	}
@@ -129,7 +125,7 @@ func resolveEnvVars(t *testing.T) *Vars {
 		r = BucketRegionDefault
 	}
 	t.Logf("Using bucekt region %s", r)
-	return &Vars{
+	return Vars{
 		Kubeconfig:     k,
 		OperatorImage:  op,
 		HalyardImage:   h,
@@ -190,35 +186,23 @@ func (e *TestEnv) Cleanup(t *testing.T) {
 }
 
 func InstallCrdsAndOperator(spinNs string, isClusterMode bool, t *testing.T) (e *TestEnv) {
-	ns := RandomString("operator")
-	if spinNs == "" {
-		spinNs = ns
-	}
-	LogMainStep(t, "Installing CRDs and operator in namespace %s", ns)
-	opKustPath := "testdata/operator/overlay_basicmode"
-	if isClusterMode {
-		opKustPath = "testdata/operator/overlay_clustermode"
-	}
-	e = NewEnv(opKustPath, t)
+	e = CommonSetup(t)
 	if t.Failed() {
 		return
 	}
 	e.Vars.SpinNamespace = spinNs
-	e.Vars.OperatorNamespace = ns
 	if isClusterMode {
-		e.SubstituteOverlayVars("testdata/operator/overlay_clustermode", e.Vars, t)
+		opClusterLock.Lock()
+		defer opClusterLock.Unlock()
+		if opCluster.KustomizationPath != "" {
+			t.Logf("Operator in cluster mode already installed")
+		} else {
+			opCluster = e.InstallOperator(isClusterMode, t)
+		}
+		e.Operator = opCluster
 	} else {
-		e.SubstituteOverlayVars("testdata/operator/overlay_basicmode", e.Vars, t)
+		e.Operator = e.InstallOperator(isClusterMode, t)
 	}
-	e.SubstituteOverlayVars("testdata/spinnaker/base", e.Vars, t)
-	if t.Failed() {
-		return
-	}
-	if !e.InstallCrds(t) {
-		return
-	}
-	e.InstallOperator(t)
-	LogMainStep(t, "CRDs and operator installed")
 	return
 }
 
@@ -229,30 +213,35 @@ func (e *TestEnv) InstallCrds(t *testing.T) bool {
 	return !t.Failed()
 }
 
-func (e *TestEnv) InstallOperator(t *testing.T) bool {
-	ran, ok := operatorRunsByNamespace[e.Vars.OperatorNamespace]
-	if ok && ran {
-		t.Logf("Operator already installed")
-		return true
+func (e *TestEnv) InstallOperator(isCluster bool, t *testing.T) Operator {
+	opKustPath := "testdata/operator/overlay_basicmode"
+	if isCluster {
+		opKustPath = "testdata/operator/overlay_clustermode"
 	}
-	operatorRunsByNamespace[e.Vars.OperatorNamespace] = true
-	if !CreateNamespace(e.Vars.OperatorNamespace, e, t) {
-		return !t.Failed()
+	op := Operator{
+		KustomizationPath: opKustPath,
+		Namespace:         RandomString("operator"),
 	}
-	if !ApplyKustomizeAndAssert(e.Vars.OperatorNamespace, e.Operator.KustomizationPath, e, t) {
-		return !t.Failed()
+	LogMainStep(t, "Installing CRDs and operator in namespace %s", op.Namespace)
+	SubstituteOverlayVars(opKustPath, op, t)
+	if !CreateNamespace(op.Namespace, e, t) {
+		return Operator{}
 	}
-	if !WaitForDeploymentToStabilize(e.Vars.OperatorNamespace, "spinnaker-operator", e, t) {
-		return !t.Failed()
+	if !ApplyKustomizeAndAssert(op.Namespace, opKustPath, e, t) {
+		return Operator{}
 	}
-	p := RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep spinnaker-operator | awk '{print $1}'", e.KubectlPrefix(), e.Vars.OperatorNamespace), t)
-	e.Operator.PodName = strings.TrimSpace(p)
-	return !t.Failed()
+	if !WaitForDeploymentToStabilize(op.Namespace, "spinnaker-operator", e, t) {
+		return Operator{}
+	}
+	p := RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep spinnaker-operator | awk '{print $1}'", e.KubectlPrefix(), op.Namespace), t)
+	op.PodName = strings.TrimSpace(p)
+	LogMainStep(t, "CRDs and operator installed")
+	return op
 }
 
 func (e *TestEnv) DeleteOperator(t *testing.T) {
 	t.Logf("Deleting operator...")
-	DeleteNamespace(e.Vars.OperatorNamespace, e, t)
+	DeleteNamespace(e.Operator.Namespace, e, t)
 }
 
 func (e *TestEnv) InstallSpinnaker(ns, kustPath string, t *testing.T) bool {
@@ -324,32 +313,5 @@ spec:
 	f = fmt.Sprintf(f, name, string(indentedFile))
 	err = ioutil.WriteFile(filepath.Join(kustPath, "files.yml"), []byte(f), os.ModePerm)
 	assert.Nil(t, err, "unable to generate files.yml file")
-	return !t.Failed()
-}
-
-func (e *TestEnv) SubstituteOverlayVars(overlayHome string, vars interface{}, t *testing.T) bool {
-	fs, err := ioutil.ReadDir(overlayHome)
-	if !assert.Nil(t, err) {
-		return !t.Failed()
-	}
-	for _, f := range fs {
-		if !strings.Contains(f.Name(), "-template") {
-			continue
-		}
-		tmpl, err := template.New(f.Name()).ParseFiles(filepath.Join(overlayHome, f.Name()))
-		if !assert.Nil(t, err) {
-			return !t.Failed()
-		}
-		n := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
-		n = strings.ReplaceAll(n, "-template", "")
-		p := filepath.Join(overlayHome, fmt.Sprintf("%s-generated%s", n, filepath.Ext(f.Name())))
-		gf, err := os.Create(p)
-		if !assert.Nil(t, err) {
-			return !t.Failed()
-		}
-		if !assert.Nil(t, tmpl.ExecuteTemplate(gf, f.Name(), vars)) {
-			return !t.Failed()
-		}
-	}
 	return !t.Failed()
 }

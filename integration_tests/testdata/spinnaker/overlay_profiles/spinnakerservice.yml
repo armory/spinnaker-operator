@@ -1,0 +1,37 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    profiles:
+      clouddriver:
+        kubernetes:
+          enabled: true
+          accounts:
+            - name: kube-sa
+              requiredGroupMembership: []
+              serviceAccount: true
+              providerVersion: V2
+              permissions: {}
+              dockerRegistries: []
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              customResources: []
+              cachingPolicies: []
+              oAuthScopes: []
+              onlySpinnakerManaged: false
+          primaryAccount: kube-sa
+      deck:
+        settings-local.js: |
+          window.spinnakerSettings.feature.kustomizeEnabled = true;
+
+    service-settings:
+      clouddriver:
+        kubernetes:
+          serviceAccountName: spin-sa

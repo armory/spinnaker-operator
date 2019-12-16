@@ -1,0 +1,9 @@
+bases:
+  - ../base
+
+resources:
+  - sa.yml
+  - role_binding-generated.yml
+
+patchesStrategicMerge:
+  - spinnakerservice.yml

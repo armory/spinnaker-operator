@@ -20,7 +20,7 @@ func TestSpinnakerBase(t *testing.T) {
 	}
 
 	// install
-	e.InstallSpinnaker(e.Vars.OperatorNamespace, "testdata/spinnaker/base", t)
+	e.InstallSpinnaker(e.Operator.Namespace, "testdata/spinnaker/base", t)
 }
 
 func TestKubernetesAndUpgradeOverlay(t *testing.T) {
@@ -42,7 +42,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 
 	// prepare overlay dynamic files
 	LogMainStep(t, "Preparing overlay dynamic files for namespace %s", ns)
-	e.SubstituteOverlayVars(spinOverlay, e.Vars, t)
+	SubstituteOverlayVars(spinOverlay, e.Vars, t)
 	if t.Failed() {
 		return
 	}
@@ -110,7 +110,7 @@ func TestSecretsAndDuplicateOverlay(t *testing.T) {
 	if t.Failed() {
 		return
 	}
-	e.SubstituteOverlayVars(spinOverlay, e.Vars, t)
+	SubstituteOverlayVars(spinOverlay, e.Vars, t)
 	if t.Failed() {
 		return
 	}
@@ -130,14 +130,42 @@ func TestSecretsAndDuplicateOverlay(t *testing.T) {
 	}
 
 	// verify accounts
-	e.VerifyAccountsExist("/artifacts/credentials", t,
+	e.VerifyAccountsExist("/credentials", t,
 		Account{Name: "kube-s3-secret", Type: "kubernetes"},
-		Account{Name: "test-github-account", Type: "github/file"})
+		Account{Name: "kube-k8s-secret", Type: "kubernetes"})
+	e.VerifyAccountsExist("/artifacts/credentials", t, Account{Name: "test-github-account", Type: "github/file"})
 	if t.Failed() {
 		return
 	}
 
 	// try to install a second spinnaker in the same namespace
-	o, err := ApplyKustomize(e.Vars.OperatorNamespace, "testdata/spinnaker/overlay_duplicate", e, t)
+	o, err := ApplyKustomize(e.Operator.Namespace, "testdata/spinnaker/overlay_duplicate", e, t)
 	assert.NotNil(t, err, fmt.Sprintf("expected error but was %s", o))
+}
+
+func TestProfilesOverlay(t *testing.T) {
+	// setup
+	t.Parallel()
+	LogMainStep(t, `Test goals:
+- Settings in profile configs should work `)
+
+	spinOverlay := "testdata/spinnaker/overlay_profiles"
+	ns := RandomString("spin-profiles-test")
+	e := InstallCrdsAndOperator(ns, true, t)
+	if t.Failed() {
+		return
+	}
+
+	SubstituteOverlayVars(spinOverlay, e.Vars, t)
+	if t.Failed() {
+		return
+	}
+
+	// install
+	e.InstallSpinnaker(ns, spinOverlay, t)
+
+	// validate
+	e.VerifyAccountsExist("/credentials", t, Account{Name: "kube-sa", Type: "kubernetes"})
+	o := ExecuteGetRequest(fmt.Sprintf("%s/settings-local.js", e.SpinDeckUrl), t)
+	assert.True(t, strings.Contains(o, "window.spinnakerSettings.feature.kustomizeEnabled"))
 }
