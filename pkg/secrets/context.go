@@ -3,26 +3,26 @@ package secrets
 import (
 	"context"
 	"errors"
+	"k8s.io/client-go/rest"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SecretContext struct {
-	Cache     map[string]string
-	FileCache map[string]string
-	Client    client.Client
-	Namespace string
+	Cache      map[string]string
+	FileCache  map[string]string
+	RestConfig *rest.Config
+	Namespace  string
 }
 
 var errContextNotInitialized = errors.New("secret context not initialized")
 var secretContextKey = "secretContext"
 
-func NewContext(ctx context.Context, c client.Client, namespace string) context.Context {
+func NewContext(ctx context.Context, c *rest.Config, namespace string) context.Context {
 	return context.WithValue(ctx, secretContextKey, &SecretContext{
-		Cache:     make(map[string]string),
-		FileCache: make(map[string]string),
-		Client:    c,
-		Namespace: namespace,
+		Cache:      make(map[string]string),
+		FileCache:  make(map[string]string),
+		RestConfig: c,
+		Namespace:  namespace,
 	})
 }
 

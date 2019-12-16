@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	webhook "github.com/armory/spinnaker-operator/pkg/controller/webhook"
+	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"k8s.io/client-go/rest"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -19,12 +21,16 @@ import (
 
 // spinnakerValidatingController performs preflight checks
 type accountValidatingController struct {
-	client  client.Client
-	decoder *admission.Decoder
+	client     client.Client
+	restConfig *rest.Config
+	decoder    *admission.Decoder
 }
 
-// Implement admission.Handler so the controller can handle admission request.
+// Implement all intended interfaces.
 var _ admission.Handler = &accountValidatingController{}
+var _ inject.Config = &accountValidatingController{}
+var _ inject.Client = &accountValidatingController{}
+var _ admission.DecoderInjector = &accountValidatingController{}
 var log = logf.Log.WithName("accountvalidate")
 
 // Add adds the validating admission controller
@@ -62,7 +68,7 @@ func (v *accountValidatingController) Handle(ctx context.Context, req admission.
 		}
 
 		av := spinAccount.NewValidator()
-		ctx = secrets.NewContext(ctx, v.client, acc.GetNamespace())
+		ctx = secrets.NewContext(ctx, v.restConfig, acc.GetNamespace())
 		defer secrets.Cleanup(ctx)
 
 		if err := av.Validate(nil, v.client, ctx, log); err != nil {
@@ -81,5 +87,11 @@ func (v *accountValidatingController) InjectClient(c client.Client) error {
 // InjectDecoder injects the decoder.
 func (v *accountValidatingController) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
+	return nil
+}
+
+// InjectConfig injects the rest config for creating raw kubernetes clients.
+func (v *accountValidatingController) InjectConfig(c *rest.Config) error {
+	v.restConfig = c
 	return nil
 }

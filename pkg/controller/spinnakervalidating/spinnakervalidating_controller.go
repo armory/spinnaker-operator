@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	webhook "github.com/armory/spinnaker-operator/pkg/controller/webhook"
+	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"k8s.io/api/admission/v1beta1"
+	"k8s.io/client-go/rest"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -21,15 +23,19 @@ import (
 
 // spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
-	client  client.Client
-	decoder *admission.Decoder
+	client     client.Client
+	decoder    *admission.Decoder
+	restConfig *rest.Config
 }
 
 // NewSpinnakerService instantiates the type we're going to validate
 var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
 
-// Implement admission.Handler so the controller can handle admission request.
+// Implement all intended interfaces.
 var _ admission.Handler = &spinnakerValidatingController{}
+var _ inject.Config = &spinnakerValidatingController{}
+var _ inject.Client = &spinnakerValidatingController{}
+var _ admission.DecoderInjector = &spinnakerValidatingController{}
 var log = logf.Log.WithName("spinvalidate")
 
 // Add adds the validating admission controller
@@ -57,7 +63,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 
 	opts := validate.Options{
-		Ctx:         secrets.NewContext(ctx, v.client, req.Namespace),
+		Ctx:         secrets.NewContext(ctx, v.restConfig, req.Namespace),
 		Client:      v.client,
 		Req:         req,
 		Log:         log,
@@ -93,5 +99,11 @@ func (v *spinnakerValidatingController) InjectClient(c client.Client) error {
 // InjectDecoder injects the decoder.
 func (v *spinnakerValidatingController) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
+	return nil
+}
+
+// InjectConfig injects the rest config for creating raw kubernetes clients.
+func (v *spinnakerValidatingController) InjectConfig(c *rest.Config) error {
+	v.restConfig = c
 	return nil
 }

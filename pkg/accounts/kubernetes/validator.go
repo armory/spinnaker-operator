@@ -21,6 +21,7 @@ import (
 	"k8s.io/klog"
 	"net"
 	"os"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
@@ -73,24 +74,32 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1a
 
 // makeClientFromFile loads the client config from a file path which can be a secret
 func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg *v1alpha2.SpinnakerConfig) (*rest.Config, error) {
+	var cfg *clientcmdapi.Config
+	var err error
 	if tools.IsEncryptedSecret(file) {
 		file, err := secrets.DecodeAsFile(ctx, file)
 		if err != nil {
 			return nil, err
 		}
-		cfg, err := clientcmd.LoadFromFile(file)
+		cfg, err = clientcmd.LoadFromFile(file)
 		if err != nil {
 			return nil, err
 		}
-		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
+	} else if filepath.IsAbs(file) {
+		// if file path is absolute, it may already be a path decoded by secret engines
+		cfg, err = clientcmd.LoadFromFile(file)
+		if err != nil {
+			return nil, err
+		}
 	} else {
+		// we're taking relative file paths as files defined inside spec.spinnakerConfig.files
 		b := spinCfg.GetFileContent(file)
-		cfg, err := clientcmd.Load(b)
+		cfg, err = clientcmd.Load(b)
 		if err != nil {
 			return nil, err
 		}
-		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 	}
+	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
@@ -99,7 +108,7 @@ func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespac
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
 	}
-	str, err := util.GetSecretContent(sc.Client, sc.Namespace, ref.Name, ref.Key)
+	str, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, ref.Name, ref.Key)
 	if err != nil {
 		return nil, err
 	}

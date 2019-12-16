@@ -9,6 +9,9 @@ import (
 	"github.com/ghodss/yaml"
 	v12 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,9 +45,13 @@ func FindSecretInDeployment(c client.Client, dep *v12.Deployment, containerName,
 	return nil, fmt.Errorf("unable to find secret at path %s in container %s in deployment %s", path, containerName, dep.Name)
 }
 
-func GetSecretContent(c client.Client, namespace, name, key string) (string, error) {
-	sec := &v1.Secret{}
-	if err := c.Get(context.TODO(), client.ObjectKey{Name: name, Namespace: namespace}, sec); err != nil {
+func GetSecretContent(c *rest.Config, namespace, name, key string) (string, error) {
+	cl, err := clientcorev1.NewForConfig(c)
+	if err != nil {
+		return "", err
+	}
+	sec, err := cl.Secrets(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
 		return "", err
 	}
 	if d, ok := sec.Data[key]; ok {
