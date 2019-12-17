@@ -21,6 +21,7 @@ const (
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 25
 	MaxChecksWaitingForSpinnakerStability  = 250
+	MaxChecksWaitingForLBStability         = 30
 )
 
 var SpinBaseSvcs []string
@@ -47,16 +48,11 @@ func DeploySpinnaker(ns, kustPath string, e *TestEnv, t *testing.T) (deckUrl str
 	if t.Failed() {
 		return
 	}
-	gateUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.apiUrl}'", e.KubectlPrefix(), ns, SpinServiceName), t)
+	gateUrl = WaitForLBReady(ns, "{.status.apiUrl}", e, t)
 	if t.Failed() {
-		t.Logf("Cannot get Gate public url: %s", gateUrl)
 		return
 	}
-	deckUrl = RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.uiUrl}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-	if t.Failed() {
-		t.Logf("Cannot get Deck public url: %s", deckUrl)
-		return
-	}
+	deckUrl = WaitForLBReady(ns, "{.status.uiUrl}", e, t)
 	return
 }
 
@@ -117,6 +113,26 @@ func AssertSpinnakerHealthy(ns, spinName string, e *TestEnv, t *testing.T) {
 			return
 		}
 	}
+}
+
+func WaitForLBReady(ns, statusPath string, e *TestEnv, t *testing.T) string {
+	t.Logf("Waiting for spinnaker lb (%s) to become reachable", statusPath)
+	lbUrl := ""
+	for counter := 0; counter < MaxChecksWaitingForLBStability; counter++ {
+		if lbUrl == "" {
+			lbUrl, _ = RunCommandSilent(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='%s'", e.KubectlPrefix(), ns, SpinServiceName, statusPath), t)
+		}
+		if lbUrl != "" {
+			_, err := RunCommandSilent(fmt.Sprintf("curl %s", lbUrl), t)
+			if err == nil {
+				return lbUrl
+			}
+		}
+		time.Sleep(2 * time.Second)
+	}
+	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get services", e.KubectlPrefix(), ns), t)
+	t.Errorf("Waited too much time for spinnaker deck and gate LB's to be reachable. Services:\n%s", o)
+	return ""
 }
 
 func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) bool {
@@ -189,6 +205,10 @@ func ExecuteGetRequest(reqUrl string, t *testing.T) string {
 		req = req.WithContext(context.TODO())
 		client := &http.Client{}
 		resp, err := client.Do(req)
+		if !assert.Nil(t, err, fmt.Sprintf("Network error executing GET request to %s", reqUrl)) {
+			t.Logf("GET request to %s failed with error: %s", reqUrl, err.Error())
+			return ""
+		}
 		defer resp.Body.Close()
 		b, _ := ioutil.ReadAll(resp.Body)
 		o := string(b)

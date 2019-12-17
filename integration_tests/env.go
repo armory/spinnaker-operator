@@ -272,7 +272,7 @@ func (e *TestEnv) VerifyAccountsExist(endpoint string, t *testing.T, accts ...Ac
 					found++
 					break
 				}
-				if a.Types != nil && len(a.Types) > 0 && a.Types[0] == c.Type && a.Name == c.Name {
+				if a.Types != nil && len(a.Types) > 0 && len(c.Types) > 0 && a.Types[0] == c.Types[0] && a.Name == c.Name {
 					found++
 					break
 				}
