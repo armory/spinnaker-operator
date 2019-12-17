@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	webhook "github.com/armory/spinnaker-operator/pkg/controller/webhook"
+	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,9 +21,9 @@ import (
 
 // spinnakerValidatingController performs preflight checks
 type accountValidatingController struct {
-	client    client.Client
-	rawClient *kubernetes.Clientset
-	decoder   *admission.Decoder
+	client     client.Client
+	restConfig *rest.Config
+	decoder    *admission.Decoder
 }
 
 // Implement all intended interfaces.
@@ -69,7 +68,7 @@ func (v *accountValidatingController) Handle(ctx context.Context, req admission.
 		}
 
 		av := spinAccount.NewValidator()
-		ctx = secrets.NewContext(ctx, v.rawClient, acc.GetNamespace())
+		ctx = secrets.NewContext(ctx, v.restConfig, acc.GetNamespace())
 		defer secrets.Cleanup(ctx)
 
 		if err := av.Validate(nil, v.client, ctx, log); err != nil {
@@ -93,10 +92,6 @@ func (v *accountValidatingController) InjectDecoder(d *admission.Decoder) error 
 
 // InjectConfig injects the rest config for creating raw kubernetes clients.
 func (v *accountValidatingController) InjectConfig(c *rest.Config) error {
-	rawClient, err := kubernetes.NewForConfig(c)
-	if err != nil {
-		return err
-	}
-	v.rawClient = rawClient
+	v.restConfig = c
 	return nil
 }
