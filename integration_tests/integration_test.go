@@ -163,6 +163,9 @@ func TestProfilesOverlay(t *testing.T) {
 
 	// install
 	e.InstallSpinnaker(ns, spinOverlay, t)
+	if t.Failed() {
+		return
+	}
 
 	// validate
 	e.VerifyAccountsExist("/credentials", t, Account{Name: "kube-sa", Type: "kubernetes"})

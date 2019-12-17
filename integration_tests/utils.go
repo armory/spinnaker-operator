@@ -19,9 +19,9 @@ import (
 const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
-	MaxChecksWaitingForDeploymentStability = 25
-	MaxChecksWaitingForSpinnakerStability  = 250
-	MaxChecksWaitingForLBStability         = 30
+	MaxChecksWaitingForDeploymentStability = 25  // (25 * 2s) = 50 seconds
+	MaxChecksWaitingForSpinnakerStability  = 350 // (350 * 2s) / 60 = 11.6 minutes
+	MaxChecksWaitingForLBStability         = 30  // (30 * 2s) / 60 = 1 minute
 )
 
 var SpinBaseSvcs []string
