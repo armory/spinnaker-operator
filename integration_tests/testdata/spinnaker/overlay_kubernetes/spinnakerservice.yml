@@ -1,0 +1,51 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    config:
+      providers:
+        kubernetes:
+          enabled: true
+          accounts:
+            - name: kube-sa
+              requiredGroupMembership: []
+              serviceAccount: true
+              providerVersion: V2
+              permissions: {}
+              dockerRegistries: []
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              customResources: []
+              cachingPolicies: []
+              oAuthScopes: []
+              onlySpinnakerManaged: false
+            - name: kube-file-reference
+              requiredGroupMembership: []
+              providerVersion: V2
+              kubeconfigFile: kubecfg
+              permissions: {}
+              dockerRegistries: []
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              customResources: []
+              cachingPolicies: []
+              oAuthScopes: []
+              onlySpinnakerManaged: false
+          primaryAccount: kube-sa
+
+    service-settings:
+      clouddriver:
+        kubernetes:
+          serviceAccountName: spin-sa

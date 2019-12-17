@@ -1,0 +1,6 @@
+bases:
+  - ../base
+
+resources:
+  - role.yml
+  - role_binding-generated.yml

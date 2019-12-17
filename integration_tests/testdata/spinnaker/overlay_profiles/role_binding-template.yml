@@ -1,0 +1,12 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: spin-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: spin-sa
+    namespace: {{.SpinNamespace}}
+roleRef:
+  kind: ClusterRole
+  name: spin-role
+  apiGroup: rbac.authorization.k8s.io

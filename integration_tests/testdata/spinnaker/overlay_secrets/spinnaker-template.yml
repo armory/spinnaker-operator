@@ -1,0 +1,47 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    config:
+      providers:
+        kubernetes:
+          enabled: true
+          accounts:
+            - name: kube-k8s-secret
+              requiredGroupMembership: []
+              providerVersion: V2
+              kubeconfigFile: encryptedFile:k8s!n:testsecrets!k:kubecfg
+              permissions: {}
+              dockerRegistries: []
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              customResources: []
+              cachingPolicies: []
+              oAuthScopes: []
+              onlySpinnakerManaged: false
+            - name: kube-s3-secret
+              providerVersion: V2
+              kubeconfigFile: encryptedFile:s3!b:{{.S3Bucket}}!f:secrets/kubeconfig!r:{{.S3BucketRegion}}
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              onlySpinnakerManaged: false
+          primaryAccount: kube-s3-secret
+
+      artifacts:
+        github:
+          enabled: true
+          accounts:
+            - name: test-github-account
+              token: encrypted:s3!b:{{.S3Bucket}}!f:secrets/secrets.yml!r:{{.S3BucketRegion}}!k:github.account.token

@@ -1,0 +1,5 @@
+resources:
+- spinnakerservice.yml
+
+patchesStrategicMerge:
+- persistence-generated.yml

@@ -1,0 +1,13 @@
+bases:
+  - ../base
+
+patchesStrategicMerge:
+  - spinnaker-generated.yml
+
+secretGenerator:
+  - name: testsecrets
+    files:
+      - kubecfg
+
+generatorOptions:
+  disableNameSuffixHash: true

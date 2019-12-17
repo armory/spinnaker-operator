@@ -1,0 +1,16 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    config:
+      version: 1.17.0
+      persistentStorage:
+        persistentStoreType: s3
+        s3:
+          rootFolder: front50
+  expose:
+    type: service
+    service:
+      type: LoadBalancer
