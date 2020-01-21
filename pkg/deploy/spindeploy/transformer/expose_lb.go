@@ -142,11 +142,7 @@ func (t *exposeLbTransformer) applyExposeServiceConfig(svc *corev1.Service, serv
 	} else {
 		svc.Spec.Type = corev1.ServiceType(exp.Service.Type)
 	}
-
-	annotations := exp.GetAggregatedAnnotations(serviceName)
-	if len(annotations) > 0 {
-		svc.Annotations = annotations
-	}
+	svc.Annotations = exp.GetAggregatedAnnotations(serviceName)
 }
 
 func (t *exposeLbTransformer) applyPortChanges(ctx context.Context, portName string, portDefault int32, overrideUrlName string, svc *corev1.Service) error {

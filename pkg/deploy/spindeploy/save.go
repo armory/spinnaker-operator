@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
 
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
@@ -12,7 +14,6 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -76,14 +77,14 @@ func (d *Deployer) deleteObject(ctx context.Context, obj runtime.Object) error {
 	return d.client.Delete(ctx, obj)
 }
 
-func (d *Deployer) patch(original runtime.Object) error {
-	o, ok := original.(metav1.Object)
+func (d *Deployer) patch(modifiedRaw runtime.Object) error {
+	modified, ok := modifiedRaw.(metav1.Object)
 	if !ok {
-		return errors.New("Unable to save object")
+		return errors.New(fmt.Sprintf("unable to save object %s because is not a metav1.Object", modifiedRaw.GetObjectKind().GroupVersionKind().String()))
 	}
 
-	gvk := original.GetObjectKind().GroupVersionKind()
-	data, err := json.Marshal(original)
+	gvk := modifiedRaw.GetObjectKind().GroupVersionKind()
+	modifiedJson, err := json.Marshal(modifiedRaw)
 	if err != nil {
 		return err
 	}
@@ -112,38 +113,53 @@ func (d *Deployer) patch(original runtime.Object) error {
 	}
 
 	rsc, _ := apimeta.UnsafeGuessKindToResource(gvk)
-	// gvk.GroupKind().Group
-	// e := d.rawClient.CoreV1().Services(o.GetNamespace())
-	// o.GetResourceVersion()
-	// _, rsc := gvk.GetResourceVersion()
-	cp := original.DeepCopyObject()
+	originalRaw := modifiedRaw.DeepCopyObject()
 
-	err = i.Get().
-		Namespace(o.GetNamespace()).
-		Resource(rsc.Resource).
-		Name(o.GetName()).
-		Do().
-		Into(cp)
+	// avoid reading from cache
+	err = d.client.Get(context.TODO(), types.NamespacedName{Namespace: modified.GetNamespace(), Name: modified.GetName()}, originalRaw)
 
 	if err != nil {
 		if kerrors.IsNotFound(err) {
-			return d.client.Create(context.TODO(), original)
-			// return i.Post().
-			// 	Namespace(o.GetNamespace()).
-			// 	Resource(rsc).
-			// 	Name(o.GetName()).
-			// 	Body()
-			// 	Do().
-			// 	Into(original)
+			return d.client.Create(context.TODO(), modifiedRaw)
 		}
 		return err
 	}
+
+	originalJson, err := json.Marshal(originalRaw)
+	if err != nil {
+		return err
+	}
+	deleteJson, err := d.createDeleteJson(modifiedRaw, originalRaw)
+	if err != nil {
+		return err
+	}
+	patch, err := jsonmergepatch.CreateThreeWayJSONMergePatch(deleteJson, modifiedJson, originalJson)
+	if err != nil {
+		return err
+	}
+
 	return i.Patch(types.MergePatchType).
-		Namespace(o.GetNamespace()).
+		Namespace(modified.GetNamespace()).
 		Resource(rsc.Resource).
-		// SubResource("spec").
-		Name(o.GetName()).
-		Body(data).
+		Name(modified.GetName()).
+		Body(patch).
 		Do().
-		Into(original)
+		Into(modifiedRaw)
+}
+
+// createDeleteJson creates a json with potential fields to be removed from the original object
+func (d *Deployer) createDeleteJson(modifiedRaw runtime.Object, originalRaw runtime.Object) ([]byte, error) {
+	original, ok := originalRaw.(metav1.Object)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("unable to cast %s to metav1.Object", originalRaw.GetObjectKind().GroupVersionKind().String()))
+	}
+	deleteObjectRaw := modifiedRaw.DeepCopyObject()
+	deleteObject, ok := deleteObjectRaw.(metav1.Object)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("unable to cast %s to metav1.Object", deleteObjectRaw.GetObjectKind().GroupVersionKind().String()))
+	}
+	// "removable" fields
+	deleteObject.SetAnnotations(original.GetAnnotations())
+	deleteObject.SetLabels(original.GetLabels())
+	return json.Marshal(deleteObject)
 }

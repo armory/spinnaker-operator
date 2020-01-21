@@ -61,6 +61,21 @@ func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
 	assert.Equal(t, expected, gen.Config["gate"].Service)
 }
 
+func TestTransformManifests_ExposedAnnotationsRemoved(t *testing.T) {
+	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	test.AddServiceToGenConfig(gen, "gate", "testdata/output_service_lb.yml", t)
+	spinSvc.Spec.Expose.Service.Annotations = map[string]string{} // annotations removed from config
+
+	err := tr.TransformManifests(context.TODO(), nil, gen)
+	assert.Nil(t, err)
+
+	expected := &corev1.Service{}
+	test.ReadYamlFile("testdata/output_service_lb.yml", expected, t)
+	expected.Annotations = map[string]string{}
+	assert.Equal(t, expected, gen.Config["gate"].Service)
+}
+
 func TestTransformManifests_ExposedServiceTypeOverridden(t *testing.T) {
 	tr, spinSvc := th.setupTransformer(&exposeLbTransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
