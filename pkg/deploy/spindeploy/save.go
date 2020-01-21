@@ -3,7 +3,6 @@ package spindeploy
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
@@ -63,7 +62,7 @@ func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen
 func (d *Deployer) saveObject(ctx context.Context, obj runtime.Object, skipCheckExists bool, logger logr.Logger) error {
 	// Check if it exists
 	if !skipCheckExists {
-		if err := d.patch(obj); err != nil {
+		if err := d.patch(ctx, obj); err != nil {
 			logger.Error(err, fmt.Sprintf("Unable to save object: %v", obj))
 			return err
 		}
@@ -77,10 +76,10 @@ func (d *Deployer) deleteObject(ctx context.Context, obj runtime.Object) error {
 	return d.client.Delete(ctx, obj)
 }
 
-func (d *Deployer) patch(modifiedRaw runtime.Object) error {
+func (d *Deployer) patch(ctx context.Context, modifiedRaw runtime.Object) error {
 	modified, ok := modifiedRaw.(metav1.Object)
 	if !ok {
-		return errors.New(fmt.Sprintf("unable to save object %s because is not a metav1.Object", modifiedRaw.GetObjectKind().GroupVersionKind().String()))
+		return fmt.Errorf("unable to save object %s because is not a metav1.Object", modifiedRaw.GetObjectKind().GroupVersionKind().String())
 	}
 
 	gvk := modifiedRaw.GetObjectKind().GroupVersionKind()
@@ -116,11 +115,11 @@ func (d *Deployer) patch(modifiedRaw runtime.Object) error {
 	originalRaw := modifiedRaw.DeepCopyObject()
 
 	// avoid reading from cache
-	err = d.client.Get(context.TODO(), types.NamespacedName{Namespace: modified.GetNamespace(), Name: modified.GetName()}, originalRaw)
+	err = d.client.Get(ctx, types.NamespacedName{Namespace: modified.GetNamespace(), Name: modified.GetName()}, originalRaw)
 
 	if err != nil {
 		if kerrors.IsNotFound(err) {
-			return d.client.Create(context.TODO(), modifiedRaw)
+			return d.client.Create(ctx, modifiedRaw)
 		}
 		return err
 	}
@@ -151,12 +150,12 @@ func (d *Deployer) patch(modifiedRaw runtime.Object) error {
 func (d *Deployer) createDeleteJson(modifiedRaw runtime.Object, originalRaw runtime.Object) ([]byte, error) {
 	original, ok := originalRaw.(metav1.Object)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("unable to cast %s to metav1.Object", originalRaw.GetObjectKind().GroupVersionKind().String()))
+		return nil, fmt.Errorf("unable to cast %s to metav1.Object", originalRaw.GetObjectKind().GroupVersionKind().String())
 	}
 	deleteObjectRaw := modifiedRaw.DeepCopyObject()
 	deleteObject, ok := deleteObjectRaw.(metav1.Object)
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("unable to cast %s to metav1.Object", deleteObjectRaw.GetObjectKind().GroupVersionKind().String()))
+		return nil, fmt.Errorf("unable to cast %s to metav1.Object", deleteObjectRaw.GetObjectKind().GroupVersionKind().String())
 	}
 	// "removable" fields
 	deleteObject.SetAnnotations(original.GetAnnotations())
