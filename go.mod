@@ -1,8 +1,8 @@
 module github.com/armory/spinnaker-operator
 
 require (
-	github.com/armory/go-yaml-tools v0.0.0-20191120233933-0620b6b7ea86
-	github.com/aws/aws-sdk-go v1.25.39 // indirect
+	github.com/armory/go-yaml-tools v0.0.0-20200122014301-147e7afb982a
+	github.com/aws/aws-sdk-go v1.28.9 // indirect
 	github.com/emicklei/go-restful v2.9.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
@@ -60,8 +60,5 @@ replace (
 replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.2-0.20190919011008-6ed4ff330711
 
 replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.10.1-0.20191004014855-dc713e4d7890
-
-// Remove once this bug is fixed: https://github.com/aws/aws-sdk-go/issues/2972 (slow decrypting of S3 secrets)
-replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.25.37
 
 go 1.13

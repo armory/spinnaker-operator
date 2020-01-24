@@ -86,3 +86,4 @@ integration_tests/testdata/operator/base/kustomization.yml
 integration_tests/testdata/spinnaker/overlay_kubernetes/files.yml
 integration_tests/testdata/spinnaker/overlay_secrets/kubecfg
 integration_tests/testdata/**/*-generated.yml
+integration_tests/testdata/**/*-generated.yaml
