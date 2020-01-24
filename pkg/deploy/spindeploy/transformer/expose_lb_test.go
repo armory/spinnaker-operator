@@ -105,6 +105,8 @@ func TestTransformManifests_NotExposed(t *testing.T) {
 	test.ReadYamlFile("testdata/output_service_lb.yml", expected, t)
 	expected.Annotations = nil
 	expected.Spec.Type = "ClusterIP"
+	expected.Spec.Ports[0].Port = 8084
+	expected.Spec.Ports[0].Name = ""
 	assert.Equal(t, expected, gen.Config["gate"].Service)
 }
 

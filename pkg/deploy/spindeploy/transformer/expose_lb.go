@@ -115,6 +115,10 @@ func (t *exposeLbTransformer) generateOverrideUrl(ctx context.Context, serviceNa
 }
 
 func (t *exposeLbTransformer) transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error {
+	exp := t.svc.GetExpose()
+	if strings.ToLower(exp.Type) != "service" {
+		return nil
+	}
 	if svcName != "gate" && svcName != "deck" {
 		return nil
 	}
