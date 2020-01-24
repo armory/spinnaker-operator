@@ -15,7 +15,7 @@ spec:
       serviceAccountName: spin-operator-sa
       containers:
         - name: spinnaker-operator
-          image: armory/spinnaker-operator:dev
+          image: {{.OperatorImage}}
           command:
             - spinnaker-operator
           imagePullPolicy: Always
@@ -27,7 +27,7 @@ spec:
             - name: OPERATOR_NAME
               value: "spinnaker-operator"
         - name: halyard
-          image: armory/halyard:operator-0.3.x
+          image: {{.HalyardImage}}
           imagePullPolicy: Always
           ports:
             - containerPort: 8064
