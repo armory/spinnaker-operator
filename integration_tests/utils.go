@@ -21,7 +21,7 @@ const (
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 25  // (25 * 2s) = 50 seconds
 	MaxChecksWaitingForSpinnakerStability  = 350 // (350 * 2s) / 60 = 11.6 minutes
-	MaxChecksWaitingForLBStability         = 30  // (30 * 2s) / 60 = 1 minute
+	MaxChecksWaitingForLBStability         = 90  // (90 * 2s) / 60 = 3 minutes
 )
 
 var SpinBaseSvcs []string
@@ -131,7 +131,7 @@ func WaitForLBReady(ns, statusPath string, e *TestEnv, t *testing.T) string {
 		time.Sleep(2 * time.Second)
 	}
 	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get services", e.KubectlPrefix(), ns), t)
-	t.Errorf("Waited too much time for spinnaker deck and gate LB's to be reachable. Services:\n%s", o)
+	t.Errorf("Waited too much time for spinnaker deck and gate LB's to be reachable. Either they're not assigned public LBs yet or DNS servers still don't resolve them. Services:\n%s", o)
 	return ""
 }
 

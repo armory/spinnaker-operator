@@ -14,19 +14,21 @@ import (
 )
 
 const (
-	KubeconfigVar        = "KUBECONFIG"
-	OperatorImageVar     = "OPERATOR_IMAGE"
-	OperatorImageDefault = "armory/spinnaker-operator:dev"
-	HalyardImageVar      = "HALYARD_IMAGE"
-	HalyardImageDefault  = "armory/halyard:operator-0.3.x"
-	BucketVar            = "S3_BUCKET"
-	BucketDefault        = "operator-int-tests"
-	BucketRegionVar      = "S3_BUCKET_REGION"
-	BucketRegionDefault  = "us-west-2"
-
-	OperatorKustomizeBase = "testdata/operator/base"
-	CRDManifests          = "../deploy/crds"
+	KubeconfigVar    = "KUBECONFIG"
+	OperatorImageVar = "OPERATOR_IMAGE"
+	HalyardImageVar  = "HALYARD_IMAGE"
+	BucketVar        = "S3_BUCKET"
+	BucketRegionVar  = "S3_BUCKET_REGION"
 )
+
+type Defaults struct {
+	HalyardImageDefault   string
+	BucketDefault         string
+	BucketRegionDefault   string
+	OperatorKustomizeBase string
+	CRDManifests          string
+	OperatorImageDefault  string
+}
 
 var envLock sync.Mutex
 var baseEnv = TestEnv{}
@@ -65,20 +67,20 @@ type Vars struct {
 }
 
 // CommonSetup creates a new environment context, initializing common settings for all tests
-func CommonSetup(t *testing.T) *TestEnv {
+func CommonSetup(d Defaults, t *testing.T) *TestEnv {
 	envLock.Lock()
 	defer envLock.Unlock()
 	if baseEnv.Vars.Kubeconfig != "" {
 		t.Logf("Environment already initialized")
 	} else {
 		baseEnv = TestEnv{
-			Vars: resolveEnvVars(t),
+			Vars: resolveEnvVars(d, t),
 		}
-		SubstituteOverlayVars(OperatorKustomizeBase, baseEnv.Vars, t)
+		SubstituteOverlayVars(d.OperatorKustomizeBase, baseEnv.Vars, t)
 		if t.Failed() {
 			return nil
 		}
-		baseEnv.InstallCrds(t)
+		baseEnv.InstallCrds(d, t)
 		SubstituteOverlayVars("testdata/spinnaker/base", baseEnv.Vars, t)
 	}
 	return &TestEnv{
@@ -86,7 +88,7 @@ func CommonSetup(t *testing.T) *TestEnv {
 	}
 }
 
-func resolveEnvVars(t *testing.T) Vars {
+func resolveEnvVars(d Defaults, t *testing.T) Vars {
 	k := os.Getenv(KubeconfigVar)
 	if k == "" {
 		t.Logf("%s env var not set, using default", KubeconfigVar)
@@ -101,28 +103,28 @@ func resolveEnvVars(t *testing.T) Vars {
 	op := os.Getenv(OperatorImageVar)
 	if op == "" {
 		t.Logf("%s env var not set, using default", OperatorImageVar)
-		op = OperatorImageDefault
+		op = d.OperatorImageDefault
 	}
 	t.Logf("Using operator image %s", op)
 
 	h := os.Getenv(HalyardImageVar)
 	if h == "" {
 		t.Logf("%s env var not set, using default", HalyardImageVar)
-		h = HalyardImageDefault
+		h = d.HalyardImageDefault
 	}
 	t.Logf("Using halyard image %s", h)
 
 	b := os.Getenv(BucketVar)
 	if b == "" {
 		t.Logf("%s env var not set, using default", BucketVar)
-		b = BucketDefault
+		b = d.BucketDefault
 	}
 	t.Logf("Using bucekt %s", b)
 
 	r := os.Getenv(BucketRegionVar)
 	if r == "" {
-		t.Logf("%s env var not set, using default", BucketRegionDefault)
-		r = BucketRegionDefault
+		t.Logf("%s env var not set, using default", d.BucketRegionDefault)
+		r = d.BucketRegionDefault
 	}
 	t.Logf("Using bucekt region %s", r)
 	return Vars{
@@ -142,8 +144,8 @@ func (e *TestEnv) Cleanup(t *testing.T) {
 	e.DeleteOperator(t)
 }
 
-func InstallCrdsAndOperator(spinNs string, isClusterMode bool, t *testing.T) (e *TestEnv) {
-	e = CommonSetup(t)
+func InstallCrdsAndOperator(spinNs string, isClusterMode bool, d Defaults, t *testing.T) (e *TestEnv) {
+	e = CommonSetup(d, t)
 	if t.Failed() {
 		return
 	}
@@ -163,8 +165,8 @@ func InstallCrdsAndOperator(spinNs string, isClusterMode bool, t *testing.T) (e 
 	return
 }
 
-func (e *TestEnv) InstallCrds(t *testing.T) bool {
-	ApplyManifest("default", CRDManifests, e, t)
+func (e *TestEnv) InstallCrds(d Defaults, t *testing.T) bool {
+	ApplyManifest("default", d.CRDManifests, e, t)
 	RunCommandAndAssert(fmt.Sprintf("%s get spinsvc", e.KubectlPrefix()), t)
 	RunCommandAndAssert(fmt.Sprintf("%s get spinnakeraccounts", e.KubectlPrefix()), t)
 	return !t.Failed()
