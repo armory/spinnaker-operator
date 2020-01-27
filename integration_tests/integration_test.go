@@ -9,12 +9,25 @@ import (
 	"testing"
 )
 
+var defaults Defaults
+
+func init() {
+	defaults = Defaults{
+		OperatorImageDefault:  "armory/spinnaker-operator:dev",
+		HalyardImageDefault:   "armory/halyard:operator-0.3.x",
+		BucketDefault:         "operator-int-tests",
+		BucketRegionDefault:   "us-west-2",
+		OperatorKustomizeBase: "testdata/operator/base",
+		CRDManifests:          "../deploy/crds",
+	}
+}
+
 func TestSpinnakerBase(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
 - Install spinnaker with operator running in basic mode`)
-	e := InstallCrdsAndOperator("", false, t)
+	e := InstallCrdsAndOperator("", false, defaults, t)
 	if t.Failed() {
 		return
 	}
@@ -35,7 +48,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 
 	spinOverlay := "testdata/spinnaker/overlay_kubernetes"
 	ns := RandomString("spin-kubernetes-test")
-	e := InstallCrdsAndOperator(ns, true, t)
+	e := InstallCrdsAndOperator(ns, true, defaults, t)
 	if t.Failed() {
 		return
 	}
@@ -98,7 +111,7 @@ func TestSecretsAndDuplicateOverlay(t *testing.T) {
 
 	spinOverlay := "testdata/spinnaker/overlay_secrets"
 	ns := RandomString("spin-secrets-test")
-	e := InstallCrdsAndOperator(ns, true, t)
+	e := InstallCrdsAndOperator(ns, true, defaults, t)
 	if t.Failed() {
 		return
 	}
@@ -151,7 +164,7 @@ func TestProfilesOverlay(t *testing.T) {
 
 	spinOverlay := "testdata/spinnaker/overlay_profiles"
 	ns := RandomString("spin-profiles-test")
-	e := InstallCrdsAndOperator(ns, true, t)
+	e := InstallCrdsAndOperator(ns, true, defaults, t)
 	if t.Failed() {
 		return
 	}
