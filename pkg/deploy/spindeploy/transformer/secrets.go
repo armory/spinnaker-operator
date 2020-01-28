@@ -76,7 +76,7 @@ func (k *kubernetesSecretCollector) mapSecrets(svc string, secret *v1.Secret) er
 		// Is this a json string?
 		v := secret.Data[key]
 		s := strings.TrimSpace(string(v))
-		if s[0] == '{' && s[len(s)-1] == '}' {
+		if (s[0] == '{' && s[len(s)-1] == '}') || (s[0] == '[' && s[len(s)-1] == ']') {
 			continue
 		}
 		// Attempt to deserialize as YAML

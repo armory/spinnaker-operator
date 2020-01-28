@@ -173,6 +173,15 @@ func TestExcludedFileFormats(t *testing.T) {
 `,
 		},
 		{
+			name: "jsonArray",
+			file: `
+[{
+  "key1": "value1",
+  "key2": "value2"
+}]
+`,
+		},
+		{
 			name: "shellScript",
 			file: `
 #!/bin/bash -e
