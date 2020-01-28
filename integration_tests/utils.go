@@ -244,6 +244,11 @@ func RunCommandInOperatorAndAssert(c string, e *TestEnv, t *testing.T) bool {
 	return !t.Failed()
 }
 
+func RunCommandInContainerAndAssert(ns, svc, cmd string, e *TestEnv, t *testing.T) string {
+	pod := GetPodName(ns, svc, e, t)
+	return RunCommandAndAssert(fmt.Sprintf("%s -n %s exec %s -- bash -c \"%s\"", e.KubectlPrefix(), ns, pod, cmd), t)
+}
+
 func CopyFileToS3Bucket(f, dest string, e *TestEnv, t *testing.T) bool {
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s cp %s %s:/tmp/fileToCopy", e.KubectlPrefix(), e.Operator.Namespace, f, e.Operator.PodName), t)
 	if t.Failed() {
@@ -278,4 +283,8 @@ func SubstituteOverlayVars(overlayHome string, vars interface{}, t *testing.T) b
 		}
 	}
 	return !t.Failed()
+}
+
+func GetPodName(ns, svc string, e *TestEnv, t *testing.T) string {
+	return strings.TrimSpace(RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep %s | awk '{print $1}'", e.KubectlPrefix(), ns, svc), t))
 }

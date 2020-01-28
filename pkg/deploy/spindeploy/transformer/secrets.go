@@ -73,9 +73,15 @@ type kubernetesSecretCollector struct {
 // and file paths
 func (k *kubernetesSecretCollector) mapSecrets(svc string, secret *v1.Secret) error {
 	for key := range secret.Data {
+		// Is this a json string?
+		v := secret.Data[key]
+		s := strings.TrimSpace(string(v))
+		if (s[0] == '{' && s[len(s)-1] == '}') || (s[0] == '[' && s[len(s)-1] == ']') {
+			continue
+		}
 		// Attempt to deserialize as YAML
 		m := make(map[string]interface{})
-		if err := yaml.Unmarshal(secret.Data[key], &m); err != nil {
+		if err := yaml.Unmarshal(v, &m); err != nil {
 			continue
 		}
 		// If it's YAML replace secret references
