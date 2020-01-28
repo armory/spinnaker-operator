@@ -184,4 +184,14 @@ func TestProfilesOverlay(t *testing.T) {
 	e.VerifyAccountsExist("/credentials", t, Account{Name: "kube-sa", Type: "kubernetes"})
 	o := ExecuteGetRequest(fmt.Sprintf("%s/settings-local.js", e.SpinDeckUrl), t)
 	assert.True(t, strings.Contains(o, "window.spinnakerSettings.feature.kustomizeEnabled"))
+	j := strings.TrimSpace(RunCommandInContainerAndAssert(ns, "spin-rosco", fmt.Sprintf("cat /opt/rosco/config/packer/example-packer-config.json"), e, t))
+	assert.Equal(t,
+		`{
+  "key1": "value1",
+  "key2": "value2"
+}`, j)
+	sh := strings.TrimSpace(RunCommandInContainerAndAssert(ns, "spin-rosco", fmt.Sprintf("cat /opt/rosco/config/packer/my_custom_script.sh"), e, t))
+	assert.Equal(t,
+		`#!/bin/bash -e
+echo "hello world!"`, sh)
 }

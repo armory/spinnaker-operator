@@ -31,6 +31,15 @@ spec:
         settings-local.js: |
           window.spinnakerSettings.feature.kustomizeEnabled = true;
 
+    files:
+      profiles__rosco__packer__example-packer-config.json: |
+        {
+          "key1": "value1",
+          "key2": "value2"
+        }
+      profiles__rosco__packer__my_custom_script.sh: |
+        #!/bin/bash -e
+        echo "hello world!"
     service-settings:
       clouddriver:
         kubernetes:

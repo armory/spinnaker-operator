@@ -1,10 +1,12 @@
 package transformer
 
 import (
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"testing"
 )
 
@@ -153,5 +155,42 @@ spec:
 	err = k.setInDeployment(dep)
 	if assert.NotNil(t, err) {
 		assert.Equal(t, "unable to find container my-service2 in deployment, cannot mount secrets", err.Error())
+	}
+}
+
+func TestExcludedFileFormats(t *testing.T) {
+	cases := []struct {
+		name string
+		file string
+	}{
+		{
+			name: "json",
+			file: `
+{
+  "key1": "value1",
+  "key2": "value2"
+}
+`,
+		},
+		{
+			name: "shellScript",
+			file: `
+#!/bin/bash -e
+echo "hello world!"
+`,
+		},
+		{
+			name: "text",
+			file: "hello world!",
+		},
+	}
+	for _, c := range cases {
+		s := &v1.Secret{
+			Data: map[string][]byte{c.name: []byte(c.file)},
+		}
+		k := &kubernetesSecretCollector{}
+		err := k.mapSecrets(c.name, s)
+		assert.Nil(t, err)
+		assert.Equal(t, c.file, string(s.Data[c.name]), fmt.Sprintf("file type %s should not be changed", c.name))
 	}
 }
