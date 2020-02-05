@@ -3,7 +3,7 @@ package transformer
 import (
 	"context"
 	"fmt"
-	secrets2 "github.com/armory/go-yaml-tools/pkg/secrets"
+	secups "github.com/armory/go-yaml-tools/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
@@ -19,19 +19,41 @@ import (
 	"strings"
 )
 
+const (
+	awsProviderAccessKey    = "providers.aws.accessKeyId"
+	awsProviderSecretKey    = "providers.aws.secretAccessKey"
+	awsPersistenceAccessKey = "persistentStorage.s3.accessKeyId"
+	awsPersistenceSecretKey = "persistentStorage.s3.secretAccessKey"
+	awsArtifactsRootKey     = "artifacts.s3.accounts"
+	awsArtifactsAccessKey   = "awsAccessKeyId"
+	awsArtifactsSecretKey   = "awsSecretAccessKey"
+	awsCanary               = "canary"
+)
+
 // secretsTransformer maps Kubernetes secrets onto the deployment of the service that requires it
 // Either as a mounted file (encryptedFile) or an environment variable (tokens, passwords...)
 type secretsTransformer struct {
-	svc    v1alpha2.SpinnakerServiceInterface
-	log    logr.Logger
-	client client.Client
+	svc        v1alpha2.SpinnakerServiceInterface
+	log        logr.Logger
+	client     client.Client
+	k8sSecrets *k8sSecretHolder
 }
 
 type secretsTransformerGenerator struct{}
 
+// k8sSecretHolder keeps track of kubernetes secret references that appear in selected fields of the config.
+type k8sSecretHolder struct {
+	awsCredsByService map[string]*awsCredentials
+}
+
+type awsCredentials struct {
+	accessKeyId     string
+	secretAccessKey string
+}
+
 func (s *secretsTransformerGenerator) NewTransformer(svc v1alpha2.SpinnakerServiceInterface,
 	client client.Client, log logr.Logger) (Transformer, error) {
-	tr := secretsTransformer{svc: svc, log: log, client: client}
+	tr := secretsTransformer{svc: svc, log: log, client: client, k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
 	return &tr, nil
 }
 
@@ -40,20 +62,138 @@ func (s *secretsTransformerGenerator) GetName() string {
 }
 
 func (s *secretsTransformer) TransformConfig(ctx context.Context) error {
+	spinCfg := s.svc.GetSpinnakerConfig()
+	return s.replaceK8sSecretsFromAwsKeys(spinCfg, ctx)
+}
+
+// replaceK8sSecretsFromAwsKeys replaces any kubernetes secret references from aws credentials fields and saves them for later processing
+func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) error {
+	persistenceKeys, err := s.getAndReplace(awsPersistenceAccessKey, awsPersistenceSecretKey, spinCfg, ctx)
+	if err != nil {
+		return err
+	}
+	if persistenceKeys != nil {
+		s.k8sSecrets.awsCredsByService["front50"] = persistenceKeys
+	}
+	providerKeys, err := s.getAndReplace(awsProviderAccessKey, awsProviderSecretKey, spinCfg, ctx)
+	if err != nil {
+		return err
+	}
+	if providerKeys != nil {
+		s.k8sSecrets.awsCredsByService["clouddriver"] = providerKeys
+	}
+	artifactKeys, err := s.getAndReplaceArray(awsArtifactsRootKey, awsArtifactsAccessKey, awsArtifactsSecretKey, spinCfg, ctx)
+	if err != nil {
+		return err
+	}
+	if artifactKeys != nil {
+		s.k8sSecrets.awsCredsByService["clouddriver"] = artifactKeys
+	}
+	can, ok := spinCfg.Config[awsCanary]
+	if !ok {
+		return nil
+	}
+	newCan, err := s.sanitizeK8sSecret(can, ctx)
+	if err != nil {
+		return err
+	}
+	spinCfg.Config[awsCanary] = newCan
 	return nil
+}
+
+func (s *secretsTransformer) getAndReplace(accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
+	secretRaw, err := spinCfg.GetRawHalConfigPropString(secretKeyProp)
+	if err != nil {
+		// ignore error if key doesn't exist
+		return nil, nil
+	}
+	e, _, _ := secups.GetEngine(secretRaw)
+	if e != "k8s" {
+		return nil, nil
+	}
+	err = spinCfg.SetHalConfigProp(secretKeyProp, "OVERRIDDEN_BY_ENV_VARS")
+	if err != nil {
+		return nil, err
+	}
+	accessKey, err := spinCfg.GetHalConfigPropString(ctx, accessKeyProp)
+	if err != nil {
+		return nil, fmt.Errorf("aws secret key configured without access key for property %s", secretKeyProp)
+	}
+	return &awsCredentials{
+		accessKeyId:     accessKey,
+		secretAccessKey: secretRaw,
+	}, nil
+}
+
+// getAndReplaceArray retrieves a single aws access and secret key pair from an input array (last one wins)
+func (s *secretsTransformer) getAndReplaceArray(rootProp, accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
+	root, err := spinCfg.GetHalConfigObjectArray(ctx, rootProp)
+	if err != nil {
+		// ignore error if key doesn't exist
+		return nil, nil
+	}
+	var secretKey string
+	var accessKey string
+	ok := false
+	for _, i := range root {
+		secretKey, ok = i[secretKeyProp].(string)
+		if !ok {
+			continue
+		}
+		e, _, _ := secups.GetEngine(secretKey)
+		if e != "k8s" {
+			continue
+		}
+		i[secretKeyProp] = "OVERRIDDEN_BY_ENV_VARS"
+		accessKey, ok = i[accessKeyProp].(string)
+		if !ok {
+			return nil, fmt.Errorf("aws secret access key specified without access key under %s", root)
+		}
+	}
+	err = spinCfg.SetHalConfigProp(rootProp, root)
+	if err != nil {
+		return nil, err
+	}
+	return &awsCredentials{
+		accessKeyId:     accessKey,
+		secretAccessKey: secretKey,
+	}, nil
+}
+
+func (s *secretsTransformer) sanitizeK8sSecret(object interface{}, ctx context.Context) (interface{}, error) {
+	h := func(val string) (string, error) {
+		if !secups.IsEncryptedSecret(val) {
+			return val, nil
+		}
+		e, _, _ := secups.GetEngine(val)
+		if e != "k8s" {
+			return val, nil
+		}
+		s, f, err := secrets.Decode(ctx, val)
+		if err != nil {
+			return "", err
+		}
+		if f {
+			return "", fmt.Errorf("\"encryptedFile...\" specified for a non file property (%s), should be \"encrypted...\" instead", val)
+		}
+		return s, nil
+	}
+	return inspect.InspectStrings(object, h)
 }
 
 func (s *secretsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	for svc, cfg := range gen.Config {
 		kCollector := &kubernetesSecretCollector{svc: svc, namespace: s.svc.GetNamespace()}
-
 		for k := range cfg.Resources {
 			sec, ok := cfg.Resources[k].(*v1.Secret)
 			if ok {
 				kCollector.mapSecrets(svc, sec)
 			}
 		}
-
+		err := kCollector.mapAwsKeys(s.k8sSecrets)
+		if err != nil {
+			return err
+		}
 		if err := kCollector.setInDeployment(cfg.Deployment); err != nil {
 			return err
 		}
@@ -69,7 +209,7 @@ type kubernetesSecretCollector struct {
 	namespace    string
 }
 
-// transformSecrets goes through all secret data and replace references to passwords and files with env variables
+// mapSecrets goes through all secret data and replace references to passwords and files with env variables
 // and file paths
 func (k *kubernetesSecretCollector) mapSecrets(svc string, secret *v1.Secret) error {
 	for key := range secret.Data {
@@ -85,7 +225,7 @@ func (k *kubernetesSecretCollector) mapSecrets(svc string, secret *v1.Secret) er
 			continue
 		}
 		// If it's YAML replace secret references
-		ndata, err := k.sanitizeSecrets(svc, m)
+		ndata, err := k.sanitizeSecrets(m)
 		// This time, we harshly don't accept failure
 		if err != nil {
 			return err
@@ -101,9 +241,39 @@ func (k *kubernetesSecretCollector) mapSecrets(svc string, secret *v1.Secret) er
 	return nil
 }
 
-func (k *kubernetesSecretCollector) sanitizeSecrets(svc string, obj interface{}) (interface{}, error) {
+// mapAwsKeys adds env vars for AWS keys if needed
+func (k *kubernetesSecretCollector) mapAwsKeys(keys *k8sSecretHolder) error {
+	svcKeys, ok := keys.awsCredsByService[k.svc]
+	if !ok {
+		return nil
+	}
+	// if keys were already added, skip
+	for i := range k.envVars {
+		if k.envVars[i].Name == "AWS_ACCESS_KEY_ID" {
+			return nil
+		}
+	}
+	n, secretKey := secrets.ParseKubernetesSecretParams(svcKeys.secretAccessKey)
+	k.envVars = append(k.envVars, v1.EnvVar{
+		Name:  "AWS_ACCESS_KEY_ID",
+		Value: svcKeys.accessKeyId,
+	})
+	k.envVars = append(k.envVars, v1.EnvVar{
+		Name: "AWS_SECRET_ACCESS_KEY",
+		ValueFrom: &v1.EnvVarSource{
+			SecretKeyRef: &v1.SecretKeySelector{
+				LocalObjectReference: v1.LocalObjectReference{n},
+				Key:                  secretKey,
+			},
+		},
+	})
+
+	return nil
+}
+
+func (k *kubernetesSecretCollector) sanitizeSecrets(obj interface{}) (interface{}, error) {
 	h := func(val string) (string, error) {
-		e, f, p := secrets2.GetEngine(val)
+		e, f, p := secups.GetEngine(val)
 		// If not Kubernetes secret, we just pass to the service as is
 		if e != "k8s" {
 			return val, nil

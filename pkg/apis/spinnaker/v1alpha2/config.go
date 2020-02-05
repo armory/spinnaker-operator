@@ -12,11 +12,18 @@ func (s *SpinnakerConfig) GetServiceSettingsPropString(ctx context.Context, svc,
 	return inspect.GetObjectPropString(ctx, s.ServiceSettings, fmt.Sprintf("%s.%s", svc, prop))
 }
 
-// GetHalConfigPropString returns a property stored in halconfig
+// GetHalConfigPropString returns a property stored in halconfig, decrypting it if necessary
 // We use the dot notation including for arrays
 // e.g. providers.aws.accounts.0.name
 func (s *SpinnakerConfig) GetHalConfigPropString(ctx context.Context, prop string) (string, error) {
 	return inspect.GetObjectPropString(ctx, s.Config, prop)
+}
+
+// GetRawHalConfigPropString returns a property stored in halconfig
+// We use the dot notation including for arrays
+// e.g. providers.aws.accounts.0.name
+func (s *SpinnakerConfig) GetRawHalConfigPropString(prop string) (string, error) {
+	return inspect.GetRawObjectPropString(s.Config, prop)
 }
 
 // GetHalConfigObjectArray reads an untyped array

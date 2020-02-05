@@ -15,6 +15,19 @@ import (
 	"testing"
 )
 
+type DummyK8sSecretEngine struct {
+	Secret string
+	File   bool
+}
+
+func (s *DummyK8sSecretEngine) Decrypt() (string, error) {
+	return s.Secret, nil
+}
+
+func (s *DummyK8sSecretEngine) IsFile() bool {
+	return s.File
+}
+
 func ManifestToSpinService(manifestYaml string, t *testing.T) *v1alpha2.SpinnakerService {
 	svc := &v1alpha2.SpinnakerService{}
 	ReadYamlFile(manifestYaml, svc, t)
