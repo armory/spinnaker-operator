@@ -80,7 +80,9 @@ Please refer to [the Spinnaker's documentation](https://www.spinnaker.io/referen
 This method is only available with the Operator at this time. It is similar to storing secrets in cloud provider storage but with a different syntax:
 
 For secret values: `encrypted:k8s!n:<secret name>!k:<key under which the secret is stored>`
+
 For secret files: `encryptedFile:k8s!n:<secret name>!k:<key under which the file is stored>`
+
 
 Note that for security reasons, Spinnaker can only access secrets stored in its own namespace (which may be different
 from Operator's namespace).
