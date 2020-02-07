@@ -9,7 +9,7 @@ spec:
       persistentStorage:
         persistentStoreType: s3
         s3:
-          bucket: change-me # Change to a unique name. Spinnaker stores application and pipeline definitions here
+          bucket: <change-me> # Change to a unique name. Spinnaker stores application and pipeline definitions here
           rootFolder: front50
   # spec.expose - This section defines how Spinnaker should be publicly exposed
   expose:

@@ -1,6 +1,6 @@
 # Spinnaker Operator for Kubernetes
 
-We've announced the [Spinnaker Operator](https://blog.armory.io/spinnaker-operator/): a Kubernetes operator to deploy and manage Spinnaker with the tools you're used to. We're sharing it to let the community evaluate it and provide feedback. 
+The [Spinnaker Operator](https://blog.armory.io/spinnaker-operator/) is a Kubernetes operator to deploy and manage Spinnaker using familiar tools. We're sharing it to let the community evaluate it and provide feedback.
 Please let us know what would make your life easier when installing Spinnaker! You can use [GitHub issues](https://github.com/armory/spinnaker-operator/issues) for the time being.
 
 ## Benefits of Operator
@@ -29,7 +29,7 @@ Note: If you can't use the validation webhook, pass the `--disable-admission-con
 This is a high-level view of the commands you need to run for those who want to jump right in. More explanation can be found in the sections after this one.
 
 ```bash
-# Pick a release from https://github.com/armory/spinnaker-operator/releases (or clone the repo and use master branch for the latest development work)
+# Pick a release from https://github.com/armory/spinnaker-operator/releases (or clone the repo and use the master branch for the latest development work)
 $ mkdir -p spinnaker-operator && cd spinnaker-operator
 $ RELEASE=v0.3.0 bash -c 'curl -L https://github.com/armory/spinnaker-operator/releases/download/${RELEASE}/manifests.tgz | tar -xz'
  
@@ -116,7 +116,7 @@ If you use a namespace other than `spinnaker-operator`, replace `spinnaker-opera
 
 ## Spinnaker Installation
 
-Once you've installed CRDs and Operator, check out examples in `deploy/spinnaker/`. Below the 
+Once you've installed CRDs and Operator, check out examples in `deploy/spinnaker/`. Below, the 
 `spinnaker-namespace` parameter refers to the namespace where you want to install
 Spinnaker. It is likely different from the operator's namespace.
 
