@@ -9,7 +9,7 @@ Please let us know what would make your life easier when installing Spinnaker! Y
 - Expose Spinnaker to the outside world (via `LoadBalancer`). You can still disable that behavior if you prefer to manage ingresses and LBs yourself. 
 - Deploy any version of Spinnaker. Operator is not tied to a particular version of Spinnaker. 
 - Keep secrets separate from your config. Store your config in `git` and have an easy Gitops workflow.
-- Validate your configuration before applying it (with webhook validation).
+- Validate your configuration before applying it (by using kubernetes's webhook validation).
 - Store Spinnaker secrets in Kubernetes secrets.
 - Patch versions, accounts or any setting with `kustomize`. 
 - Monitor the health of Spinnaker through `kubectl`.
