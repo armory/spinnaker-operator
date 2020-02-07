@@ -11,7 +11,7 @@ spec:
       persistentStorage:
         persistentStoreType: s3
         s3:
-          bucket: spinnaker
+          bucket: spinnaker # Bucket name where Spinnaker stores applications and pipelines
           rootFolder: front50
 
     # spec.spinnakerConfig.profiles - This section contains the YAML of each service's profile

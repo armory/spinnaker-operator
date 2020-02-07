@@ -40,7 +40,7 @@ $ kubectl apply -f deploy/crds/
 $ kubectl create ns spinnaker-operator
 $ kubectl -n spinnaker-operator apply -f deploy/operator/cluster
 
-# Install Spinnaker in "spinnaker" namespace, connected to S3 bucket "spinnaker" (bucket must already exist and be accessible from Kubernetes EKS IAM role of the worker nodes)
+# Install Spinnaker in "spinnaker" namespace. Note that this configuration uses an S3 bucket that Spinnaker needs to be able to access (e.g. on EKS, you can grant access to the worker node on which Spinnaker runs).
 $ kubectl create ns spinnaker
 $ kubectl -n spinnaker apply -f deploy/spinnaker/basic
 
