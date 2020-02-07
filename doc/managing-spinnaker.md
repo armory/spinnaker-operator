@@ -76,10 +76,11 @@ Examples of cloud provider storage are S3 and S3-like storage and GCS. This meth
 
 Please refer to [the Spinnaker's documentation](https://www.spinnaker.io/reference/halyard/secrets/) for more details.
 
-## Secrets in Kubernetes secrets (under development)
+## Secrets in Kubernetes secrets
 This method is only available with the Operator at this time. It is similar to storing secrets in cloud provider storage but with a different syntax:
 
-`encrypted:k8s!n:<secret name>!k:<key under which the secret is stored>`
+For secret values: `encrypted:k8s!n:<secret name>!k:<key under which the secret is stored>`
+For secret files: `encryptedFile:k8s!n:<secret name>!k:<key under which the file is stored>`
 
 Note that for security reasons, Spinnaker can only access secrets stored in its own namespace (which may be different
 from Operator's namespace).
@@ -98,6 +99,6 @@ spec:
         kubernetes:
           accounts:
           - name: myaccount
-            kubeconfigFile: encrypted:k8s!n:spinnaker-secrets!k:myaccount-kubeconfig
+            kubeconfigFile: encryptedFile:k8s!n:spinnaker-secrets!k:myaccount-kubeconfig
             ... 
 ``` 

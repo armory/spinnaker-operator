@@ -7,11 +7,11 @@ spec:
   spinnakerConfig:
     # spec.spinnakerConfig.config - This section contains the contents of a deployment found in a halconfig .deploymentConfigurations[0]
     config:
-      version: 1.15.1   # the version of Spinnaker to be deployed
+      version: 1.17.1   # the version of Spinnaker to be deployed
       persistentStorage:
         persistentStoreType: s3
         s3:
-          bucket: mybucket
+          bucket: spinnaker
           rootFolder: front50
 
     # spec.spinnakerConfig.profiles - This section contains the YAML of each service's profile
