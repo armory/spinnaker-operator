@@ -17,7 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"time"
 )
+
+const ValidationsTimeout = 25 * time.Second
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
 
@@ -73,21 +76,39 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	defer secrets.Cleanup(opts.Ctx)
 
 	log.Info("Starting validation")
-	validationResult := validate.ValidateAll(svc, opts)
-	if validationResult.HasErrors() {
-		errorMsg := validationResult.GetErrorMessage()
+	vch := make(chan validate.ValidationResult, 1)
+	go func(spinSvc v1alpha2.SpinnakerServiceInterface, options validate.Options) {
+		vch <- validate.ValidateAll(svc, opts)
+	}(svc, opts)
+
+	select {
+	case validationResult := <-vch:
+		if validationResult.HasErrors() {
+			errorMsg := validationResult.GetErrorMessage()
+			err := fmt.Errorf(errorMsg)
+			log.Error(err, errorMsg, "metadata.name", svc)
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		// Update the status with any admission status change, only if there's already an existing SpinnakerService
+		if req.AdmissionRequest.Operation == v1beta1.Update {
+			if err := v.client.Status().Update(ctx, svc); err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+		}
+		log.Info("SpinnakerService is valid", "metadata.name", svc)
+		return admission.ValidationResponse(true, "")
+	case <-time.After(ValidationsTimeout):
+		validations := halyard.GetValidationKeys()
+		errorMsg := fmt.Sprintf("\nValidations are taking too much time. You can disable individual validations in: \n"+
+			"- \"spec.validations.providers.[name].enabled\". Providers: %v\n"+
+			"- \"spec.validations.persistentStorage.[name].enabled\". Persistence storages: %v\n"+
+			"- \"spec.validations.canary.[name].enabled\". Canaries: %v\n"+
+			"- \"spec.validations.pubsub.[name].enabled\". PubSubs: %v\n",
+			validations["providers"], validations["persistentStorage"], validations["canary"], validations["pubsub"])
 		err := fmt.Errorf(errorMsg)
 		log.Error(err, errorMsg, "metadata.name", svc)
-		return admission.Errored(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	// Update the status with any admission status change, only if there's already an existing SpinnakerService
-	if req.AdmissionRequest.Operation == v1beta1.Update {
-		if err := v.client.Status().Update(ctx, svc); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-	}
-	log.Info("SpinnakerService is valid", "metadata.name", svc)
-	return admission.ValidationResponse(true, "")
 }
 
 // InjectClient injects the client.

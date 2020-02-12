@@ -14,136 +14,154 @@ var validationsToSkip = []string{
 	"DeploymentConfigurationValidator",
 }
 
-type validationEnableRule struct {
-	validations []string
-	isEnabled   func(*v1alpha2.SpinnakerValidation) bool
+type ValidationEnableRule struct {
+	Key         string
+	Validations []string
+	IsEnabled   func(*v1alpha2.SpinnakerValidation) bool
 }
 
-var providerValidationEnables = []validationEnableRule{
+var ProviderValidationEnables = []ValidationEnableRule{
 	{ // Appengine
-		validations: []string{"AppengineAccountValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "appengine",
+		Validations: []string{"AppengineAccountValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["appengine"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // AWS
-		validations: []string{"AwsAccountValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "aws",
+		Validations: []string{"AwsAccountValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["aws"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Azure
-		validations: []string{"AzureAccountValidator", "AzureBakeryDefaultsValidator", "AzureBaseImageValidator", "AzureProviderValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "azure",
+		Validations: []string{"AzureAccountValidator", "AzureBakeryDefaultsValidator", "AzureBaseImageValidator", "AzureProviderValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["azure"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Cloudfoundry
-		validations: []string{"CloudFoundryAccountValidator", "CloudFoundryProviderValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "cloudfoundry",
+		Validations: []string{"CloudFoundryAccountValidator", "CloudFoundryProviderValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["cloudfoundry"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // DCOS
-		validations: []string{"DCOSAccountValidator", "DCOSClusterValidator", "DCOSProviderValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "dcos",
+		Validations: []string{"DCOSAccountValidator", "DCOSClusterValidator", "DCOSProviderValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["dcos"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Docker
-		validations: []string{"DockerRegistryAccountValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "docker",
+		Validations: []string{"DockerRegistryAccountValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["docker"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // ECS
-		validations: []string{"EcsAccountValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "ecs",
+		Validations: []string{"EcsAccountValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["ecs"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Google
-		validations: []string{"GoogleAccountValidator", "GoogleBakeryDefaultsValidator", "GoogleBaseImageValidator", "GoogleProviderValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "google",
+		Validations: []string{"GoogleAccountValidator", "GoogleBakeryDefaultsValidator", "GoogleBaseImageValidator", "GoogleProviderValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["google"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Oracle
-		validations: []string{"OracleAccountValidator", "OracleBakeryDefaultsValidator", "OracleBaseImageValidator", "OracleProviderValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "oracle",
+		Validations: []string{"OracleAccountValidator", "OracleBakeryDefaultsValidator", "OracleBaseImageValidator", "OracleProviderValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Providers["oracle"]
 			return !ok || m.Enabled
 		},
 	},
 }
 
-var persistentStorageValidationEnables = []validationEnableRule{
+var persistentStorageValidationEnables = []ValidationEnableRule{
 	{ // azs
-		validations: []string{"AzsValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "azs",
+		Validations: []string{"AzsValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.PersistentStorage["azs"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // GCS
-		validations: []string{"GCSValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "gcs",
+		Validations: []string{"GCSValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.PersistentStorage["gcs"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Oracle
-		validations: []string{"OracleValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "oracle",
+		Validations: []string{"OracleValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.PersistentStorage["oracle"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // s3
-		validations: []string{"S3Validator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "s3",
+		Validations: []string{"S3Validator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.PersistentStorage["s3"]
 			return !ok || m.Enabled
 		},
 	},
 }
 
-var pubsubValidationRules = []validationEnableRule{
+var pubsubValidationRules = []ValidationEnableRule{
 	{ // Google
-		validations: []string{"GooglePublisherValidator", "GooglePubsubValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "google",
+		Validations: []string{"GooglePublisherValidator", "GooglePubsubValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Pubsub["google"]
 			return !ok || m.Enabled
 		},
 	},
 }
 
-var canaryValidationRules = []validationEnableRule{
+var canaryValidationRules = []ValidationEnableRule{
 	{ // AWS
-		validations: []string{"AwsCanaryValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "aws",
+		Validations: []string{"AwsCanaryValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Canary["aws"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Google
-		validations: []string{"GoogleCanaryAccountValidator", "GoogleCanaryValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "google",
+		Validations: []string{"GoogleCanaryAccountValidator", "GoogleCanaryValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Canary["google"]
 			return !ok || m.Enabled
 		},
 	},
 	{ // Prometheus
-		validations: []string{"PrometheusCanaryAccountValidator", "PrometheusCanaryValidator"},
-		isEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
+		Key:         "prometheus",
+		Validations: []string{"PrometheusCanaryAccountValidator", "PrometheusCanaryValidator"},
+		IsEnabled: func(setting *v1alpha2.SpinnakerValidation) bool {
 			m, ok := setting.Canary["prometheus"]
 			return !ok || m.Enabled
 		},
@@ -152,25 +170,42 @@ var canaryValidationRules = []validationEnableRule{
 
 func getValidationsToSkip(settings v1alpha2.SpinnakerValidation) []string {
 	skip := validationsToSkip
-	for _, r := range providerValidationEnables {
-		if !r.isEnabled(&settings) {
-			skip = append(skip, r.validations...)
+	for _, r := range ProviderValidationEnables {
+		if !r.IsEnabled(&settings) {
+			skip = append(skip, r.Validations...)
 		}
 	}
 	for _, r := range canaryValidationRules {
-		if !r.isEnabled(&settings) {
-			skip = append(skip, r.validations...)
+		if !r.IsEnabled(&settings) {
+			skip = append(skip, r.Validations...)
 		}
 	}
 	for _, r := range pubsubValidationRules {
-		if !r.isEnabled(&settings) {
-			skip = append(skip, r.validations...)
+		if !r.IsEnabled(&settings) {
+			skip = append(skip, r.Validations...)
 		}
 	}
 	for _, r := range persistentStorageValidationEnables {
-		if !r.isEnabled(&settings) {
-			skip = append(skip, r.validations...)
+		if !r.IsEnabled(&settings) {
+			skip = append(skip, r.Validations...)
 		}
 	}
 	return skip
+}
+
+func GetValidationKeys() map[string][]string {
+	result := map[string][]string{}
+	for _, r := range ProviderValidationEnables {
+		result["providers"] = append(result["providers"], r.Key)
+	}
+	for _, r := range canaryValidationRules {
+		result["canary"] = append(result["canary"], r.Key)
+	}
+	for _, r := range pubsubValidationRules {
+		result["pubsub"] = append(result["pubsub"], r.Key)
+	}
+	for _, r := range persistentStorageValidationEnables {
+		result["persistentStorage"] = append(result["persistentStorage"], r.Key)
+	}
+	return result
 }
