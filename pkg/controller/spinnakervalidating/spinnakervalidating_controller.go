@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-const ValidationsTimeout = 25 * time.Second
+const ValidationsTimeWarning = 10 * time.Second
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
 
@@ -75,40 +75,44 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 	defer secrets.Cleanup(opts.Ctx)
 
+	f := v.warnInValidationDelay(ValidationsTimeWarning, svc)
 	log.Info("Starting validation")
-	vch := make(chan validate.ValidationResult, 1)
-	go func(spinSvc v1alpha2.SpinnakerServiceInterface, options validate.Options) {
-		vch <- validate.ValidateAll(svc, opts)
-	}(svc, opts)
-
-	select {
-	case validationResult := <-vch:
-		if validationResult.HasErrors() {
-			errorMsg := validationResult.GetErrorMessage()
-			err := fmt.Errorf(errorMsg)
-			log.Error(err, errorMsg, "metadata.name", svc)
-			return admission.Errored(http.StatusBadRequest, err)
-		}
-		// Update the status with any admission status change, only if there's already an existing SpinnakerService
-		if req.AdmissionRequest.Operation == v1beta1.Update {
-			if err := v.client.Status().Update(ctx, svc); err != nil {
-				return admission.Errored(http.StatusInternalServerError, err)
-			}
-		}
-		log.Info("SpinnakerService is valid", "metadata.name", svc)
-		return admission.ValidationResponse(true, "")
-	case <-time.After(ValidationsTimeout):
-		validations := halyard.GetValidationKeys()
-		errorMsg := fmt.Sprintf("\nValidations are taking too much time. You can disable individual validations in: \n"+
-			"- \"spec.validations.providers.[name].enabled\". Providers: %v\n"+
-			"- \"spec.validations.persistentStorage.[name].enabled\". Persistence storages: %v\n"+
-			"- \"spec.validations.canary.[name].enabled\". Canaries: %v\n"+
-			"- \"spec.validations.pubsub.[name].enabled\". PubSubs: %v\n",
-			validations["providers"], validations["persistentStorage"], validations["canary"], validations["pubsub"])
+	validationResult := validate.ValidateAll(svc, opts)
+	f <- true
+	if validationResult.HasErrors() {
+		errorMsg := validationResult.GetErrorMessage()
 		err := fmt.Errorf(errorMsg)
 		log.Error(err, errorMsg, "metadata.name", svc)
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
+	// Update the status with any admission status change, only if there's already an existing SpinnakerService
+	if req.AdmissionRequest.Operation == v1beta1.Update {
+		if err := v.client.Status().Update(ctx, svc); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+	}
+	log.Info("SpinnakerService is valid", "metadata.name", svc)
+	return admission.ValidationResponse(true, "")
+}
+
+func (v *spinnakerValidatingController) warnInValidationDelay(d time.Duration, svc v1alpha2.SpinnakerServiceInterface) chan bool {
+	ch := make(chan bool, 1)
+	go func() {
+		select {
+		case <-ch:
+			return
+		case <-time.After(d):
+			validations := halyard.GetValidationKeys()
+			msg := fmt.Sprintf("WARNING: Validations are taking too much time. Consider disabling individual validations in: "+
+				"'spec.validations.providers.[name].enabled'. Providers: %v, "+
+				"'spec.validations.persistentStorage.[name].enabled'. Persistence storages: %v, "+
+				"'spec.validations.canary.[name].enabled'. Canaries: %v, "+
+				"'spec.validations.pubsub.[name].enabled'. PubSubs: %v",
+				validations["providers"], validations["persistentStorage"], validations["canary"], validations["pubsub"])
+			log.Info(msg, "metadata.name", svc)
+		}
+	}()
+	return ch
 }
 
 // InjectClient injects the client.
