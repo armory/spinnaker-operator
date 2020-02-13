@@ -78,7 +78,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	f := v.warnInValidationDelay(ValidationsTimeWarning, svc)
 	log.Info("Starting validation")
 	validationResult := validate.ValidateAll(svc, opts)
-	f <- true
+	f <- struct{}{}
 	if validationResult.HasErrors() {
 		errorMsg := validationResult.GetErrorMessage()
 		err := fmt.Errorf(errorMsg)
@@ -95,8 +95,8 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	return admission.ValidationResponse(true, "")
 }
 
-func (v *spinnakerValidatingController) warnInValidationDelay(d time.Duration, svc v1alpha2.SpinnakerServiceInterface) chan bool {
-	ch := make(chan bool, 1)
+func (v *spinnakerValidatingController) warnInValidationDelay(d time.Duration, svc v1alpha2.SpinnakerServiceInterface) chan struct{} {
+	ch := make(chan struct{}, 1)
 	go func() {
 		select {
 		case <-ch:
