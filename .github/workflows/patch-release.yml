@@ -1,0 +1,49 @@
+on:
+  repository_dispatch:
+    types: [patch-release]
+
+jobs:
+  patch-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.client_payload.branch }}
+      - name: Validate branch and fetch tags
+        run: |
+          [[ ${{ github.event.client_payload.branch }} != release-* ]] && echo "Branch ${{ github.event.client_payload.branch }} is not a release branch" && exit 1
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: Validate tag
+        run: |
+          bprefix=$(echo ${{ github.event.client_payload.branch }} | sed 's/release-//' | cut -d '.' -f 1,2)
+          vprefix=$(echo ${{ github.event.client_payload.version }} | cut -d '.' -f 1,2)
+          [[ $bprefix != $vprefix ]] && echo "Major-minor version mismatch between supplied branch name and version" && exit 1
+          git tag v${{ github.event.client_payload.version }}
+      - name: Update manifests version
+        run: |
+          cat deploy/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:${{ github.event.client_payload.version }}|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > deploy/operator/basic/deployment.yaml.new
+          mv deploy/operator/basic/deployment.yaml.new deploy/operator/basic/deployment.yaml
+          cat deploy/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:${{ github.event.client_payload.version }}|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > deploy/operator/cluster/deployment.yaml.new
+          mv deploy/operator/cluster/deployment.yaml.new deploy/operator/cluster/deployment.yaml
+      - name: Archive manifests
+        run: tar -czvf manifests.tgz deploy/
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.event.client_payload.version }}
+          release_name: v${{ github.event.client_payload.version }}
+          draft: false
+          prerelease: true
+      - name: Upload manifests
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./manifests.tgz
+          asset_name: manifests.tgz
+          asset_content_type: application/zip
