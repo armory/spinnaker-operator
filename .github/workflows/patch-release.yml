@@ -6,19 +6,21 @@ jobs:
   patch-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Determine release branch
+        id: branch_step
+        run: |
+          branch=release-$(echo ${{ github.event.client_payload.version }} | cut -d '.' -f 1,2).x
+          echo "Derived release branch: $branch (this branch must already exist for patch releases)"
+          echo "##[set-output name=branch;]$branch"
       - name: Checkout branch
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.client_payload.branch }}
-      - name: Validate branch and fetch tags
+          ref: ${{ steps.branch_step.outputs.branch }}
+      - name: Fetch tags
         run: |
-          [[ ${{ github.event.client_payload.branch }} != release-* ]] && echo "Branch ${{ github.event.client_payload.branch }} is not a release branch" && exit 1
           git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: Validate tag
         run: |
-          bprefix=$(echo ${{ github.event.client_payload.branch }} | sed 's/release-//' | cut -d '.' -f 1,2)
-          vprefix=$(echo ${{ github.event.client_payload.version }} | cut -d '.' -f 1,2)
-          [[ $bprefix != $vprefix ]] && echo "Major-minor version mismatch between supplied branch name and version" && exit 1
           git tag v${{ github.event.client_payload.version }}
       - name: Update manifests version
         run: |
