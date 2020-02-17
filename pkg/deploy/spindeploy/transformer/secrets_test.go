@@ -282,3 +282,69 @@ config:
 `
 	assert.Equal(t, expected, string(actual))
 }
+
+func TestReplaceK8sSecretsInAwsSecretKeysInProfiles(t *testing.T) {
+	cfg := `
+profiles:
+  clouddriver:
+    artifacts:
+      s3:
+        accounts:
+        - awsAccessKeyId: acc1AccessKey
+          awsSecretAccessKey: encrypted:k8s!n:testsecret!k:acc1Secret
+          name: acc-1
+        - awsAccessKeyId: acc2AccessKey
+          awsSecretAccessKey: encrypted:k8s!n:testsecret!k:acc2Secret
+          name: acc-2
+    providers:
+      aws:
+        accessKeyId: providerAccessKey
+        enabled: true
+        secretAccessKey: encrypted:k8s!n:testsecret!k:providerSecret
+  front50:
+    persistentStorage:
+      persistentStoreType: s3
+      s3:
+        accessKeyId: persistenceAccessKey
+        secretAccessKey: encrypted:k8s!n:testsecret!k:persistenceSecret
+`
+	spinCfg := &v1alpha2.SpinnakerConfig{}
+	assert.Nil(t, yaml.Unmarshal([]byte(cfg), spinCfg))
+	tr := &secretsTransformer{k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
+	secups.Engines["k8s"] = func(ctx context.Context, isFile bool, params string) (secups.Decrypter, error) {
+		_, k := secrets.ParseKubernetesSecretParams(params)
+		return &test.DummyK8sSecretEngine{Secret: k}, nil
+	}
+	ctx := secrets.NewContext(context.TODO(), nil, "")
+	assert.Nil(t, tr.replaceK8sSecretsFromAwsKeys(spinCfg, ctx))
+	assert.Equal(t, "persistenceAccessKey", tr.k8sSecrets.awsCredsByService["front50"].accessKeyId)
+	assert.Equal(t, "encrypted:k8s!n:testsecret!k:persistenceSecret", tr.k8sSecrets.awsCredsByService["front50"].secretAccessKey)
+	assert.Equal(t, "acc2AccessKey", tr.k8sSecrets.awsCredsByService["clouddriver"].accessKeyId)
+	assert.Equal(t, "encrypted:k8s!n:testsecret!k:acc2Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].secretAccessKey)
+	actual, err := yaml.Marshal(spinCfg)
+	assert.Nil(t, err)
+	expected := `profiles:
+  clouddriver:
+    artifacts:
+      s3:
+        accounts:
+        - awsAccessKeyId: acc1AccessKey
+          awsSecretAccessKey: OVERRIDDEN_BY_ENV_VARS
+          name: acc-1
+        - awsAccessKeyId: acc2AccessKey
+          awsSecretAccessKey: OVERRIDDEN_BY_ENV_VARS
+          name: acc-2
+    providers:
+      aws:
+        accessKeyId: providerAccessKey
+        enabled: true
+        secretAccessKey: OVERRIDDEN_BY_ENV_VARS
+  front50:
+    persistentStorage:
+      persistentStoreType: s3
+      s3:
+        accessKeyId: persistenceAccessKey
+        secretAccessKey: OVERRIDDEN_BY_ENV_VARS
+`
+	assert.Equal(t, expected, string(actual))
+}

@@ -31,9 +31,27 @@ func (s *SpinnakerConfig) GetHalConfigObjectArray(ctx context.Context, prop stri
 	return inspect.GetObjectArray(s.Config, prop)
 }
 
+// GetServiceConfigObjectArray reads an untyped array from profile config
+func (s *SpinnakerConfig) GetServiceConfigObjectArray(svc, prop string) ([]map[string]interface{}, error) {
+	p, ok := s.Profiles[svc]
+	if ok {
+		return inspect.GetObjectArray(p, prop)
+	}
+	return nil, nil
+}
+
 // SetHalConfigProp sets a property in the config
 func (s *SpinnakerConfig) SetHalConfigProp(prop string, value interface{}) error {
 	return inspect.SetObjectProp(s.Config, prop, value)
+}
+
+// SetServiceConfigProp sets a property in the profile config
+func (s *SpinnakerConfig) SetServiceConfigProp(svc, prop string, value interface{}) error {
+	p, ok := s.Profiles[svc]
+	if ok {
+		return inspect.SetObjectProp(p, prop, value)
+	}
+	return nil
 }
 
 // GetHalConfigPropBool returns a boolean property in halconfig
@@ -46,6 +64,15 @@ func (s *SpinnakerConfig) GetServiceConfigPropString(ctx context.Context, svc, p
 	p, ok := s.Profiles[svc]
 	if ok {
 		return inspect.GetObjectPropString(ctx, p, prop)
+	}
+	return "", nil
+}
+
+// GetRawServiceConfigPropString returns the value of the prop in a service profile file, without decrypting any secret reference.
+func (s *SpinnakerConfig) GetRawServiceConfigPropString(svc, prop string) (string, error) {
+	p, ok := s.Profiles[svc]
+	if ok {
+		return inspect.GetRawObjectPropString(p, prop)
 	}
 	return "", nil
 }

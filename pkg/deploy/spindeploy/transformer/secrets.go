@@ -68,21 +68,21 @@ func (s *secretsTransformer) TransformConfig(ctx context.Context) error {
 
 // replaceK8sSecretsFromAwsKeys replaces any kubernetes secret references from aws credentials fields and saves them for later processing
 func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) error {
-	persistenceKeys, err := s.getAndReplace(awsPersistenceAccessKey, awsPersistenceSecretKey, spinCfg, ctx)
+	persistenceKeys, err := s.getAndReplace("front50", awsPersistenceAccessKey, awsPersistenceSecretKey, spinCfg, ctx)
 	if err != nil {
 		return err
 	}
 	if persistenceKeys != nil {
 		s.k8sSecrets.awsCredsByService["front50"] = persistenceKeys
 	}
-	providerKeys, err := s.getAndReplace(awsProviderAccessKey, awsProviderSecretKey, spinCfg, ctx)
+	providerKeys, err := s.getAndReplace("clouddriver", awsProviderAccessKey, awsProviderSecretKey, spinCfg, ctx)
 	if err != nil {
 		return err
 	}
 	if providerKeys != nil {
 		s.k8sSecrets.awsCredsByService["clouddriver"] = providerKeys
 	}
-	artifactKeys, err := s.getAndReplaceArray(awsArtifactsRootKey, awsArtifactsAccessKey, awsArtifactsSecretKey, spinCfg, ctx)
+	artifactKeys, err := s.getAndReplaceArray("clouddriver", awsArtifactsRootKey, awsArtifactsAccessKey, awsArtifactsSecretKey, spinCfg, ctx)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,15 @@ func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *v1alpha2.Spin
 	return nil
 }
 
-func (s *secretsTransformer) getAndReplace(accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
+func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
+	creds, err := s.getAndReplaceFromProfiles(svc, accessKeyProp, secretKeyProp, spinCfg, ctx)
+	if creds != nil || err != nil {
+		return creds, err
+	}
+	return s.getAndReplaceFromHal(accessKeyProp, secretKeyProp, spinCfg, ctx)
+}
+
+func (s *secretsTransformer) getAndReplaceFromHal(accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
 	secretRaw, err := spinCfg.GetRawHalConfigPropString(secretKeyProp)
 	if err != nil {
 		// ignore error if key doesn't exist
@@ -125,9 +133,38 @@ func (s *secretsTransformer) getAndReplace(accessKeyProp, secretKeyProp string, 
 	}, nil
 }
 
+func (s *secretsTransformer) getAndReplaceFromProfiles(svc, accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
+	secretRaw, err := spinCfg.GetRawServiceConfigPropString(svc, secretKeyProp)
+	if err != nil {
+		// ignore error if key doesn't exist
+		return nil, nil
+	}
+	e, _, _ := secups.GetEngine(secretRaw)
+	if e != "k8s" {
+		return nil, nil
+	}
+	err = spinCfg.SetServiceConfigProp(svc, secretKeyProp, "OVERRIDDEN_BY_ENV_VARS")
+	if err != nil {
+		return nil, err
+	}
+	accessKey, err := spinCfg.GetRawServiceConfigPropString(svc, accessKeyProp)
+	if err != nil {
+		return nil, fmt.Errorf("aws secret key configured without access key for property %s", secretKeyProp)
+	}
+	return &awsCredentials{
+		accessKeyId:     accessKey,
+		secretAccessKey: secretRaw,
+	}, nil
+}
+
 // getAndReplaceArray retrieves a single aws access and secret key pair from an input array (last one wins)
-func (s *secretsTransformer) getAndReplaceArray(rootProp, accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
-	root, err := spinCfg.GetHalConfigObjectArray(ctx, rootProp)
+func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) (*awsCredentials, error) {
+	isHalConfig := false
+	root, err := spinCfg.GetServiceConfigObjectArray(svc, rootProp)
+	if root == nil || err != nil {
+		root, err = spinCfg.GetHalConfigObjectArray(ctx, rootProp)
+		isHalConfig = true
+	}
 	if err != nil {
 		// ignore error if key doesn't exist
 		return nil, nil
@@ -150,7 +187,11 @@ func (s *secretsTransformer) getAndReplaceArray(rootProp, accessKeyProp, secretK
 			return nil, fmt.Errorf("aws secret access key specified without access key under %s", root)
 		}
 	}
-	err = spinCfg.SetHalConfigProp(rootProp, root)
+	if isHalConfig {
+		err = spinCfg.SetHalConfigProp(rootProp, root)
+	} else {
+		err = spinCfg.SetServiceConfigProp(svc, rootProp, root)
+	}
 	if err != nil {
 		return nil, err
 	}
