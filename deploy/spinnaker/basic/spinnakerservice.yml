@@ -9,12 +9,10 @@ spec:
       persistentStorage:
         persistentStoreType: s3
         s3:
-          bucket: mybucket # Change me
+          bucket: <change-me> # Change to a unique name. Spinnaker stores application and pipeline definitions here
           rootFolder: front50
   # spec.expose - This section defines how Spinnaker should be publicly exposed
   expose:
     type: service  # Kubernetes LoadBalancer type (service/ingress), note: only "service" is supported for now
     service:
       type: LoadBalancer
-      annotations:
-        service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http

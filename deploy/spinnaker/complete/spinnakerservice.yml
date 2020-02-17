@@ -11,8 +11,8 @@ spec:
       persistentStorage:
         persistentStoreType: s3
         s3:
-          bucket: mybucket
-          rootFolder: front50 # Change me
+          bucket: <change-me> # Change to a unique name. Spinnaker stores application and pipeline definitions here
+          rootFolder: front50
 
     # spec.spinnakerConfig.profiles - This section contains the YAML of each service's profile
     profiles:
