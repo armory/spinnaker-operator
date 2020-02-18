@@ -21,14 +21,22 @@ func GetObjectPropBool(obj interface{}, prop string, defaultVal bool) (bool, err
 }
 
 func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (string, error) {
+	s, err := GetRawObjectPropString(obj, prop)
+	if err != nil {
+		return "", err
+	}
+	decoded, _, err := secrets.Decode(ctx, s)
+	return decoded, err
+}
+
+func GetRawObjectPropString(obj interface{}, prop string) (string, error) {
 	c, err := getObjectProp(obj, prop)
 	if err != nil {
 		return "", err
 	}
 	switch c.Kind() {
 	case reflect.String:
-		s, _, err := secrets.Decode(ctx, c.String())
-		return s, err
+		return c.String(), err
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(c.Int(), 10), nil
 	case reflect.Float64:
