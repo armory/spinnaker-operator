@@ -7,6 +7,13 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 )
 
+type ConfigSource string
+
+const (
+	HalConfigSource     = ConfigSource("hal")
+	ProfileConfigSource = ConfigSource("profile")
+)
+
 // GetServiceSettingsPropString returns a service settings prop for a given service
 func (s *SpinnakerConfig) GetServiceSettingsPropString(ctx context.Context, svc, prop string) (string, error) {
 	return inspect.GetObjectPropString(ctx, s.ServiceSettings, fmt.Sprintf("%s.%s", svc, prop))
@@ -38,6 +45,23 @@ func (s *SpinnakerConfig) GetServiceConfigObjectArray(svc, prop string) ([]map[s
 		return inspect.GetObjectArray(p, prop)
 	}
 	return nil, nil
+}
+
+// GetConfigObjectArray reads an untyped array from profile config, if not found, reads itt from hal config
+func (s *SpinnakerConfig) GetConfigObjectArray(svc, prop string) ([]map[string]interface{}, ConfigSource, error) {
+	p, ok := s.Profiles[svc]
+	if ok {
+		a, err := inspect.GetObjectArray(p, prop)
+		if err == nil && a != nil {
+			return a, ProfileConfigSource, err
+		} else {
+			a, err = inspect.GetObjectArray(s.Config, prop)
+			return a, HalConfigSource, err
+		}
+	} else {
+		a, err := inspect.GetObjectArray(s.Config, prop)
+		return a, HalConfigSource, err
+	}
 }
 
 // SetHalConfigProp sets a property in the config
@@ -75,6 +99,23 @@ func (s *SpinnakerConfig) GetRawServiceConfigPropString(svc, prop string) (strin
 		return inspect.GetRawObjectPropString(p, prop)
 	}
 	return "", nil
+}
+
+// GetRawConfigPropString returns the raw value of the prop in a service profile file, if not found, returns the value of the prop in the main hal config file
+func (s *SpinnakerConfig) GetRawConfigPropString(svc, prop string) (string, ConfigSource, error) {
+	p, ok := s.Profiles[svc]
+	if ok {
+		v, err := inspect.GetRawObjectPropString(p, prop)
+		if err == nil {
+			return v, ProfileConfigSource, err
+		} else {
+			v, err = s.GetRawHalConfigPropString(prop)
+			return v, HalConfigSource, err
+		}
+	} else {
+		v, err := s.GetRawHalConfigPropString(prop)
+		return v, HalConfigSource, err
+	}
 }
 
 func (e *ExposeConfig) GetAggregatedAnnotations(serviceName string) map[string]string {
