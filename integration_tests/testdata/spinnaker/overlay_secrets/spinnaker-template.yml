@@ -43,5 +43,12 @@ spec:
         github:
           enabled: true
           accounts:
-            - name: test-github-account
+            - name: test-github-account-s3
               token: encrypted:s3!b:{{.S3Bucket}}!f:secrets/secrets.yml!r:{{.S3BucketRegion}}!k:github.account.token
+            - name: test-github-account-k8s
+              token: encrypted:k8s!n:testsecrets!k:github-token
+        s3:
+          enabled: true
+          accounts:
+            - name: test-s3-account-1
+              region: us-west-2
