@@ -203,7 +203,7 @@ echo "hello world!"
 			Data: map[string][]byte{c.name: []byte(c.file)},
 		}
 		k := &kubernetesSecretCollector{}
-		err := k.mapSecrets(c.name, s)
+		err := k.mapSecrets(s)
 		assert.Nil(t, err)
 		assert.Equal(t, c.file, string(s.Data[c.name]), fmt.Sprintf("file type %s should not be changed", c.name))
 	}
@@ -247,10 +247,16 @@ config:
 	}
 	ctx := secrets.NewContext(context.TODO(), nil, "")
 	assert.Nil(t, tr.replaceK8sSecretsFromAwsKeys(spinCfg, ctx))
-	assert.Equal(t, "persistenceAccessKey", tr.k8sSecrets.awsCredsByService["front50"].accessKeyId)
-	assert.Equal(t, "encrypted:k8s!n:testsecret!k:persistenceSecret", tr.k8sSecrets.awsCredsByService["front50"].secretAccessKey)
-	assert.Equal(t, "acc2AccessKey", tr.k8sSecrets.awsCredsByService["clouddriver"].accessKeyId)
-	assert.Equal(t, "encrypted:k8s!n:testsecret!k:acc2Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].secretAccessKey)
+	assert.Equal(t, "persistenceAccessKey", tr.k8sSecrets.awsCredsByService["front50"].genAccessKey.Value)
+	assert.Equal(t, "persistenceSecret", tr.k8sSecrets.awsCredsByService["front50"].genSecretKey.ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "testsecret", tr.k8sSecrets.awsCredsByService["front50"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "persistenceSecret", tr.k8sSecrets.awsCredsByService["front50"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "acc2AccessKey", tr.k8sSecrets.awsCredsByService["clouddriver"].genAccessKey.Value)
+	assert.Equal(t, "acc2Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].genSecretKey.ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "testsecret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "acc1Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "testsecret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[1].ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "acc2Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[1].ValueFrom.SecretKeyRef.Key)
 	actual, err := yaml.Marshal(spinCfg)
 	assert.Nil(t, err)
 	expected := `config:
@@ -258,10 +264,10 @@ config:
     s3:
       accounts:
       - awsAccessKeyId: acc1AccessKey
-        awsSecretAccessKey: OVERRIDDEN_BY_ENV_VARS
+        awsSecretAccessKey: ${CLOUDDRIVER_TESTSECRET_ACC1SECRET}
         name: acc-1
       - awsAccessKeyId: acc2AccessKey
-        awsSecretAccessKey: OVERRIDDEN_BY_ENV_VARS
+        awsSecretAccessKey: ${CLOUDDRIVER_TESTSECRET_ACC2SECRET}
         name: acc-2
   canary:
     serviceIntegrations:
@@ -273,12 +279,12 @@ config:
     persistentStoreType: s3
     s3:
       accessKeyId: persistenceAccessKey
-      secretAccessKey: OVERRIDDEN_BY_ENV_VARS
+      secretAccessKey: ${FRONT50_TESTSECRET_PERSISTENCESECRET}
   providers:
     aws:
       accessKeyId: providerAccessKey
       enabled: true
-      secretAccessKey: OVERRIDDEN_BY_ENV_VARS
+      secretAccessKey: ${CLOUDDRIVER_TESTSECRET_PROVIDERSECRET}
 `
 	assert.Equal(t, expected, string(actual))
 }
@@ -317,10 +323,16 @@ profiles:
 	}
 	ctx := secrets.NewContext(context.TODO(), nil, "")
 	assert.Nil(t, tr.replaceK8sSecretsFromAwsKeys(spinCfg, ctx))
-	assert.Equal(t, "persistenceAccessKey", tr.k8sSecrets.awsCredsByService["front50"].accessKeyId)
-	assert.Equal(t, "encrypted:k8s!n:testsecret!k:persistenceSecret", tr.k8sSecrets.awsCredsByService["front50"].secretAccessKey)
-	assert.Equal(t, "acc2AccessKey", tr.k8sSecrets.awsCredsByService["clouddriver"].accessKeyId)
-	assert.Equal(t, "encrypted:k8s!n:testsecret!k:acc2Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].secretAccessKey)
+	assert.Equal(t, "persistenceAccessKey", tr.k8sSecrets.awsCredsByService["front50"].genAccessKey.Value)
+	assert.Equal(t, "persistenceSecret", tr.k8sSecrets.awsCredsByService["front50"].genSecretKey.ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "testsecret", tr.k8sSecrets.awsCredsByService["front50"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "persistenceSecret", tr.k8sSecrets.awsCredsByService["front50"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "acc2AccessKey", tr.k8sSecrets.awsCredsByService["clouddriver"].genAccessKey.Value)
+	assert.Equal(t, "acc2Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].genSecretKey.ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "testsecret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "acc1Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[0].ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "testsecret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[1].ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "acc2Secret", tr.k8sSecrets.awsCredsByService["clouddriver"].svcSecretKeys[1].ValueFrom.SecretKeyRef.Key)
 	actual, err := yaml.Marshal(spinCfg)
 	assert.Nil(t, err)
 	expected := `profiles:
@@ -329,22 +341,22 @@ profiles:
       s3:
         accounts:
         - awsAccessKeyId: acc1AccessKey
-          awsSecretAccessKey: OVERRIDDEN_BY_ENV_VARS
+          awsSecretAccessKey: ${CLOUDDRIVER_TESTSECRET_ACC1SECRET}
           name: acc-1
         - awsAccessKeyId: acc2AccessKey
-          awsSecretAccessKey: OVERRIDDEN_BY_ENV_VARS
+          awsSecretAccessKey: ${CLOUDDRIVER_TESTSECRET_ACC2SECRET}
           name: acc-2
     providers:
       aws:
         accessKeyId: providerAccessKey
         enabled: true
-        secretAccessKey: OVERRIDDEN_BY_ENV_VARS
+        secretAccessKey: ${CLOUDDRIVER_TESTSECRET_PROVIDERSECRET}
   front50:
     persistentStorage:
       persistentStoreType: s3
       s3:
         accessKeyId: persistenceAccessKey
-        secretAccessKey: OVERRIDDEN_BY_ENV_VARS
+        secretAccessKey: ${FRONT50_TESTSECRET_PERSISTENCESECRET}
 `
 	assert.Equal(t, expected, string(actual))
 }
