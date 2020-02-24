@@ -122,6 +122,14 @@ k8s:
 openapi:
 	@go run tools/generate.go openapi
 
+.PHONY: addapi
+addapi:
+	@go run tools/add.go ${NEW_API_VERSION}
+	rm deploy/crds/*${NEW_API_VERSION}*
+	@echo "***** MANUAL TODO, YOU'RE NOT FINISHED YET ******"
+	@echo "- Copy the contents of the previous version '_types.go' file into the new version"
+	@echo "- Change storage version to new api by deleting '+kubebuilder:storageversion' comment above SpinnakerService struct from the previous version."
+
 .PHONY: reverse-proxy
 reverse-proxy:
 	kubectl --kubeconfig=${KUBECONFIG} create cm ssh-key --from-file=authorized_keys=${HOME}/.ssh/id_rsa.pub --dry-run -o yaml | kubectl apply -f -
