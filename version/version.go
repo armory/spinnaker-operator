@@ -2,16 +2,15 @@ package version
 
 import (
 	"io/ioutil"
+	"strings"
 )
 
-var (
-	Version = getVersion()
-)
+var Version string
 
-func getVersion() string {
-	version, err := ioutil.ReadFile("./operator-version")
+func init() {
+	b, err := ioutil.ReadFile("./operator-version")
 	if err != nil {
-		return "Unknown"
+		Version = "Unknown"
 	}
-	return string(version)
+	Version = strings.TrimSpace(string(b))
 }

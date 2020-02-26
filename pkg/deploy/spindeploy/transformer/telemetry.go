@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	EchoConfigFile     = "echo.yml"
-	KubernetesOperator = "kubernetes_operator"
-	TelemetryKey       = "telemetry"
+	echoConfigFile     = "echo.yml"
+	kubernetesOperator = "kubernetes_operator"
+	telemetryKey       = "telemetry"
 )
 
 type telemetryTransformer struct {
@@ -31,13 +31,7 @@ type DeploymentMethod struct {
 }
 
 type Telemetry struct {
-	Enabled                 bool             `json:"enabled"`
-	Endpoint                string           `json:"endpoint"`
-	InstanceId              string           `json:"instanceId"`
-	SpinnakerVersion        string           `json:"spinnakerVersion"`
-	DeploymentMethod        DeploymentMethod `json:"deploymentMethod"`
-	ConnectionTimeoutMillis int              `json:"connectionTimeoutMillis"`
-	ReadTimeoutMillis       int              `json:"readTimeoutMillis"`
+	DeploymentMethod DeploymentMethod `json:"deploymentMethod"`
 }
 
 func (t *telemetryTransformerGenerator) NewTransformer(svc v1alpha2.SpinnakerServiceInterface,
@@ -55,7 +49,10 @@ func (t *telemetryTransformer) TransformConfig(ctx context.Context) error {
 }
 
 func (t *telemetryTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
-	for _, cfg := range gen.Config {
+	for svc, cfg := range gen.Config {
+		if svc != "echo" {
+			continue
+		}
 		for k := range cfg.Resources {
 			sec, ok := cfg.Resources[k].(*v1.Secret)
 			if ok {
@@ -69,20 +66,20 @@ func (t *telemetryTransformer) TransformManifests(ctx context.Context, scheme *r
 	return nil
 }
 
-// mapTelemetrySecret goes through EchoConfigFile and set deployment method information
+// mapTelemetrySecret goes through echoConfigFile and set deployment method information
 func mapTelemetrySecret(secret *v1.Secret) error {
 	for key := range secret.Data {
-		if EchoConfigFile == key {
+		if echoConfigFile == key {
 
 			// Attempt to deserialize as YAML
 			m := make(map[string]interface{})
 			if err := yaml.Unmarshal(secret.Data[key], &m); err != nil {
-				continue
+				return err
 			}
 
 			data, err := setTelemetryDeploymentMethod(m)
 			if err != nil {
-				continue
+				return err
 			}
 
 			secret.Data[key] = data
@@ -95,11 +92,11 @@ func setTelemetryDeploymentMethod(row map[string]interface{}) ([]byte, error) {
 
 	// read telemetry property and map content into Telemetry struct
 	var telemetry Telemetry
-	if err := inspect.Convert(row[TelemetryKey], &telemetry); err != nil {
+	if err := inspect.Convert(row[telemetryKey], &telemetry); err != nil {
 		return nil, err
 	}
 
-	telemetry.DeploymentMethod.DeploymentType = KubernetesOperator
+	telemetry.DeploymentMethod.DeploymentType = kubernetesOperator
 	telemetry.DeploymentMethod.DeploymentVersion = version.Version
 
 	mapTelemetry := make(map[string]interface{})
@@ -108,7 +105,7 @@ func setTelemetryDeploymentMethod(row map[string]interface{}) ([]byte, error) {
 	}
 
 	// override telemetry property
-	row[TelemetryKey] = mapTelemetry
+	row[telemetryKey] = mapTelemetry
 
 	return yaml.Marshal(row)
 }
