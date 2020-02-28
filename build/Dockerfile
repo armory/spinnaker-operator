@@ -20,7 +20,8 @@ ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_UID=1001 \
     USER_NAME=spinnaker-operator \
     AWS_BINARY_RELEASE_DATE=2019-08-22 \
-    KUBECTL_RELEASE=1.14.6
+    KUBECTL_RELEASE=1.14.6 \
+    OPERATOR_HOME=/opt/spinnaker-operator
 
 EXPOSE 8383
 RUN apk update                        \
@@ -43,6 +44,7 @@ ENV PATH=$PATH:/opt/google-cloud-sdk/bin/
 
 COPY --from=builder /opt/spinnaker-operator/build/$OPERATOR_PATH ${OPERATOR}
 COPY --from=builder /opt/spinnaker-operator/build/build/entrypoint /usr/local/bin/entrypoint
+COPY --from=builder /opt/spinnaker-operator/build/build/MANIFEST ${OPERATOR_HOME}/MANIFEST
 
 USER ${USER_NAME}
 ENTRYPOINT ["/usr/local/bin/entrypoint"]

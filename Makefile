@@ -15,6 +15,7 @@
 # Inspired by MySQL Operator Makefile: https://github.com/oracle/mysql-operator/blob/master/Makefile
 
 VERSION ?= $(shell git describe --always --dirty)
+SPINNAKER_OPERATOR_VERSION ?= $(shell head -1 operator-version)
 REGISTRY_ORG ?= "armory"
 ARCH    ?= amd64
 OS      ?= linux
@@ -64,12 +65,16 @@ build: build-dirs Makefile
 	@go build -mod=vendor -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
 
 .PHONY: build-docker
-build-docker:
+build-docker: set-version Makefile
 	@docker build \
 	--build-arg OPERATOR_VERSION=${VERSION} \
 	--build-arg OPERATOR_PATH=bin/$(OS)_$(ARCH)/spinnaker-operator \
 	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) \
 	-f build/Dockerfile .
+
+.PHONY: set-version
+set-version:
+	@sh build/generate-manifest.sh $(SPINNAKER_OPERATOR_VERSION) $(VERSION) $(RELEASE_VERSION)
 
 # Note: Only used for development, i.e. in CI the images are pushed using Wercker.
 .PHONY: push

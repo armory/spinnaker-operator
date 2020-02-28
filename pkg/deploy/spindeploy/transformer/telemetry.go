@@ -5,7 +5,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
-	"github.com/armory/spinnaker-operator/version"
+	"github.com/armory/spinnaker-operator/pkg/version"
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
@@ -97,7 +97,7 @@ func setTelemetryDeploymentMethod(row map[string]interface{}) ([]byte, error) {
 	}
 
 	telemetry.DeploymentMethod.DeploymentType = kubernetesOperator
-	telemetry.DeploymentMethod.DeploymentVersion = version.Version
+	telemetry.DeploymentMethod.DeploymentVersion = version.SpinnakerOperatorVersion
 
 	mapTelemetry := make(map[string]interface{})
 	if err := inspect.Convert(telemetry, &mapTelemetry); err != nil {
