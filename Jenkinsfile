@@ -25,7 +25,7 @@ node {
             script: 'make version',
             returnStdout: true
         ).trim()
-        def props = [ version: version, buildArgs: "" ]
+        def props = [ version: version, buildArgs: "--" ]
 
         def releaseVersion = getReleaseVersion(env.BRANCH_NAME)
 
