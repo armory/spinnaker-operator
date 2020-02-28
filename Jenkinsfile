@@ -25,13 +25,14 @@ node {
             script: 'make version',
             returnStdout: true
         ).trim()
-        def props = [ version: version, buildArgs: "--" ]
+        def props = [ version: version ]
 
         def releaseVersion = getReleaseVersion(env.BRANCH_NAME)
+        def buildArgs = ""
 
         if(releaseVersion){
            props.releaseVersion = releaseVersion
-           props.buildArgs="RELEASE_VERSION=\"${releaseVersion}\""
+           buildArgs = "RELEASE_VERSION=\"${releaseVersion}\""
         }
 
         stage("Testing ${version}") {
