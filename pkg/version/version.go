@@ -1,11 +1,29 @@
 package version
 
-var SpinnakerOperatorVersion string
+var (
+	// local variable for version
+	version string
 
-func init() {
-	v := manifest["Spinnaker-Operator-Version"]
-	if v == "" {
-		SpinnakerOperatorVersion = "Unknown"
+	// key string to identify version property in manifest
+	Key = "Version"
+)
+
+func GetOperatorVersion() string {
+
+	// initialize manifest lazily
+	if len(manifest) == 0 {
+		_ = read()
 	}
-	SpinnakerOperatorVersion = v
+
+	// populate version and save it locally
+	if version == "" {
+		v, ok := manifest[Key]
+		if ok {
+			version = v
+		} else {
+			version = "Unknown"
+		}
+	}
+
+	return version
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/armory/go-yaml-tools/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/ghodss/yaml"
 	v12 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -138,4 +139,17 @@ func GetSpinnakerServices(list v1alpha2.SpinnakerServiceListInterface, ns string
 		return nil, err
 	}
 	return list.GetItems(), nil
+}
+
+func GetSecretConfigFromConfig(config generated.ServiceConfig, n string) *v1.Secret {
+	secretName := GetMountedSecretNameInDeployment(config.Deployment, n, "/opt/spinnaker/config")
+	if secretName != "" {
+		for i := range config.Resources {
+			o := config.Resources[i]
+			if sc, ok := o.(*v1.Secret); ok && sc.GetName() == secretName {
+				return sc
+			}
+		}
+	}
+	return nil
 }

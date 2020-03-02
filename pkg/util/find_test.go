@@ -1,9 +1,12 @@
 package util
 
 import (
+	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 )
 
@@ -45,9 +48,65 @@ spec:
           secretName: val3
 status: {}`
 
-	d := &v1.Deployment{}
+	d := &appsv1.Deployment{}
 	if assert.Nil(t, yaml.Unmarshal([]byte(s), d)) {
 		v := GetMountedSecretNameInDeployment(d, "clouddriver", "/opt/spinnaker/config")
 		assert.Equal(t, "val3", v)
 	}
+}
+
+func TestGetSecretConfigFromConfig(t *testing.T) {
+
+	// given
+	secretContent := `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: spin-echo-files-287979322
+  type: Opaque
+data:
+  echo.yml: dGVsZW1ldHJ5OgogIGVuYWJsZWQ6IHRydWUKICBkZXBsb3ltZW50TWV0aG9kOgogICAgdHlwZTogaGFseWFyZAogICAgdmVyc2lvbjogMS4zMi4wLTQz
+`
+	data := make(map[string][]byte)
+
+	secret := &v1.Secret{Data: data}
+	_ = yaml.Unmarshal([]byte(secretContent), secret)
+
+	deploymentContent := `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+name: spin-echo
+spec:
+  template:
+    spec:
+      containers:
+      - name: echo
+        image: gcr.io/spinnaker-marketplace/echo:4.5.2-20190525034011
+        volumeMounts:
+        - name: spin-echo-files-287979322
+          mountPath: /opt/spinnaker/config 
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: local
+      volumes: 
+      - name: spin-echo-files-287979322
+        secret:
+          secretName: spin-echo-files-287979322
+`
+	deployment := &appsv1.Deployment{}
+	_ = yaml.Unmarshal([]byte(deploymentContent), deployment)
+
+	config := &generated.ServiceConfig{
+		Deployment: deployment,
+		Resources:  []runtime.Object{secret},
+	}
+
+	// when
+	s := GetSecretConfigFromConfig(*config, "echo")
+
+	// then
+	assert.NotNil(t, s)
+	assert.Equal(t, "spin-echo-files-287979322", s.ObjectMeta.Name)
+	assert.Contains(t, s.Data, "echo.yml")
 }

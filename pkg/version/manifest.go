@@ -13,14 +13,14 @@ const (
 
 var manifest = make(map[string]string)
 
-func init() {
+func read() error {
 	// read MANIFEST file, that contains Operator Version Information
 	// absolute path: $(OPERATOR_HOME)/MANIFEST
 	path := os.Getenv(operatorHomePath)
 	body, err := ioutil.ReadFile(path + "/" + manifestFile)
 
 	if err != nil {
-		return
+		return err
 	}
 
 	raws := strings.Split(string(body), "\n")
@@ -33,4 +33,5 @@ func init() {
 			}
 		}
 	}
+	return nil
 }

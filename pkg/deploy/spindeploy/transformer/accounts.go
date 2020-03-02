@@ -76,24 +76,13 @@ func updateServiceSettings(ctx context.Context, crdAccounts []account.Account, g
 		if !ok {
 			continue
 		}
-		secretName := util.GetMountedSecretNameInDeployment(config.Deployment, k, "/opt/spinnaker/config")
-		sec := getSecretFromConfig(config, secretName)
+		sec := util.GetSecretConfigFromConfig(config, k)
 		if sec == nil {
 			continue
 		}
 
 		if err = util.UpdateSecret(sec, k, settings, accounts.SpringProfile); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-func getSecretFromConfig(s generated.ServiceConfig, n string) *v1.Secret {
-	for i := range s.Resources {
-		o := s.Resources[i]
-		if sc, ok := o.(*v1.Secret); ok && sc.GetName() == n {
-			return sc
 		}
 	}
 	return nil

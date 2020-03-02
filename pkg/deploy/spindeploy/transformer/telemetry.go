@@ -2,9 +2,11 @@ package transformer
 
 import (
 	"context"
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/armory/spinnaker-operator/pkg/version"
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
@@ -25,15 +27,6 @@ type telemetryTransformer struct {
 
 type telemetryTransformerGenerator struct{}
 
-type DeploymentMethod struct {
-	DeploymentType    string `json:"type"`
-	DeploymentVersion string `json:"version"`
-}
-
-type Telemetry struct {
-	DeploymentMethod DeploymentMethod `json:"deploymentMethod"`
-}
-
 func (t *telemetryTransformerGenerator) NewTransformer(svc v1alpha2.SpinnakerServiceInterface,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	tr := telemetryTransformer{log: log}
@@ -49,19 +42,19 @@ func (t *telemetryTransformer) TransformConfig(ctx context.Context) error {
 }
 
 func (t *telemetryTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
-	for svc, cfg := range gen.Config {
-		if svc != "echo" {
-			continue
-		}
-		for k := range cfg.Resources {
-			sec, ok := cfg.Resources[k].(*v1.Secret)
-			if ok {
-				err := mapTelemetrySecret(sec)
-				if err != nil {
-					return err
-				}
-			}
-		}
+	n := "echo"
+	config, ok := gen.Config[n]
+	if !ok {
+		return nil
+	}
+	sec := util.GetSecretConfigFromConfig(config, n)
+	if sec == nil {
+		return nil
+	}
+	err := mapTelemetrySecret(sec)
+	if err != nil {
+		t.log.Info(fmt.Sprintf("Error setting telemetry.DeploymentMethod: %s, ignoring", err))
+		return nil
 	}
 	return nil
 }
@@ -91,21 +84,23 @@ func mapTelemetrySecret(secret *v1.Secret) error {
 func setTelemetryDeploymentMethod(row map[string]interface{}) ([]byte, error) {
 
 	// read telemetry property and map content into Telemetry struct
-	var telemetry Telemetry
-	if err := inspect.Convert(row[telemetryKey], &telemetry); err != nil {
+	telemetryRowContent := make(map[string]interface{})
+	if err := inspect.Convert(row[telemetryKey], &telemetryOriginalContent); err != nil {
 		return nil, err
 	}
 
-	telemetry.DeploymentMethod.DeploymentType = kubernetesOperator
-	telemetry.DeploymentMethod.DeploymentVersion = version.SpinnakerOperatorVersion
-
-	mapTelemetry := make(map[string]interface{})
-	if err := inspect.Convert(telemetry, &mapTelemetry); err != nil {
-		return nil, err
+	if len(telemetryRowContent) == 0 {
+		telemetryRowContent = make(map[string]interface{})
 	}
+
+	deploymentmethodContent := make(map[string]interface{})
+	deploymentmethodContent["type"] = kubernetesOperator
+	deploymentmethodContent["version"] = version.GetOperatorVersion()
+
+	telemetryRowContent["deploymentMethod"] = deploymentmethodContent
 
 	// override telemetry property
-	row[telemetryKey] = mapTelemetry
+	row[telemetryKey] = telemetryRowContent
 
 	return yaml.Marshal(row)
 }
