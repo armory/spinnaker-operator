@@ -83,7 +83,7 @@ func mapTelemetrySecret(secret *v1.Secret) error {
 
 func setTelemetryDeploymentMethod(row map[string]interface{}) ([]byte, error) {
 
-	// read telemetry property and map content into Telemetry struct
+	// read telemetry property and map content
 	telemetryRowContent := make(map[string]interface{})
 	if err := inspect.Convert(row[telemetryKey], &telemetryRowContent); err != nil {
 		return nil, err
