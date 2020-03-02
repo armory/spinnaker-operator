@@ -27,22 +27,28 @@ node {
         ).trim()
         def props = [ version: version ]
 
+        def releaseVersion = getReleaseVersion(env.BRANCH_NAME)
+        def buildArgs = ""
+
+        if(releaseVersion){
+           props.releaseVersion = releaseVersion
+           buildArgs = "RELEASE_VERSION=\"${releaseVersion}\""
+        }
+
         stage("Testing ${version}") {
             sh 'make test-docker'
         }
         stage("Build image ${version}") {
-            sh 'make build-docker'
+            sh "make build-docker ${buildArgs}"
         }
         if (env.BRANCH_NAME == "master") {
             stage("Push image") {
                 sh 'make push publish'
             }
         } else {
-            def releaseVersion = getReleaseVersion(env.BRANCH_NAME)
             if (releaseVersion) {
-                props.releaseVersion = releaseVersion
                 stage("Publish Version ${releaseVersion}") {
-                    sh "make push publishRelease RELEASE_VERSION=\"${releaseVersion}\""
+                    sh "make push publishRelease ${buildArgs}"
                 }
             }
         }
