@@ -32,7 +32,7 @@ data:
 	// then
 	assert.Empty(t, err)
 
-	assertTelemetry(*t, secret.Data[telemetryKey])
+	assertTelemetry(t, secret.Data[telemetryKey])
 }
 
 func TestSetDeploymentMethodWithExistingValues(t *testing.T) {
@@ -52,7 +52,7 @@ func TestSetDeploymentMethodWithExistingValues(t *testing.T) {
 	b, _ := setTelemetryDeploymentMethod(row)
 
 	// then
-	assertTelemetry(*t, b)
+	assertTelemetry(t, b)
 }
 
 func TestSetDeploymentMethodWithNoValues(t *testing.T) {
@@ -64,20 +64,20 @@ func TestSetDeploymentMethodWithNoValues(t *testing.T) {
 	b, _ := setTelemetryDeploymentMethod(row)
 
 	// then
-	assertTelemetry(*t, b)
+	assertTelemetry(t, b)
 }
 
-func assertTelemetry(t testing.T, telemetryByteContent []byte) {
+func assertTelemetry(t *testing.T, telemetryByteContent []byte) {
 	// Parse as map
 	m := make(map[string]interface{})
-	if assert.Nil(&t, yaml.Unmarshal(telemetryByteContent, &m)) {
+	if !assert.Nil(t, yaml.Unmarshal(telemetryByteContent, &m)) {
 		v, err := inspect.GetObjectPropString(context.TODO(), m, "telemetry.deploymentMethod.type")
-		if assert.Nil(&t, err) {
-			assert.Equal(&t, "kubernetes_operator", v)
+		if assert.Nil(t, err) {
+			assert.Equal(t, "kubernetes_operator", v)
 		}
 		v, err = inspect.GetObjectPropString(context.TODO(), m, "telemetry.deploymentMethod.version")
-		if assert.Nil(&t, err) {
-			assert.Equal(&t, "Unknown", v)
+		if assert.Nil(t, err) {
+			assert.Equal(t, "Unknown", v)
 		}
 	}
 }
