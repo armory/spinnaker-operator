@@ -85,7 +85,7 @@ func setTelemetryDeploymentMethod(row map[string]interface{}) ([]byte, error) {
 
 	// read telemetry property and map content into Telemetry struct
 	telemetryRowContent := make(map[string]interface{})
-	if err := inspect.Convert(row[telemetryKey], &telemetryOriginalContent); err != nil {
+	if err := inspect.Convert(row[telemetryKey], &telemetryRowContent); err != nil {
 		return nil, err
 	}
 
