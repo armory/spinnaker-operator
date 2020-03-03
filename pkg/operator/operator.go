@@ -10,6 +10,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakervalidating"
 	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
+	"github.com/armory/spinnaker-operator/pkg/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -41,6 +42,7 @@ var (
 var log = logf.Log.WithName("cmd")
 
 func printVersion() {
+	log.Info(fmt.Sprintf("Spinnaker Operator Version: %v", version.GetOperatorVersion()))
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))

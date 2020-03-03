@@ -146,7 +146,10 @@ func TestSecretsAndDuplicateOverlay(t *testing.T) {
 	e.VerifyAccountsExist("/credentials", t,
 		Account{Name: "kube-s3-secret", Type: "kubernetes"},
 		Account{Name: "kube-k8s-secret", Type: "kubernetes"})
-	e.VerifyAccountsExist("/artifacts/credentials", t, Account{Name: "test-github-account", Types: []string{"github/file"}})
+	e.VerifyAccountsExist("/artifacts/credentials", t,
+		Account{Name: "test-github-account-s3", Types: []string{"github/file"}},
+		Account{Name: "test-github-account-k8s", Types: []string{"github/file"}},
+		Account{Name: "test-s3-account-1", Types: []string{"s3/object"}})
 	if t.Failed() {
 		return
 	}

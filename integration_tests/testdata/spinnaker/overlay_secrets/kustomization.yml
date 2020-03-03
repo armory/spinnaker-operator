@@ -8,6 +8,8 @@ secretGenerator:
   - name: testsecrets
     files:
       - kubecfg
+    literals:
+      - github-token=supersecrettoken
 
 generatorOptions:
   disableNameSuffixHash: true
