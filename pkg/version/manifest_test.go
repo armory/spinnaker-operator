@@ -1,6 +1,7 @@
 package version
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -24,7 +25,7 @@ func TestReadManifest(t *testing.T) {
 	// then
 	assert.NotEmpty(t, manifest)
 	assert.Equal(t, manifest["Version"], "0.3.0-2378828-dirty")
-	assert.Empty(t, err)
+	assert.Nil(t, err)
 }
 
 func TestTryToReadManifestWithoutPath(t *testing.T) {
@@ -37,5 +38,31 @@ func TestTryToReadManifestWithoutPath(t *testing.T) {
 
 	// then
 	assert.Empty(t, manifest)
-	assert.NotEmpty(t, err)
+	assert.NotNil(t, err)
+}
+
+func TestGetManifestValue(t *testing.T) {
+	// given
+	setup()
+
+	// when
+	val, err := GetManifestValue("Built-By")
+
+	//then
+	assert.NotNil(t, val)
+	assert.Equal(t, "Jenkins", val)
+	assert.Nil(t, err)
+}
+
+func TestGetManifestValueWithNotExistingKey(t *testing.T) {
+	// given
+	setup()
+	key := "Not-Existing-Key"
+	// when
+	val, err := GetManifestValue(key)
+
+	//then
+	assert.Equal(t, "", val)
+	assert.NotNil(t, err)
+	assert.EqualError(t, err, fmt.Sprintf("key %v not found in manifest", key))
 }

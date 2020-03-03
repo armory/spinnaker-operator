@@ -10,15 +10,10 @@ var (
 
 func GetOperatorVersion() string {
 
-	// initialize manifest lazily
-	if len(manifest) == 0 {
-		_ = read()
-	}
-
 	// populate version and save it locally
 	if version == "" {
-		v, ok := manifest[Key]
-		if ok {
+		v, err := GetManifestValue(Key)
+		if err == nil {
 			version = v
 		} else {
 			version = "Unknown"

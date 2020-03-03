@@ -1,6 +1,7 @@
 package version
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -34,4 +35,21 @@ func read() error {
 		}
 	}
 	return nil
+}
+
+func GetManifestValue(key string) (string, error) {
+
+	// initialize manifest lazily
+	if len(manifest) == 0 {
+		err := read()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	val, ok := manifest[key]
+	if ok {
+		return val, nil
+	}
+	return "", fmt.Errorf("key %v not found in manifest", key)
 }
