@@ -58,6 +58,7 @@ func TestGetManifestValueWithNotExistingKey(t *testing.T) {
 	// given
 	setup()
 	key := "Not-Existing-Key"
+
 	// when
 	val, err := GetManifestValue(key)
 
@@ -65,4 +66,18 @@ func TestGetManifestValueWithNotExistingKey(t *testing.T) {
 	assert.Equal(t, "", val)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, fmt.Sprintf("key %v not found in manifest", key))
+}
+
+func TestGetManifestValueWithNotPath(t *testing.T) {
+	// given
+	setup()
+	_ = os.Setenv(operatorHomePath, "")
+
+	// when
+	val, err := GetManifestValue("Some-key")
+
+	//then
+	assert.Equal(t, "", val)
+	assert.NotNil(t, err)
+	assert.EqualError(t, err, "open /MANIFEST: no such file or directory")
 }
