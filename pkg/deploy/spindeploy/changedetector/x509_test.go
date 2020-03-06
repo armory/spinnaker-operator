@@ -2,7 +2,7 @@ package changedetector
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ func TestIsSpinnakerUpToDate_x509TargetPortDifferent(t *testing.T) {
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t,
 		test.BuildSvc("spin-gate-x509", "LoadBalancer", 9999, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 8085
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(8085)
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -47,8 +47,10 @@ func TestIsSpinnakerUpToDate_x509PublicPortOverrideDifferent(t *testing.T) {
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t,
 		test.BuildSvc("spin-gate-x509", "LoadBalancer", 8085, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 8085
-	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 80}
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(8085)
+	o := th.TypesFactory.NewExposeConfigServiceOverrides()
+	o.SetPublicPort(80)
+	spinSvc.GetSpec().GetExpose().GetService().AddOverride("gate-x509", o)
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -62,7 +64,7 @@ func TestIsSpinnakerUpToDate_x509PortConfigRemoved(t *testing.T) {
 	x509Svc.Spec.Ports[0].Port = 1111
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t, x509Svc)
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 0
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(0)
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -76,8 +78,10 @@ func TestIsSpinnakerUpToDate_UpToDate(t *testing.T) {
 	x509Svc.Spec.Ports[0].TargetPort = intstr.IntOrString{Type: intstr.Int, IntVal: 8085}
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t, x509Svc)
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 7777
-	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 80}
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(7777)
+	o := th.TypesFactory.NewExposeConfigServiceOverrides()
+	o.SetPublicPort(80)
+	spinSvc.GetSpec().GetExpose().GetService().AddOverride("gate-x509", o)
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -89,7 +93,7 @@ func TestIsSpinnakerUpToDate_RemoveService(t *testing.T) {
 	ch := th.setupChangeDetector(&x509ChangeDetectorGenerator{}, t,
 		test.BuildSvc("spin-gate-x509", "LoadBalancer", 8085, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.SpinnakerConfig.Profiles = map[string]v1alpha2.FreeForm{}
+	spinSvc.GetSpec().GetSpinnakerConfig().SetProfiles(map[string]interfaces.FreeForm{})
 
 	upTpDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 

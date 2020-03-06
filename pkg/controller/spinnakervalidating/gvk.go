@@ -1,20 +1,20 @@
 package spinnakervalidating
 
 import (
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func isSpinnakerRequest(req admission.Request) bool {
-	gv := SpinnakerServiceBuilder.GetGroupVersion()
+	gv := TypesFactory.GetGroupVersion()
 	return "SpinnakerService" == req.AdmissionRequest.Kind.Kind &&
 		gv.Group == req.AdmissionRequest.Kind.Group &&
 		gv.Version == req.AdmissionRequest.Kind.Version
 }
 
-func (v *spinnakerValidatingController) getSpinnakerService(req admission.Request) (v1alpha2.SpinnakerServiceInterface, error) {
+func (v *spinnakerValidatingController) getSpinnakerService(req admission.Request) (interfaces.SpinnakerService, error) {
 	if isSpinnakerRequest(req) {
-		svc := SpinnakerServiceBuilder.New()
+		svc := TypesFactory.NewService()
 		if err := v.decoder.Decode(req, svc); err != nil {
 			return nil, err
 		}

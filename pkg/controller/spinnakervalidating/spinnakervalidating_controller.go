@@ -3,7 +3,7 @@ package spinnakervalidating
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
@@ -28,8 +28,8 @@ type spinnakerValidatingController struct {
 	restConfig *rest.Config
 }
 
-// NewSpinnakerService instantiates the type we're going to validate
-var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
+// TypesFactory instantiates the type we're going to validate
+var TypesFactory interfaces.TypesFactory
 
 // Implement all intended interfaces.
 var _ admission.Handler = &spinnakerValidatingController{}
@@ -40,7 +40,7 @@ var log = logf.Log.WithName("spinvalidate")
 
 // Add adds the validating admission controller
 func Add(m manager.Manager) error {
-	spinSvc := SpinnakerServiceBuilder.New()
+	spinSvc := TypesFactory.NewService()
 	gvk, err := apiutil.GVKForObject(spinSvc, m.GetScheme())
 	if err != nil {
 		return err
@@ -63,12 +63,12 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 
 	opts := validate.Options{
-		Ctx:         secrets.NewContext(ctx, v.restConfig, req.Namespace),
-		Client:      v.client,
-		Req:         req,
-		Log:         log,
-		Halyard:     halyard.NewService(),
-		SpinBuilder: SpinnakerServiceBuilder,
+		Ctx:          secrets.NewContext(ctx, v.restConfig, req.Namespace),
+		Client:       v.client,
+		Req:          req,
+		Log:          log,
+		Halyard:      halyard.NewService(),
+		TypesFactory: TypesFactory,
 	}
 	defer secrets.Cleanup(opts.Ctx)
 

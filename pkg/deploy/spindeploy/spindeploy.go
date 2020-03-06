@@ -3,7 +3,7 @@ package spindeploy
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
@@ -44,7 +44,7 @@ func (d *Deployer) GetName() string {
 	return "spindeploy"
 }
 
-func (d *Deployer) isSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) (bool, error) {
+func (d *Deployer) isSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
 	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
 	if err != nil {
 		return false, err
@@ -56,7 +56,7 @@ func (d *Deployer) isSpinnakerUpToDate(ctx context.Context, svc spinnakerv1alpha
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
 // - creates the manifests
-func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface, scheme *runtime.Scheme) (bool, error) {
+func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, scheme *runtime.Scheme) (bool, error) {
 	rLogger := d.log.WithValues("Service", svc.GetName())
 
 	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
@@ -70,7 +70,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerSe
 	}
 
 	rLogger.Info("Retrieving complete Spinnaker configuration")
-	v, err := svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
+	v, err := svc.GetSpec().GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
 	}
@@ -93,7 +93,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerSe
 	}
 
 	rLogger.Info("Generating manifests with Halyard")
-	l, err := d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
+	l, err := d.m.Generate(ctx, nSvc.GetSpec().GetSpinnakerConfig())
 	if err != nil {
 		return true, err
 	}
@@ -114,12 +114,12 @@ func (d *Deployer) Deploy(ctx context.Context, svc spinnakerv1alpha2.SpinnakerSe
 	d.evtRecorder.Eventf(nSvc, corev1.EventTypeNormal, "Config", "Spinnaker version %s deployment set", v)
 
 	st := nSvc.GetStatus()
-	st.Version = v
+	st.SetVersion(v)
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
 	err = d.commitConfigToStatus(ctx, nSvc)
 	return true, err
 }
 
-func (d *Deployer) commitConfigToStatus(ctx context.Context, svc spinnakerv1alpha2.SpinnakerServiceInterface) error {
+func (d *Deployer) commitConfigToStatus(ctx context.Context, svc interfaces.SpinnakerService) error {
 	return d.client.Status().Update(ctx, svc)
 }

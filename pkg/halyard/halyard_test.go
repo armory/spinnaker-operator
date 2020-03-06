@@ -2,26 +2,33 @@ package halyard
 
 import (
 	"context"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"sigs.k8s.io/yaml"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func makeBasicSpinnakerConfig() *v1alpha2.SpinnakerConfig {
-	return &v1alpha2.SpinnakerConfig{
-		Config: map[string]interface{}{
-			"name":    "default",
-			"version": "1.14.2",
-			"deploymentEnvironment": map[string]interface{}{
-				"type": "Distributed",
-			},
-		},
-	}
+func init() {
+	v1alpha2.RegisterTypes()
+}
+
+func makeBasicSpinnakerConfig(t *testing.T) interfaces.SpinnakerConfig {
+	m := `
+config:
+  name: default
+  version: 1.14.2
+  deploymentEnvironment:
+    type: Distributed
+`
+	c := interfaces.DefaultTypesFactory.NewSpinConfig()
+	assert.Nil(t, yaml.Unmarshal([]byte(m), c))
+	return c
 }
 
 func TestService_buildGenManifestsRequest(t *testing.T) {
@@ -30,7 +37,7 @@ func TestService_buildGenManifestsRequest(t *testing.T) {
 	}
 	type args struct {
 		ctx        context.Context
-		spinConfig *v1alpha2.SpinnakerConfig
+		spinConfig interfaces.SpinnakerConfig
 	}
 
 	tests := []struct {
@@ -45,7 +52,7 @@ func TestService_buildGenManifestsRequest(t *testing.T) {
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx:        context.TODO(),
-				spinConfig: makeBasicSpinnakerConfig(),
+				spinConfig: makeBasicSpinnakerConfig(t),
 			},
 
 			wantErr: false,
@@ -74,13 +81,13 @@ version: 1.14.2`)
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() *v1alpha2.SpinnakerConfig {
-					hc := makeBasicSpinnakerConfig()
-					hc.Profiles = map[string]v1alpha2.FreeForm{
+				spinConfig: (func() interfaces.SpinnakerConfig {
+					hc := makeBasicSpinnakerConfig(t)
+					hc.SetProfiles(map[string]interfaces.FreeForm{
 						"deck": {
 							"settings-local.js": "windows.settings = 55;",
 						},
-					}
+					})
 					return hc
 				})(),
 			},
@@ -108,15 +115,15 @@ version: 1.14.2`)
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() *v1alpha2.SpinnakerConfig {
-					hc := makeBasicSpinnakerConfig()
-					hc.Profiles = map[string]v1alpha2.FreeForm{
+				spinConfig: (func() interfaces.SpinnakerConfig {
+					hc := makeBasicSpinnakerConfig(t)
+					hc.SetProfiles(map[string]interfaces.FreeForm{
 						"clouddriver": {
 							"hello": map[string]interface{}{
 								"world": 48,
 							},
 						},
-					}
+					})
 					return hc
 				})(),
 			},
@@ -148,12 +155,12 @@ hello:
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() *v1alpha2.SpinnakerConfig {
-					hc := makeBasicSpinnakerConfig()
-					hc.Files = map[string]string{
+				spinConfig: (func() interfaces.SpinnakerConfig {
+					hc := makeBasicSpinnakerConfig(t)
+					hc.SetFiles(map[string]string{
 						"test":  "some content here",
 						"other": "dGVzdA==", // = base64("test")
-					}
+					})
 					return hc
 				})(),
 			},

@@ -5,18 +5,18 @@ import (
 	"fmt"
 	accounts "github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"time"
 )
 
 // GetAccountValidationsFor inspects all known providers, retrieves their accounts,
 // and generate validators
-func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ([]SpinnakerValidator, error) {
+func GetAccountValidationsFor(spinSvc interfaces.SpinnakerService, options Options) ([]SpinnakerValidator, error) {
 	validators := make([]SpinnakerValidator, 0)
 	for _, t := range accounts.Types {
 		v := t.GetValidationSettings(spinSvc)
-		if !v.Enabled {
+		if !v.IsEnabled() {
 			continue
 		}
 		// Get accounts from that type
@@ -33,7 +33,7 @@ func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, option
 			}
 			hc := status.UpdateHashIfNotExist(getValidationHashKey(a), h, now, false)
 			// If accounts were never validated or if the validation is too old less than x ago
-			if hc.Hash != h || v.NeedsValidation(hc.LastUpdatedAt) {
+			if hc.GetHash() != h || v.NeedsValidation(hc.GetLastUpdatedAt()) {
 				validators = append(validators, &accountValidator{v: a.NewValidator(), fatal: v.IsFatal(), name: a.GetName()})
 			}
 		}
@@ -41,7 +41,7 @@ func GetAccountValidationsFor(spinSvc v1alpha2.SpinnakerServiceInterface, option
 	return validators, nil
 }
 
-func getAllAccounts(spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType, options Options) ([]account.Account, error) {
+func getAllAccounts(spinSvc interfaces.SpinnakerService, accountType account.SpinnakerAccountType, options Options) ([]account.Account, error) {
 	// Get accounts from profile
 	acc, err := getAccountsFromProfile(options.Ctx, spinSvc, accountType)
 	if err != nil {
@@ -63,9 +63,9 @@ type accountValidator struct {
 	fatal bool
 }
 
-func getAccountsFromProfile(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
+func getAccountsFromProfile(ctx context.Context, spinSvc interfaces.SpinnakerService, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	for _, svc := range accountType.GetServices() {
-		p, ok := spinSvc.GetSpinnakerConfig().Profiles[svc]
+		p, ok := spinSvc.GetSpec().GetSpinnakerConfig().GetProfiles()[svc]
 		if !ok {
 			continue
 		}
@@ -78,8 +78,8 @@ func getAccountsFromProfile(ctx context.Context, spinSvc v1alpha2.SpinnakerServi
 	return nil, nil
 }
 
-func getAccountsFromConfig(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, accountType account.SpinnakerAccountType) ([]account.Account, error) {
-	cfg := spinSvc.GetSpinnakerConfig()
+func getAccountsFromConfig(ctx context.Context, spinSvc interfaces.SpinnakerService, accountType account.SpinnakerAccountType) ([]account.Account, error) {
+	cfg := spinSvc.GetSpec().GetSpinnakerConfig()
 	arr, err := cfg.GetHalConfigObjectArray(context.TODO(), accountType.GetConfigAccountsKey())
 	if err != nil {
 		// Ignore, key or format don't match expectations
@@ -88,8 +88,8 @@ func getAccountsFromConfig(ctx context.Context, spinSvc v1alpha2.SpinnakerServic
 	return accounts.FromSpinnakerConfigSlice(ctx, accountType, arr, false)
 }
 
-func (a *accountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
-	err := a.v.Validate(spinSvc, options.Client, options.Ctx, options.Log.WithValues("Account.Name", a.name))
+func (a *accountValidator) Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
+	err := a.v.Validate(spinSvc, options.Client, options.Ctx, options.Log.WithValues("Accounts.Name", a.name))
 	if err != nil {
 		return NewResultFromError(err, a.fatal)
 	}

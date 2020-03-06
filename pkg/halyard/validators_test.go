@@ -1,33 +1,38 @@
 package halyard
 
 import (
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/openshift/origin/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestPersistentStorageValidators(t *testing.T) {
+	nosettings := interfaces.DefaultTypesFactory.NewSpinnakerValidation()
+	nogoogle := interfaces.DefaultTypesFactory.NewSpinnakerValidation()
+	nogoogleSetting := interfaces.DefaultTypesFactory.NewValidationSetting()
+	nogoogleSetting.SetEnabled(false)
+	nogoogle.SetProviders(map[string]interfaces.ValidationSetting{
+		"google": nogoogleSetting,
+	})
+	nos3 := interfaces.DefaultTypesFactory.NewSpinnakerValidation()
+	nos3Setting := interfaces.DefaultTypesFactory.NewValidationSetting()
+	nos3Setting.SetEnabled(false)
+	nos3.AddPersistentStorage("s3", nos3Setting)
 	tests := []struct {
 		name        string
-		settings    v1alpha2.SpinnakerValidation
+		settings    interfaces.SpinnakerValidation
 		expectedLen int
 		expected    func(*testing.T, []string)
 	}{
 		{
 			name:        "ok with no settings",
-			settings:    v1alpha2.SpinnakerValidation{},
+			settings:    nosettings,
 			expectedLen: len(validationsToSkip),
 			expected:    func(t *testing.T, strings []string) {},
 		},
 		{
-			name: "disable google provider",
-			settings: v1alpha2.SpinnakerValidation{
-				Providers: map[string]v1alpha2.ValidationSetting{
-					"google": {
-						Enabled: false,
-					},
-				},
-			},
+			name:        "disable google provider",
+			settings:    nogoogle,
 			expectedLen: len(validationsToSkip) + 4,
 			expected: func(t *testing.T, strings []string) {
 				assert.Contains(t, strings, "GoogleAccountValidator")
@@ -37,14 +42,8 @@ func TestPersistentStorageValidators(t *testing.T) {
 			},
 		},
 		{
-			name: "disable s3 persistent storage",
-			settings: v1alpha2.SpinnakerValidation{
-				PersistentStorage: map[string]v1alpha2.ValidationSetting{
-					"s3": {
-						Enabled: false,
-					},
-				},
-			},
+			name:        "disable s3 persistent storage",
+			settings:    nos3,
 			expectedLen: len(validationsToSkip) + 1,
 			expected: func(t *testing.T, strings []string) {
 				assert.Contains(t, strings, "S3Validator")

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	secups "github.com/armory/go-yaml-tools/pkg/secrets"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
@@ -33,7 +33,7 @@ const (
 // secretsTransformer maps Kubernetes secrets onto the deployment of the service that requires it
 // Either as a mounted file (encryptedFile) or an environment variable (tokens, passwords...)
 type secretsTransformer struct {
-	svc        v1alpha2.SpinnakerServiceInterface
+	svc        interfaces.SpinnakerService
 	log        logr.Logger
 	client     client.Client
 	k8sSecrets *k8sSecretHolder
@@ -52,7 +52,7 @@ type awsCredentials struct {
 	svcSecretKeys []v1.EnvVar // SERVICE_SECRETNAME_SECRETKEY
 }
 
-func (s *secretsTransformerGenerator) NewTransformer(svc v1alpha2.SpinnakerServiceInterface,
+func (s *secretsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	tr := secretsTransformer{svc: svc, log: log, client: client, k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
 	return &tr, nil
@@ -63,12 +63,12 @@ func (s *secretsTransformerGenerator) GetName() string {
 }
 
 func (s *secretsTransformer) TransformConfig(ctx context.Context) error {
-	spinCfg := s.svc.GetSpinnakerConfig()
+	spinCfg := s.svc.GetSpec().GetSpinnakerConfig()
 	return s.replaceK8sSecretsFromAwsKeys(spinCfg, ctx)
 }
 
 // replaceK8sSecretsFromAwsKeys replaces any kubernetes secret references from aws credentials fields and saves them for later processing
-func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *v1alpha2.SpinnakerConfig, ctx context.Context) error {
+func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg interfaces.SpinnakerConfig, ctx context.Context) error {
 	persistenceKeys, err := s.getAndReplace("front50", awsPersistenceAccessKey, awsPersistenceSecretKey, spinCfg)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *v1alpha2.Spin
 	if artifactKeys != nil {
 		s.k8sSecrets.awsCredsByService["clouddriver"] = artifactKeys
 	}
-	can, ok := spinCfg.Config[awsCanary]
+	can, ok := spinCfg.GetConfig()[awsCanary]
 	if !ok {
 		return nil
 	}
@@ -98,11 +98,11 @@ func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *v1alpha2.Spin
 	if err != nil {
 		return err
 	}
-	spinCfg.Config[awsCanary] = newCan
+	spinCfg.GetConfig()[awsCanary] = newCan
 	return nil
 }
 
-func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig) (*awsCredentials, error) {
+func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp string, spinCfg interfaces.SpinnakerConfig) (*awsCredentials, error) {
 	secretRaw, source, err := spinCfg.GetRawConfigPropString(svc, secretKeyProp)
 	if err != nil {
 		return nil, nil
@@ -116,10 +116,10 @@ func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp str
 	}
 	envVarName, secretName, secretKey := getEnvVarNameFromSecretRaw(svc, secretRaw)
 	switch source {
-	case v1alpha2.HalConfigSource:
+	case interfaces.HalConfigSource:
 		err = spinCfg.SetHalConfigProp(secretKeyProp, getEnvVarNameReference(envVarName))
 		break
-	case v1alpha2.ProfileConfigSource:
+	case interfaces.ProfileConfigSource:
 		err = spinCfg.SetServiceConfigProp(svc, secretKeyProp, getEnvVarNameReference(envVarName))
 	}
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp str
 }
 
 // getAndReplaceArray retrieves a single aws access and secret key pair from an input array (last one wins)
-func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, secretKeyProp string, spinCfg *v1alpha2.SpinnakerConfig) (*awsCredentials, error) {
+func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, secretKeyProp string, spinCfg interfaces.SpinnakerConfig) (*awsCredentials, error) {
 	root, source, err := spinCfg.GetConfigObjectArray(svc, rootProp)
 	if err != nil {
 		// ignore error if key doesn't exist
@@ -161,10 +161,10 @@ func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, se
 		svcSecretKeys = append(svcSecretKeys, envVarFromSecretReference(envVarName, secretName, secretKey))
 	}
 	switch source {
-	case v1alpha2.HalConfigSource:
+	case interfaces.HalConfigSource:
 		err = spinCfg.SetHalConfigProp(rootProp, root)
 		break
-	case v1alpha2.ProfileConfigSource:
+	case interfaces.ProfileConfigSource:
 		err = spinCfg.SetServiceConfigProp(svc, rootProp, root)
 	}
 	if err != nil {

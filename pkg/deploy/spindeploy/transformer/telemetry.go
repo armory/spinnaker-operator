@@ -3,7 +3,7 @@ package transformer
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -27,7 +27,7 @@ type telemetryTransformer struct {
 
 type telemetryTransformerGenerator struct{}
 
-func (t *telemetryTransformerGenerator) NewTransformer(svc v1alpha2.SpinnakerServiceInterface,
+func (t *telemetryTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	tr := telemetryTransformer{log: log}
 	return &tr, nil

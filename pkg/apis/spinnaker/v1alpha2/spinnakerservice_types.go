@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -54,11 +55,11 @@ type SpinnakerConfig struct {
 	// Supporting files for the Spinnaker config
 	Files map[string]string `json:"files,omitempty"`
 	// Parsed service settings - comments are stripped
-	ServiceSettings map[string]FreeForm `json:"service-settings,omitempty"`
+	ServiceSettings map[string]interfaces.FreeForm `json:"service-settings,omitempty"`
 	// Service profiles will be parsed as YAML
-	Profiles map[string]FreeForm `json:"profiles,omitempty"`
+	Profiles map[string]interfaces.FreeForm `json:"profiles,omitempty"`
 	// Main deployment configuration to be passed to Halyard
-	Config FreeForm `json:"config,omitempty"`
+	Config interfaces.FreeForm `json:"config,omitempty"`
 }
 
 // GetHash returns a hash of the config used

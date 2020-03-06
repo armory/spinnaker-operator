@@ -2,7 +2,7 @@ package account
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -14,9 +14,9 @@ import (
 // The account type also holds the information where to parse accounts from, where to save settings to
 // (when serialized to Spinnaker settings), and how to get validation settings from a SpinnakerService.
 type SpinnakerAccountType interface {
-	GetType() v1alpha2.AccountType
+	GetType() interfaces.AccountType
 	// Create account from CRD
-	FromCRD(account *v1alpha2.SpinnakerAccount) (Account, error)
+	FromCRD(account interfaces.SpinnakerAccount) (Account, error)
 	// Create account from Spinnaker config
 	FromSpinnakerConfig(ctx context.Context, config map[string]interface{}) (Account, error)
 	// Affected services
@@ -26,23 +26,23 @@ type SpinnakerAccountType interface {
 	// Key under which accounts are stored in profile/config
 	GetConfigAccountsKey() string
 	// GetValidationSettings returns validation settings if validation must happen
-	GetValidationSettings(spinsvc v1alpha2.SpinnakerServiceInterface) v1alpha2.ValidationSetting
+	GetValidationSettings(spinsvc interfaces.SpinnakerService) interfaces.ValidationSetting
 }
 
-// Account represents a single account of a certain type. It must contain a FreeForm (aka a map)
+// Accounts represents a single account of a certain type. It must contain a FreeForm (aka a map)
 // of settings. These settings hold additional settings when parsed from a SpinnakerAccount as well
 // as all settings when parsed from Spinnaker settings.
 type Account interface {
 	// GetName returns the name of the account
 	GetName() string
-	GetType() v1alpha2.AccountType
+	GetType() interfaces.AccountType
 	NewValidator() AccountValidator
 	// Output the account definition in Spinnaker terms
 	ToSpinnakerSettings(context.Context) (map[string]interface{}, error)
-	GetSettings() *v1alpha2.FreeForm
+	GetSettings() *interfaces.FreeForm
 	GetHash() (string, error)
 }
 
 type AccountValidator interface {
-	Validate(v1alpha2.SpinnakerServiceInterface, client.Client, context.Context, logr.Logger) error
+	Validate(interfaces.SpinnakerService, client.Client, context.Context, logr.Logger) error
 }

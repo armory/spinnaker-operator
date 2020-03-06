@@ -2,14 +2,14 @@ package validate
 
 import (
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"strings"
 )
 
 type versionValidator struct{}
 
-func (v *versionValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
-	config := spinSvc.GetSpinnakerConfig()
+func (v *versionValidator) Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
+	config := spinSvc.GetSpec().GetSpinnakerConfig()
 	version, err := config.GetHalConfigPropString(options.Ctx, "version")
 	if err != nil {
 		return NewResultFromError(fmt.Errorf("unable to read spinnaker version from manifest: %s", err.Error()), true)

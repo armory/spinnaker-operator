@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/go-logr/logr"
@@ -26,7 +26,7 @@ type validationResponse []struct {
 	Location string `json:"location,omitempty"`
 }
 
-func (s *Service) Validate(ctx context.Context, spinsvc v1alpha2.SpinnakerServiceInterface, failFast bool, logger logr.Logger) error {
+func (s *Service) Validate(ctx context.Context, spinsvc interfaces.SpinnakerService, failFast bool, logger logr.Logger) error {
 	req, err := s.buildValidationRequest(ctx, spinsvc, failFast)
 	if err != nil {
 		return err
@@ -38,16 +38,16 @@ func (s *Service) Validate(ctx context.Context, spinsvc v1alpha2.SpinnakerServic
 	return parseValidationResponse(resp.Body, logger)
 }
 
-func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.SpinnakerServiceInterface, failFast bool) (*http.Request, error) {
+func (s *Service) buildValidationRequest(ctx context.Context, spinsvc interfaces.SpinnakerService, failFast bool) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
 	// Add config
-	cfg := spinsvc.GetSpinnakerConfig()
+	cfg := spinsvc.GetSpec().GetSpinnakerConfig()
 
 	// Sanitize secrets before validating
 	// This will also serve as a secret validation step
-	sanitizedCfg, err := sanitizeSecrets(ctx, cfg.Config)
+	sanitizedCfg, err := sanitizeSecrets(ctx, cfg.GetConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.S
 		return nil, err
 	}
 	// Add required files
-	for k := range cfg.Files {
+	for k := range cfg.GetFiles() {
 		if err := s.addPart(writer, k, cfg.GetFileContent(k)); err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc v1alpha2.S
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/v1/validation/config?failFast=%t&skipValidators=%s", s.url, failFast, strings.Join(getValidationsToSkip(spinsvc.GetValidation()), ","))
+	url := fmt.Sprintf("%s/v1/validation/config?failFast=%t&skipValidators=%s", s.url, failFast, strings.Join(getValidationsToSkip(spinsvc.GetSpec().GetValidation()), ","))
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return req, err

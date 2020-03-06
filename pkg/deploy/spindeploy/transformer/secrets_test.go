@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	secups "github.com/armory/go-yaml-tools/pkg/secrets"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -238,7 +237,7 @@ config:
        enabled: true
        secretAccessKey: encrypted:k8s!n:testsecret!k:providerSecret
 `
-	spinCfg := &v1alpha2.SpinnakerConfig{}
+	spinCfg := th.TypesFactory.NewSpinConfig()
 	assert.Nil(t, yaml.Unmarshal([]byte(cfg), spinCfg))
 	tr := &secretsTransformer{k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
 	secups.Engines["k8s"] = func(ctx context.Context, isFile bool, params string) (secups.Decrypter, error) {
@@ -314,7 +313,7 @@ profiles:
         accessKeyId: persistenceAccessKey
         secretAccessKey: encrypted:k8s!n:testsecret!k:persistenceSecret
 `
-	spinCfg := &v1alpha2.SpinnakerConfig{}
+	spinCfg := th.TypesFactory.NewSpinConfig()
 	assert.Nil(t, yaml.Unmarshal([]byte(cfg), spinCfg))
 	tr := &secretsTransformer{k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
 	secups.Engines["k8s"] = func(ctx context.Context, isFile bool, params string) (secups.Decrypter, error) {

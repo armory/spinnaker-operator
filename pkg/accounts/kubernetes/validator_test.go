@@ -3,13 +3,17 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/armory/spinnaker-operator/pkg/test"
 	testing2 "github.com/go-logr/logr/testing"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/yaml"
 	"testing"
 )
+
+func init() {
+	TypesFactory = test.TypesFactory
+}
 
 func TestMakeClient(t *testing.T) {
 	s := `
@@ -31,16 +35,16 @@ users:
   user:
     token: test-token
 `
+	authFile := TypesFactory.NewKubernetesAuth()
+	authFile.SetKubeconfigFile(fmt.Sprintf("encryptedFile:noop!%s", s))
 	a := &Account{
 		Name: "test",
-		Auth: &v1alpha2.KubernetesAuth{
-			KubeconfigFile: fmt.Sprintf("encryptedFile:noop!%s", s),
-		},
+		Auth: authFile,
 	}
 	kv := &kubernetesAccountValidator{account: a}
 	ctx := secrets.NewContext(context.TODO(), nil, "ns1")
 	defer secrets.Cleanup(ctx)
-	spinCfg := &v1alpha2.SpinnakerService{}
+	spinCfg := TypesFactory.NewService()
 	c, err := kv.makeClient(ctx, spinCfg, nil)
 	if !assert.Nil(t, err) {
 		return
@@ -76,15 +80,15 @@ spec:
           user:
             token: test-token
 `
-	spinSvc := &v1alpha2.SpinnakerService{}
+	spinSvc := TypesFactory.NewService()
 	if !assert.Nil(t, yaml.Unmarshal([]byte(y), spinSvc)) {
 		return
 	}
+	authFile := TypesFactory.NewKubernetesAuth()
+	authFile.SetKubeconfigFile("kubecfg")
 	a := &Account{
 		Name: "test",
-		Auth: &v1alpha2.KubernetesAuth{
-			KubeconfigFile: "kubecfg",
-		},
+		Auth: authFile,
 	}
 	kv := &kubernetesAccountValidator{account: a}
 	c, err := kv.makeClient(context.TODO(), spinSvc, nil)

@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"io/ioutil"
@@ -14,6 +15,12 @@ import (
 	"sigs.k8s.io/yaml"
 	"testing"
 )
+
+func init() {
+	v1alpha2.RegisterTypes()
+}
+
+var TypesFactory = interfaces.DefaultTypesFactory
 
 type DummyK8sSecretEngine struct {
 	Secret string
@@ -28,8 +35,8 @@ func (s *DummyK8sSecretEngine) IsFile() bool {
 	return s.File
 }
 
-func ManifestToSpinService(manifestYaml string, t *testing.T) *v1alpha2.SpinnakerService {
-	svc := &v1alpha2.SpinnakerService{}
+func ManifestToSpinService(manifestYaml string, t *testing.T) interfaces.SpinnakerService {
+	svc := TypesFactory.NewService()
 	ReadYamlFile(manifestYaml, svc, t)
 	return svc
 }

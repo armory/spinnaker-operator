@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -126,15 +126,15 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 }
 
 // GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
-func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc spinnakerv1alpha2.SpinnakerServiceInterface) int32 {
+func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc interfaces.SpinnakerService) int32 {
 	desiredPort := defaultPort
-	exp := spinSvc.GetExpose()
-	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {
-		if c.PublicPort != 0 {
-			desiredPort = c.PublicPort
+	exp := spinSvc.GetSpec().GetExpose()
+	if c, ok := exp.GetService().GetOverrides()[svcNameWithoutPrefix]; ok {
+		if c.GetPublicPort() != 0 {
+			desiredPort = c.GetPublicPort()
 		}
-	} else if exp.Service.PublicPort != 0 {
-		desiredPort = exp.Service.PublicPort
+	} else if exp.GetService().GetPublicPort() != 0 {
+		desiredPort = exp.GetService().GetPublicPort()
 	}
 
 	// Get port from overrideBaseUrl, if any
@@ -148,7 +148,7 @@ func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defa
 	overrideBaseUrl := ""
 	if propName != "" {
 		// ignore error, prop may be missing
-		overrideBaseUrl, _ = spinSvc.GetSpinnakerConfig().GetHalConfigPropString(ctx, propName)
+		overrideBaseUrl, _ = spinSvc.GetSpec().GetSpinnakerConfig().GetHalConfigPropString(ctx, propName)
 	}
 	return GetPort(overrideBaseUrl, desiredPort)
 }

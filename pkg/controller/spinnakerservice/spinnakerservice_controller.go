@@ -3,7 +3,7 @@ package spinnakerservice
 import (
 	"context"
 	"fmt"
-	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
@@ -19,15 +19,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 var (
-	log                     = logf.Log.WithName("spinnakerservice")
-	SpinnakerServiceBuilder spinnakerv1alpha2.SpinnakerServiceBuilderInterface
-	DeployerGenerators      = []deployerGenerator{spindeploy.NewDeployer}
+	log                = logf.Log.WithName("spinnakerservice")
+	TypesFactory       interfaces.TypesFactory
+	DeployerGenerators = []deployerGenerator{spindeploy.NewDeployer}
 )
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -63,7 +62,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SpinnakerService
-	err = c.Watch(&source.Kind{Type: SpinnakerServiceBuilder.New()}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: TypesFactory.NewService()}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -71,7 +70,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for potential object owned by SpinnakerService
 	return c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    SpinnakerServiceBuilder.New(),
+		OwnerType:    TypesFactory.NewService(),
 	})
 }
 
@@ -98,7 +97,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling SpinnakerService")
 
 	// Fetch the SpinnakerService instance
-	instance := SpinnakerServiceBuilder.New()
+	instance := TypesFactory.NewServiceForVersion(interfaces.LatestVersion)
 	ctx := secrets.NewContext(context.TODO(), r.restConfig, request.Namespace)
 	defer secrets.Cleanup(ctx)
 
@@ -125,7 +124,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{Requeue: true}, nil
 		}
 	}
-	sc := newStatusChecker(r.client, reqLogger)
+	sc := newStatusChecker(r.client, reqLogger, TypesFactory)
 	if err = sc.checks(instance); err != nil {
 		return reconcile.Result{}, err
 	}

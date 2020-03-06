@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"errors"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 )
 
 // Kubernetes accounts have a deeper integration than other accounts.
@@ -16,12 +16,12 @@ const (
 	UseServiceAccount             = "serviceAccount"
 )
 
-var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
+var TypesFactory interfaces.TypesFactory
 
 type AccountType struct{}
 
-func (k *AccountType) GetType() v1alpha2.AccountType {
-	return v1alpha2.KubernetesAccountType
+func (k *AccountType) GetType() interfaces.AccountType {
+	return interfaces.KubernetesAccountType
 }
 
 func (k *AccountType) GetAccountsKey() string {
@@ -42,9 +42,9 @@ func (k *AccountType) newAccount() *Account {
 	}
 }
 
-func (k *AccountType) GetValidationSettings(spinsvc v1alpha2.SpinnakerServiceInterface) v1alpha2.ValidationSetting {
-	v := spinsvc.GetValidation()
-	if s, ok := v.Providers[string(v1alpha2.KubernetesAccountType)]; ok {
+func (k *AccountType) GetValidationSettings(spinsvc interfaces.SpinnakerService) interfaces.ValidationSetting {
+	v := spinsvc.GetSpec().GetValidation()
+	if s, ok := v.GetProviders()[string(interfaces.KubernetesAccountType)]; ok {
 		return s
 	}
 	return v.GetValidationSettings()
@@ -67,20 +67,20 @@ type CustomKubernetesResource struct {
 type Account struct {
 	*account.BaseAccount
 	Name     string `json:"name,omitempty"`
-	Auth     *v1alpha2.KubernetesAuth
-	Env      Env               `json:"env,omitempty"`
-	Settings v1alpha2.FreeForm `json:"settings,omitempty"`
+	Auth     interfaces.KubernetesAuth
+	Env      Env                 `json:"env,omitempty"`
+	Settings interfaces.FreeForm `json:"settings,omitempty"`
 }
 
-func (k *Account) GetType() v1alpha2.AccountType {
-	return v1alpha2.KubernetesAccountType
+func (k *Account) GetType() interfaces.AccountType {
+	return interfaces.KubernetesAccountType
 }
 
 func (k *Account) GetName() string {
 	return k.Name
 }
 
-func (k *Account) GetSettings() *v1alpha2.FreeForm {
+func (k *Account) GetSettings() *interfaces.FreeForm {
 	return &k.Settings
 }
 

@@ -3,18 +3,18 @@ package spinnakerservice
 import (
 	"context"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/core/v1"
-	"strings"
-
-	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1beta2"
+	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 type statusChecker struct {
-	client client.Client
-	logger logr.Logger
+	client       client.Client
+	logger       logr.Logger
+	typesFactory interfaces.TypesFactory
 }
 
 const (
@@ -25,11 +25,11 @@ const (
 	Failure     = "Failure"
 )
 
-func newStatusChecker(client client.Client, logger logr.Logger) statusChecker {
-	return statusChecker{client: client, logger: logger}
+func newStatusChecker(client client.Client, logger logr.Logger, f interfaces.TypesFactory) statusChecker {
+	return statusChecker{client: client, logger: logger, typesFactory: f}
 }
 
-func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterface) error {
+func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 	// Get current deployment owned by the service
 	list := &appsv1.DeploymentList{}
 	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/managed-by": "spinnaker-operator"})
@@ -37,24 +37,22 @@ func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterf
 		return err
 	}
 
-	svcs := make([]spinnakerv1alpha2.SpinnakerDeploymentStatus, 0)
 	svc := instance.DeepCopyInterface()
 	status := svc.GetStatus()
 	if len(list.Items) == 0 {
 		log.Info("Status: NA, there are still no deployments owned by the operator")
-		status.Status = Na
-		status.Services = []spinnakerv1alpha2.SpinnakerDeploymentStatus{}
+		status.SetStatus(Na)
+		status.InitServices()
 	} else {
-		status.Status = Ok
+		status.SetStatus(Ok)
 		for i := range list.Items {
 			it := list.Items[i]
 
-			st := spinnakerv1alpha2.SpinnakerDeploymentStatus{
-				Name:          it.ObjectMeta.Name,
-				Replicas:      it.Status.Replicas,
-				ReadyReplicas: it.Status.ReadyReplicas,
-				Image:         s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec),
-			}
+			st := s.typesFactory.NewSpinDeploymentStatus()
+			st.SetName(it.ObjectMeta.Name)
+			st.SetReplicas(it.Status.Replicas)
+			st.SetReadyReplicas(it.Status.ReadyReplicas)
+			st.SetImage(s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec))
 
 			var ac appsv1.DeploymentCondition
 			var fc appsv1.DeploymentCondition
@@ -68,24 +66,26 @@ func (s *statusChecker) checks(instance spinnakerv1alpha2.SpinnakerServiceInterf
 			if string(ac.Type) == "" {
 				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
 					log.Info(fmt.Sprintf("Status: Failure, deployment %s has no available condition but has failure condition: %s", it.ObjectMeta.Name, fc.Message))
-					status.Status = Failure
+					status.SetStatus(Failure)
 				} else {
 					log.Info(fmt.Sprintf("Status: Unavailable, deployment %s still has not reported available condition", it.ObjectMeta.Name))
-					status.Status = Unavailable
+					status.SetStatus(Unavailable)
 				}
 			} else if ac.Status != v1.ConditionTrue {
 				log.Info(fmt.Sprintf("Deployment %s is available: %s. Message: %s", it.ObjectMeta.Name, ac.Status, ac.Message))
 				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
-					status.Status = Failure
+					status.SetStatus(Failure)
 				} else {
-					status.Status = Updating
+					status.SetStatus(Updating)
 				}
 			}
-			svcs = append(svcs, st)
+			err = status.AppendToServices(st)
+			if err != nil {
+				return err
+			}
 		}
-		status.Services = svcs
 	}
-	status.ServiceCount = len(list.Items)
+	status.SetServiceCount(len(list.Items))
 	// Go through the list
 	return s.client.Status().Update(context.Background(), svc)
 }

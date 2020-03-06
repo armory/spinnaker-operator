@@ -129,9 +129,6 @@ func TestSecretsAndDuplicateOverlay(t *testing.T) {
 	}
 
 	// store needed secrets in S3 bucket
-	if !InstallAwsCli(e, t) {
-		return
-	}
 	CopyFileToS3Bucket(fmt.Sprintf("%s/kubecfg", spinOverlay), "secrets/kubeconfig", e, t)
 	if !CopyFileToS3Bucket(fmt.Sprintf("%s/secrets.yml", spinOverlay), "secrets/secrets.yml", e, t) {
 		return

@@ -1,40 +1,24 @@
 package v1alpha2
 
 import (
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
-type AccountType string
-
-const (
-	KubernetesAccountType AccountType = "Kubernetes"
-	AWSAccountType                    = "AWS"
-)
-
-type Authorization string
-
-const (
-	Read    Authorization = "READ"
-	Write                 = "WRITE"
-	Execute               = "EXECUTE"
-)
-
-type AccountPermissions map[Authorization][]string
-
 // SpinnakerAccountSpec defines the desired state of SpinnakerAccount
 // +k8s:openapi-gen=true
 type SpinnakerAccountSpec struct {
-	Enabled bool        `json:"enabled"`
-	Type    AccountType `json:"type"`
+	Enabled bool                   `json:"enabled"`
+	Type    interfaces.AccountType `json:"type"`
 	// +optional
 	Validation ValidationSetting `json:"validation"`
 	// +optional
-	Permissions AccountPermissions `json:"permissions"`
+	Permissions interfaces.AccountPermissions `json:"permissions"`
 	// +optional
 	Kubernetes *KubernetesAuth `json:"kubernetes,omitempty"`
 	// +optional
-	Settings FreeForm `json:"settings,omitempty"`
+	Settings interfaces.FreeForm `json:"settings,omitempty"`
 }
 
 // +k8s:openapi-gen=true

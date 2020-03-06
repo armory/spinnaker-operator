@@ -2,7 +2,6 @@ package changedetector
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -56,7 +55,7 @@ func TestIsSpinnakerUpToDate_TestExposeConfigChangedPort(t *testing.T) {
 		test.BuildSvc("spin-deck", "LoadBalancer", 7777, t),
 		test.BuildSvc("spin-gate", "LoadBalancer", 7777, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 80
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(80)
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -71,7 +70,9 @@ func TestIsSpinnakerUpToDate_TestExposeConfigChangedPortOverriden(t *testing.T) 
 		test.BuildSvc("spin-deck", "LoadBalancer", 80, t),
 		test.BuildSvc("spin-gate", "LoadBalancer", 7777, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 443}
+	o := th.TypesFactory.NewExposeConfigServiceOverrides()
+	o.SetPublicPort(443)
+	spinSvc.GetSpec().GetExpose().GetService().AddOverride("gate", o)
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -88,8 +89,11 @@ func TestIsSpinnakerUpToDate_UpToDateWithOverrides(t *testing.T) {
 	gateSvc.Annotations = annotations
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, t, deckSvc, gateSvc)
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.Overrides["gate"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 7777, Annotations: annotations}
-	spinSvc.Spec.Expose.Service.Overrides["deck"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 7777, Annotations: annotations}
+	o := th.TypesFactory.NewExposeConfigServiceOverrides()
+	o.SetPublicPort(7777)
+	o.SetAnnotations(annotations)
+	spinSvc.GetSpec().GetExpose().GetService().AddOverride("gate", o)
+	spinSvc.GetSpec().GetExpose().GetService().AddOverride("deck", o)
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -103,7 +107,7 @@ func TestIsSpinnakerUpToDate_UpToDateNoPortInConfig(t *testing.T) {
 		test.BuildSvc("spin-deck", "LoadBalancer", 80, t),
 		test.BuildSvc("spin-gate", "LoadBalancer", 80, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 0
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(0)
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -117,7 +121,7 @@ func TestIsSpinnakerUpToDate_PortConfigRemoved(t *testing.T) {
 		test.BuildSvc("spin-deck", "LoadBalancer", 1111, t),
 		test.BuildSvc("spin-gate", "LoadBalancer", 1111, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 0
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(0)
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 
@@ -131,8 +135,8 @@ func TestIsSpinnakerUpToDate_OverrideBaseUrlAdded(t *testing.T) {
 		test.BuildSvc("spin-deck", "LoadBalancer", 80, t),
 		test.BuildSvc("spin-gate", "LoadBalancer", 80, t))
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 0
-	err := spinSvc.Spec.SpinnakerConfig.SetHalConfigProp(util.GateOverrideBaseUrlProp, "https://acme-api.com")
+	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(0)
+	err := spinSvc.GetSpec().GetSpinnakerConfig().SetHalConfigProp(util.GateOverrideBaseUrlProp, "https://acme-api.com")
 	assert.Nil(t, err)
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
@@ -149,7 +153,7 @@ func TestIsSpinnakerUpToDate_NoAnnotations(t *testing.T) {
 	gateSvc.Annotations = nil
 	ch := th.setupChangeDetector(&exposeLbChangeDetectorGenerator{}, t, deckSvc, gateSvc)
 	spinSvc := test.ManifestToSpinService("testdata/spinsvc_expose.yml", t)
-	spinSvc.Spec.Expose.Service.Annotations = nil
+	spinSvc.GetSpec().GetExpose().GetService().SetAnnotations(nil)
 
 	upToDate, err := ch.IsSpinnakerUpToDate(context.TODO(), spinSvc)
 

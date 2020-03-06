@@ -3,7 +3,7 @@ package validate
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -17,7 +17,7 @@ var ParallelValidators = []SpinnakerValidator{
 }
 
 type SpinnakerValidator interface {
-	Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult
+	Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult
 	// TODO: cancel
 }
 
@@ -27,12 +27,12 @@ type ValidationResult struct {
 }
 
 type Options struct {
-	Ctx         context.Context
-	Client      client.Client
-	Req         admission.Request
-	Log         logr.Logger
-	Halyard     *halyard.Service
-	SpinBuilder v1alpha2.SpinnakerServiceBuilderInterface
+	Ctx          context.Context
+	Client       client.Client
+	Req          admission.Request
+	Log          logr.Logger
+	Halyard      *halyard.Service
+	TypesFactory interfaces.TypesFactory
 }
 
 type Account interface {
@@ -41,7 +41,7 @@ type Account interface {
 	GetHash() string
 }
 
-func ValidateAll(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
+func ValidateAll(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
 	s := &singleNamespaceValidator{}
 	r := s.Validate(spinSvc, options)
 	if r.Fatal {
@@ -55,7 +55,7 @@ func ValidateAll(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) Va
 	return v.Validate(spinSvc, options)
 }
 
-func generateParallelValidators(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ([]SpinnakerValidator, error) {
+func generateParallelValidators(spinSvc interfaces.SpinnakerService, options Options) ([]SpinnakerValidator, error) {
 	vs, err := GetAccountValidationsFor(spinSvc, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to determine validations to run")

@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"context"
-	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -16,7 +16,7 @@ import (
 type x509Transformer struct {
 	*DefaultTransformer
 	exposeLbTr *exposeLbTransformer
-	svc        spinnakerv1alpha2.SpinnakerServiceInterface
+	svc        interfaces.SpinnakerService
 	client     client.Client
 	log        logr.Logger
 }
@@ -24,7 +24,7 @@ type x509Transformer struct {
 type x509TransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *x509TransformerGenerator) NewTransformer(svc spinnakerv1alpha2.SpinnakerServiceInterface,
+func (g *x509TransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	base := &DefaultTransformer{}
 	exGen := exposeLbTransformerGenerator{}
@@ -43,8 +43,8 @@ func (g *x509TransformerGenerator) GetName() string {
 }
 
 func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
-	exp := t.svc.GetExpose()
-	if exp.Type == "" {
+	exp := t.svc.GetSpec().GetExpose()
+	if exp.GetType() == "" {
 		return nil
 	}
 
@@ -53,7 +53,7 @@ func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtim
 		return nil
 	}
 	// ignore error as api port property may not exist
-	apiPort, err := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "default.apiPort")
+	apiPort, err := t.svc.GetSpec().GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "default.apiPort")
 	if err != nil || apiPort == "" {
 		return t.scheduleForRemovalIfNeeded(gateConfig, gen)
 	}
@@ -103,11 +103,11 @@ func (t *x509Transformer) scheduleForRemovalIfNeeded(gateConfig generated.Servic
 
 func (t *x509Transformer) getPublicPort(defaultPort int32) int32 {
 	publicPort := defaultPort
-	exp := t.svc.GetExpose()
-	if c, ok := exp.Service.Overrides["gate-x509"]; ok && c.PublicPort != 0 {
-		publicPort = c.PublicPort
-	} else if exp.Service.PublicPort != 0 {
-		publicPort = exp.Service.PublicPort
+	exp := t.svc.GetSpec().GetExpose()
+	if c, ok := exp.GetService().GetOverrides()["gate-x509"]; ok && c.GetPublicPort() != 0 {
+		publicPort = c.GetPublicPort()
+	} else if exp.GetService().GetPublicPort() != 0 {
+		publicPort = exp.GetService().GetPublicPort()
 	}
 	return publicPort
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	tools "github.com/armory/go-yaml-tools/pkg/secrets"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -37,7 +37,7 @@ type kubernetesAccountValidator struct {
 	account *Account
 }
 
-func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context, log logr.Logger) error {
+func (k *kubernetesAccountValidator) Validate(spinSvc interfaces.SpinnakerService, c client.Client, ctx context.Context, log logr.Logger) error {
 	if err := k.validateSettings(ctx, log); err != nil {
 		return err
 	}
@@ -51,29 +51,29 @@ func (k *kubernetesAccountValidator) Validate(spinSvc v1alpha2.SpinnakerServiceI
 	return k.validateAccess(config)
 }
 
-func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (*rest.Config, error) {
+func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc interfaces.SpinnakerService, c client.Client) (*rest.Config, error) {
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, k.account.Settings, spinSvc.GetSpinnakerConfig())
+		return makeClientFromSettings(ctx, k.account.Settings, spinSvc.GetSpec().GetSpinnakerConfig())
 	}
-	if auth.KubeconfigFile != "" {
-		return makeClientFromFile(ctx, auth.KubeconfigFile, nil, spinSvc.GetSpinnakerConfig())
+	if auth.GetKubeconfigFile() != "" {
+		return makeClientFromFile(ctx, auth.GetKubeconfigFile(), nil, spinSvc.GetSpec().GetSpinnakerConfig())
 	}
-	if auth.Kubeconfig != nil {
-		return makeClientFromConfigAPI(auth.Kubeconfig)
+	if auth.GetKubeconfig() != nil {
+		return makeClientFromConfigAPI(auth.GetKubeconfig())
 	}
-	if auth.KubeconfigSecret != nil {
-		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
+	if auth.GetKubeconfigSecret() != nil {
+		return makeClientFromSecretRef(ctx, auth.GetKubeconfigSecret())
 	}
-	if auth.UseServiceAccount {
+	if auth.IsUseServiceAccount() {
 		return makeClientFromServiceAccount(ctx, spinSvc, c)
 	}
 	return nil, noAuthProvidedError
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg *v1alpha2.SpinnakerConfig) (*rest.Config, error) {
+func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg interfaces.SpinnakerConfig) (*rest.Config, error) {
 	var cfg *clientcmdapi.Config
 	var err error
 	if tools.IsEncryptedSecret(file) {
@@ -103,12 +103,12 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref *v1alpha2.SecretInNamespaceReference) (*rest.Config, error) {
+func makeClientFromSecretRef(ctx context.Context, ref interfaces.SecretInNamespaceReference) (*rest.Config, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
 	}
-	str, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, ref.Name, ref.Key)
+	str, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, ref.GetName(), ref.GetKey())
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}, spinCfg *v1alpha2.SpinnakerConfig) (*rest.Config, error) {
+func makeClientFromSettings(ctx context.Context, settings map[string]interface{}, spinCfg interfaces.SpinnakerConfig) (*rest.Config, error) {
 	aSettings := &authSettings{}
 	if err := inspect.Source(aSettings, settings); err != nil {
 		return nil, err
@@ -148,12 +148,12 @@ func makeClientFromSettings(ctx context.Context, settings map[string]interface{}
 	return nil, noValidKubeconfigError
 }
 
-func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client) (*rest.Config, error) {
+func makeClientFromServiceAccount(ctx context.Context, spinSvc interfaces.SpinnakerService, c client.Client) (*rest.Config, error) {
 	spinSvc, err := ensureSpinSvc(spinSvc, c, ctx)
 	if err != nil {
 		return nil, err
 	}
-	an, err := spinSvc.GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
+	an, err := spinSvc.GetSpec().GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
 	if err != nil {
 		return nil, noServiceAccountName
 	}
@@ -178,11 +178,11 @@ func makeClientFromServiceAccount(ctx context.Context, spinSvc v1alpha2.Spinnake
 	}, nil
 }
 
-func ensureSpinSvc(spinSvc v1alpha2.SpinnakerServiceInterface, c client.Client, ctx context.Context) (v1alpha2.SpinnakerServiceInterface, error) {
+func ensureSpinSvc(spinSvc interfaces.SpinnakerService, c client.Client, ctx context.Context) (interfaces.SpinnakerService, error) {
 	if spinSvc != nil {
 		return spinSvc, nil
 	}
-	i := SpinnakerServiceBuilder.NewList()
+	i := TypesFactory.NewServiceList()
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, err
