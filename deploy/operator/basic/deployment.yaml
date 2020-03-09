@@ -33,7 +33,7 @@ spec:
             - name: OPERATOR_NAME
               value: "spinnaker-operator"
         - name: halyard
-          image: armory/halyard:operator-0.3.x
+          image: armory/halyard:operator-0.4.x
           imagePullPolicy: Always
           ports:
             - containerPort: 8064

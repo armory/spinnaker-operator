@@ -14,7 +14,7 @@ var defaults Defaults
 func init() {
 	defaults = Defaults{
 		OperatorImageDefault:  "armory/spinnaker-operator:dev",
-		HalyardImageDefault:   "armory/halyard:operator-0.3.x",
+		HalyardImageDefault:   "armory/halyard:operator-0.4.x",
 		BucketDefault:         "operator-int-tests",
 		BucketRegionDefault:   "us-west-2",
 		OperatorKustomizeBase: "testdata/operator/base",
