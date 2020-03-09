@@ -1,4 +1,4 @@
-FROM golang:1.12.1-alpine3.9 as builder
+FROM golang:1.13.8-alpine3.11 as builder
 
 # vendor flags conflict with `go get`
 # so we fetch golint before running make
