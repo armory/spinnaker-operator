@@ -97,7 +97,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling SpinnakerService")
 
 	// Fetch the SpinnakerService instance
-	instance := TypesFactory.NewServiceForVersion(interfaces.LatestVersion)
+	instance := TypesFactory.NewService()
 	ctx := secrets.NewContext(context.TODO(), r.restConfig, request.Namespace)
 	defer secrets.Cleanup(ctx)
 

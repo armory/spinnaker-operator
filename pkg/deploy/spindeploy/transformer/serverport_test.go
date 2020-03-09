@@ -10,7 +10,7 @@ import (
 )
 
 func TestTransformManifests_CustomServerPort(t *testing.T) {
-	tr, _ := th.setupTransformer(&serverPortTransformerGenerator{}, "testdata/spinsvc_profile.yml", t)
+	tr, _ := th.setupTransformerFromSpinFile(&serverPortTransformerGenerator{}, "testdata/spinsvc_profile.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddDeploymentToGenConfig(gen, "gate", "testdata/input_deployment.yml", t)
 

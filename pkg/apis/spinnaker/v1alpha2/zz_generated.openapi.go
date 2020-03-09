@@ -433,7 +433,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"spinnakerConfig": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerConfig"),
+							Ref: ref("github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces.SpinnakerConfig"),
 						},
 					},
 					"validation": {
@@ -456,7 +456,7 @@ func schema_pkg_apis_spinnaker_v1alpha2_SpinnakerServiceSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.AccountConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"},
+			"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces.SpinnakerConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.AccountConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.ExposeConfig", "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerValidation"},
 	}
 }
 

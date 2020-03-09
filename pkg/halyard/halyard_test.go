@@ -18,7 +18,7 @@ func init() {
 	v1alpha2.RegisterTypes()
 }
 
-func makeBasicSpinnakerConfig(t *testing.T) interfaces.SpinnakerConfig {
+func makeBasicSpinnakerConfig(t *testing.T) *interfaces.SpinnakerConfig {
 	m := `
 config:
   name: default
@@ -26,7 +26,7 @@ config:
   deploymentEnvironment:
     type: Distributed
 `
-	c := interfaces.DefaultTypesFactory.NewSpinConfig()
+	c := &interfaces.SpinnakerConfig{}
 	assert.Nil(t, yaml.Unmarshal([]byte(m), c))
 	return c
 }
@@ -37,7 +37,7 @@ func TestService_buildGenManifestsRequest(t *testing.T) {
 	}
 	type args struct {
 		ctx        context.Context
-		spinConfig interfaces.SpinnakerConfig
+		spinConfig *interfaces.SpinnakerConfig
 	}
 
 	tests := []struct {
@@ -81,13 +81,13 @@ version: 1.14.2`)
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() interfaces.SpinnakerConfig {
+				spinConfig: (func() *interfaces.SpinnakerConfig {
 					hc := makeBasicSpinnakerConfig(t)
-					hc.SetProfiles(map[string]interfaces.FreeForm{
+					hc.Profiles = map[string]interfaces.FreeForm{
 						"deck": {
 							"settings-local.js": "windows.settings = 55;",
 						},
-					})
+					}
 					return hc
 				})(),
 			},
@@ -115,15 +115,15 @@ version: 1.14.2`)
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() interfaces.SpinnakerConfig {
+				spinConfig: (func() *interfaces.SpinnakerConfig {
 					hc := makeBasicSpinnakerConfig(t)
-					hc.SetProfiles(map[string]interfaces.FreeForm{
+					hc.Profiles = map[string]interfaces.FreeForm{
 						"clouddriver": {
 							"hello": map[string]interface{}{
 								"world": 48,
 							},
 						},
-					})
+					}
 					return hc
 				})(),
 			},
@@ -155,12 +155,12 @@ hello:
 			fields: fields{url: "http://localhost:8086"},
 			args: args{
 				ctx: context.TODO(),
-				spinConfig: (func() interfaces.SpinnakerConfig {
+				spinConfig: (func() *interfaces.SpinnakerConfig {
 					hc := makeBasicSpinnakerConfig(t)
-					hc.SetFiles(map[string]string{
+					hc.Files = map[string]string{
 						"test":  "some content here",
 						"other": "dGVzdA==", // = base64("test")
-					})
+					}
 					return hc
 				})(),
 			},

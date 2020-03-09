@@ -65,7 +65,7 @@ type accountValidator struct {
 
 func getAccountsFromProfile(ctx context.Context, spinSvc interfaces.SpinnakerService, accountType account.SpinnakerAccountType) ([]account.Account, error) {
 	for _, svc := range accountType.GetServices() {
-		p, ok := spinSvc.GetSpec().GetSpinnakerConfig().GetProfiles()[svc]
+		p, ok := spinSvc.GetSpec().GetSpinnakerConfig().Profiles[svc]
 		if !ok {
 			continue
 		}

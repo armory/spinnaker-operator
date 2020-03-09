@@ -1,9 +1,6 @@
 package v1alpha2
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"encoding/json"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -41,7 +38,7 @@ type SpinnakerServiceList struct {
 // SpinnakerServiceSpec defines the desired state of SpinnakerService
 // +k8s:openapi-gen=true
 type SpinnakerServiceSpec struct {
-	SpinnakerConfig SpinnakerConfig `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
+	SpinnakerConfig interfaces.SpinnakerConfig `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
 	// +optional
 	Validation SpinnakerValidation `json:"validation,omitempty"`
 	// +optional
@@ -50,27 +47,17 @@ type SpinnakerServiceSpec struct {
 	Accounts AccountConfig `json:"accounts,omitempty"`
 }
 
-// +k8s:deepcopy-gen=true
-type SpinnakerConfig struct {
-	// Supporting files for the Spinnaker config
-	Files map[string]string `json:"files,omitempty"`
-	// Parsed service settings - comments are stripped
-	ServiceSettings map[string]interfaces.FreeForm `json:"service-settings,omitempty"`
-	// Service profiles will be parsed as YAML
-	Profiles map[string]interfaces.FreeForm `json:"profiles,omitempty"`
-	// Main deployment configuration to be passed to Halyard
-	Config interfaces.FreeForm `json:"config,omitempty"`
-}
-
-// GetHash returns a hash of the config used
-func (s *SpinnakerConfig) GetHash() (string, error) {
-	data, err := json.Marshal(s)
-	if err != nil {
-		return "", err
-	}
-	m := md5.Sum(data)
-	return hex.EncodeToString(m[:]), nil
-}
+//// +k8s:deepcopy-gen=true
+//type SpinnakerConfig struct {
+//	// Supporting files for the Spinnaker config
+//	Files map[string]string `json:"files,omitempty"`
+//	// Parsed service settings - comments are stripped
+//	ServiceSettings map[string]interfaces.FreeForm `json:"service-settings,omitempty"`
+//	// Service profiles will be parsed as YAML
+//	Profiles map[string]interfaces.FreeForm `json:"profiles,omitempty"`
+//	// Main deployment configuration to be passed to Halyard
+//	Config interfaces.FreeForm `json:"config,omitempty"`
+//}
 
 // +k8s:deepcopy-gen=true
 type AccountConfig struct {

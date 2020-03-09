@@ -19,7 +19,7 @@ import (
 var errSecretNotFound = errors.New("secret not found")
 
 func FindSpinnakerService(c client.Client, ns string, builder interfaces.TypesFactory) (interfaces.SpinnakerService, error) {
-	l := builder.NewServiceListForVersion(interfaces.LatestVersion)
+	l := builder.NewServiceList()
 	if err := c.List(context.TODO(), l, client.InNamespace(ns)); err != nil {
 		return nil, err
 	}

@@ -73,7 +73,7 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc int
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg interfaces.SpinnakerConfig) (*rest.Config, error) {
+func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	var cfg *clientcmdapi.Config
 	var err error
 	if tools.IsEncryptedSecret(file) {
@@ -130,7 +130,7 @@ func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}, spinCfg interfaces.SpinnakerConfig) (*rest.Config, error) {
+func makeClientFromSettings(ctx context.Context, settings map[string]interface{}, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	aSettings := &authSettings{}
 	if err := inspect.Source(aSettings, settings); err != nil {
 		return nil, err

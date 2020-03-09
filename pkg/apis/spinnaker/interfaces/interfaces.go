@@ -1,7 +1,6 @@
 package interfaces
 
 import (
-	"context"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,7 +29,7 @@ const (
 )
 
 var DefaultTypesFactory = &TypesFactoryImpl{
-	Factories: map[Version]LatestTypesFactory{},
+	Factories: map[Version]TypesFactory{},
 }
 
 type ConfigSource string
@@ -39,36 +38,16 @@ type AccountType string
 type AccountPermissions map[Authorization][]string
 type Authorization string
 
-type LatestTypesFactory interface {
+type TypesFactory interface {
 	NewService() SpinnakerService
 	NewServiceList() SpinnakerServiceList
 	NewAccount() SpinnakerAccount
 	NewAccountList() SpinnakerAccountList
-	NewSpinConfig() SpinnakerConfig
 	NewSpinDeploymentStatus() SpinnakerDeploymentStatus
 	NewKubernetesAuth() KubernetesAuth
 	NewHashStatus() HashStatus
-	NewExposeConfigServiceOverrides() ExposeConfigServiceOverrides
-	NewSpinnakerValidation() SpinnakerValidation
-	NewValidationSetting() ValidationSetting
 	GetGroupVersion() schema.GroupVersion
-	DeepCopyLatestTypesFactory() LatestTypesFactory
-}
-
-type TypesFactory interface {
-	LatestTypesFactory
-	NewServiceForVersion(v Version) SpinnakerService
-	NewServiceListForVersion(v Version) SpinnakerServiceList
-	NewAccountForVersion(v Version) SpinnakerAccount
-	NewAccountListForVersion(v Version) SpinnakerAccountList
-	NewSpinConfigForVersion(v Version) SpinnakerConfig
-	NewSpinDeploymentStatusForVersion(v Version) SpinnakerDeploymentStatus
-	NewKubernetesAuthForVersion(v Version) KubernetesAuth
-	NewHashStatusForVersion(v Version) HashStatus
-	NewExposeConfigServiceOverridesForVersion(v Version) ExposeConfigServiceOverrides
-	NewSpinnakerValidationForVersion(v Version) SpinnakerValidation
-	NewValidationSettingForVersion(v Version) ValidationSetting
-	GetGroupVersionForVersion(v Version) schema.GroupVersion
+	DeepCopyLatestTypesFactory() TypesFactory
 }
 
 type SpinnakerService interface {
@@ -87,7 +66,7 @@ type SpinnakerServiceList interface {
 }
 
 type SpinnakerServiceSpec interface {
-	GetSpinnakerConfig() SpinnakerConfig
+	GetSpinnakerConfig() *SpinnakerConfig
 	GetValidation() SpinnakerValidation
 	GetExpose() ExposeConfig
 	GetAccounts() AccountConfig
@@ -133,30 +112,6 @@ type HashStatus interface {
 	GetLastUpdatedAt() v1.Time
 	SetLastUpdatedAt(v1.Time)
 	DeepCopyInterface() HashStatus
-}
-
-type SpinnakerConfig interface {
-	GetFiles() map[string]string
-	SetFiles(map[string]string)
-	GetServiceSettings() map[string]FreeForm
-	GetProfiles() map[string]FreeForm
-	SetProfiles(map[string]FreeForm)
-	GetConfig() FreeForm
-	SetConfig(FreeForm)
-	GetHash() (string, error)
-	GetFileContent(key string) []byte
-	GetServiceSettingsPropString(ctx context.Context, svc, prop string) (string, error)
-	GetHalConfigPropString(ctx context.Context, prop string) (string, error)
-	GetRawHalConfigPropString(prop string) (string, error)
-	GetHalConfigObjectArray(ctx context.Context, prop string) ([]map[string]interface{}, error)
-	GetServiceConfigObjectArray(svc, prop string) ([]map[string]interface{}, error)
-	GetConfigObjectArray(svc, prop string) ([]map[string]interface{}, ConfigSource, error)
-	SetHalConfigProp(prop string, value interface{}) error
-	SetServiceConfigProp(svc, prop string, value interface{}) error
-	GetHalConfigPropBool(prop string, defaultVal bool) (bool, error)
-	GetServiceConfigPropString(ctx context.Context, svc, prop string) (string, error)
-	GetRawServiceConfigPropString(svc, prop string) (string, error)
-	GetRawConfigPropString(svc, prop string) (string, ConfigSource, error)
 }
 
 type SpinnakerValidation interface {
@@ -259,109 +214,56 @@ type SpinnakerAccountStatus interface {
 	GetLastValidatedAt() *v1.Timestamp
 }
 
+type SpinnakerConfig struct {
+	// Supporting files for the Spinnaker config
+	Files map[string]string `json:"files,omitempty"`
+	// Parsed service settings - comments are stripped
+	ServiceSettings map[string]FreeForm `json:"service-settings,omitempty"`
+	// Service profiles will be parsed as YAML
+	Profiles map[string]FreeForm `json:"profiles,omitempty"`
+	// Main deployment configuration to be passed to Halyard
+	Config FreeForm `json:"config,omitempty"`
+}
+
 var _ TypesFactory = &TypesFactoryImpl{}
 
 type TypesFactoryImpl struct {
-	Factories map[Version]LatestTypesFactory
+	Factories map[Version]TypesFactory
 }
 
 func (f *TypesFactoryImpl) NewService() SpinnakerService {
 	return f.Factories[LatestVersion].NewService()
 }
 
-func (f *TypesFactoryImpl) NewServiceForVersion(v Version) SpinnakerService {
-	return f.Factories[v].NewService()
-}
-
 func (f *TypesFactoryImpl) NewServiceList() SpinnakerServiceList {
 	return f.Factories[LatestVersion].NewServiceList()
-}
-
-func (f *TypesFactoryImpl) NewServiceListForVersion(v Version) SpinnakerServiceList {
-	return f.Factories[v].NewServiceList()
 }
 
 func (f *TypesFactoryImpl) NewAccount() SpinnakerAccount {
 	return f.Factories[LatestVersion].NewAccount()
 }
 
-func (f *TypesFactoryImpl) NewAccountForVersion(v Version) SpinnakerAccount {
-	return f.Factories[v].NewAccount()
-}
-
 func (f *TypesFactoryImpl) NewAccountList() SpinnakerAccountList {
 	return f.Factories[LatestVersion].NewAccountList()
-}
-
-func (f *TypesFactoryImpl) NewAccountListForVersion(v Version) SpinnakerAccountList {
-	return f.Factories[v].NewAccountList()
 }
 
 func (f *TypesFactoryImpl) NewSpinDeploymentStatus() SpinnakerDeploymentStatus {
 	return f.Factories[LatestVersion].NewSpinDeploymentStatus()
 }
 
-func (f *TypesFactoryImpl) NewSpinDeploymentStatusForVersion(v Version) SpinnakerDeploymentStatus {
-	return f.Factories[v].NewSpinDeploymentStatus()
-}
-
 func (f *TypesFactoryImpl) NewKubernetesAuth() KubernetesAuth {
 	return f.Factories[LatestVersion].NewKubernetesAuth()
-}
-
-func (f *TypesFactoryImpl) NewKubernetesAuthForVersion(v Version) KubernetesAuth {
-	return f.Factories[v].NewKubernetesAuth()
 }
 
 func (f *TypesFactoryImpl) NewHashStatus() HashStatus {
 	return f.Factories[LatestVersion].NewHashStatus()
 }
 
-func (f *TypesFactoryImpl) NewHashStatusForVersion(v Version) HashStatus {
-	return f.Factories[v].NewHashStatus()
-}
-
-func (f *TypesFactoryImpl) NewSpinConfig() SpinnakerConfig {
-	return f.Factories[LatestVersion].NewSpinConfig()
-}
-
-func (f *TypesFactoryImpl) NewSpinConfigForVersion(v Version) SpinnakerConfig {
-	return f.Factories[v].NewSpinConfig()
-}
-
-func (f *TypesFactoryImpl) NewExposeConfigServiceOverrides() ExposeConfigServiceOverrides {
-	return f.Factories[LatestVersion].NewExposeConfigServiceOverrides()
-}
-
-func (f *TypesFactoryImpl) NewExposeConfigServiceOverridesForVersion(v Version) ExposeConfigServiceOverrides {
-	return f.Factories[v].NewExposeConfigServiceOverrides()
-}
-
-func (f *TypesFactoryImpl) NewSpinnakerValidation() SpinnakerValidation {
-	return f.Factories[LatestVersion].NewSpinnakerValidation()
-}
-
-func (f *TypesFactoryImpl) NewSpinnakerValidationForVersion(v Version) SpinnakerValidation {
-	return f.Factories[v].NewSpinnakerValidation()
-}
-
-func (f *TypesFactoryImpl) NewValidationSetting() ValidationSetting {
-	return f.Factories[LatestVersion].NewValidationSetting()
-}
-
-func (f *TypesFactoryImpl) NewValidationSettingForVersion(v Version) ValidationSetting {
-	return f.Factories[v].NewValidationSetting()
-}
-
 func (f *TypesFactoryImpl) GetGroupVersion() schema.GroupVersion {
 	return f.Factories[LatestVersion].GetGroupVersion()
 }
 
-func (f *TypesFactoryImpl) GetGroupVersionForVersion(v Version) schema.GroupVersion {
-	return f.Factories[v].GetGroupVersion()
-}
-
-func (f *TypesFactoryImpl) DeepCopyLatestTypesFactory() LatestTypesFactory {
+func (f *TypesFactoryImpl) DeepCopyLatestTypesFactory() TypesFactory {
 	return f.Factories[LatestVersion].DeepCopyLatestTypesFactory()
 }
 

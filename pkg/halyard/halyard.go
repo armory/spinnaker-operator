@@ -26,7 +26,7 @@ func NewService() *Service {
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
-func (s *Service) Generate(ctx context.Context, spinConfig interfaces.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
+func (s *Service) Generate(ctx context.Context, spinConfig *interfaces.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
 	req, err := s.buildGenManifestsRequest(ctx, spinConfig)
 	if err != nil {
 		return nil, err
@@ -44,21 +44,21 @@ func (s *Service) parseGenManifestsResponse(d []byte) (*generated.SpinnakerGener
 	return sgc, err
 }
 
-func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig interfaces.SpinnakerConfig) (*http.Request, error) {
+func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *interfaces.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	if err := s.addObjectToRequest(writer, "config", spinConfig.GetConfig()); err != nil {
+	if err := s.addObjectToRequest(writer, "config", spinConfig.Config); err != nil {
 		return nil, err
 	}
 	//Add service settings
-	for k := range spinConfig.GetServiceSettings() {
-		if err := s.addObjectToRequest(writer, fmt.Sprintf("service-settings__%s.yml", k), spinConfig.GetServiceSettings()[k]); err != nil {
+	for k := range spinConfig.ServiceSettings {
+		if err := s.addObjectToRequest(writer, fmt.Sprintf("service-settings__%s.yml", k), spinConfig.ServiceSettings[k]); err != nil {
 			return nil, err
 		}
 	}
 
 	// Add required files
-	for k := range spinConfig.GetFiles() {
+	for k := range spinConfig.Files {
 		if err := s.addPart(writer, k, spinConfig.GetFileContent(k)); err != nil {
 			return nil, err
 		}
@@ -66,14 +66,14 @@ func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig inter
 
 	// Add profile files
 	//mp := spinConfig.Profiles.AsMap()
-	for k := range spinConfig.GetProfiles() {
+	for k := range spinConfig.Profiles {
 		if k == "deck" {
-			if err := s.writeDeckProfile(spinConfig.GetProfiles()[k]["settings-local.js"], writer); err != nil {
+			if err := s.writeDeckProfile(spinConfig.Profiles[k]["settings-local.js"], writer); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		if err := s.addObjectToRequest(writer, fmt.Sprintf("profiles__%s-local.yml", k), spinConfig.GetProfiles()[k]); err != nil {
+		if err := s.addObjectToRequest(writer, fmt.Sprintf("profiles__%s-local.yml", k), spinConfig.Profiles[k]); err != nil {
 			return nil, err
 		}
 	}

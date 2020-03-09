@@ -16,9 +16,16 @@ var th = testHelpers{
 	TypesFactory: interfaces.DefaultTypesFactory,
 }
 
-func (h *testHelpers) setupTransformer(generator Generator, spinsvcManifest string, t *testing.T, objs ...runtime.Object) (Transformer, interfaces.SpinnakerService) {
+func (h *testHelpers) setupTransformerFromSpinFile(generator Generator, spinsvcManifest string, t *testing.T, objs ...runtime.Object) (Transformer, interfaces.SpinnakerService) {
 	fakeClient := test.FakeClient(t, objs...)
-	spinsvc := test.ManifestToSpinService(spinsvcManifest, t)
+	spinsvc := test.ManifestFileToSpinService(spinsvcManifest, t)
+	tr, _ := generator.NewTransformer(spinsvc, fakeClient, log.Log.WithName("spinnakerservice"))
+	return tr, spinsvc
+}
+
+func (h *testHelpers) setupTransformerFromSpinText(generator Generator, spinText string, t *testing.T, objs ...runtime.Object) (Transformer, interfaces.SpinnakerService) {
+	fakeClient := test.FakeClient(t, objs...)
+	spinsvc := test.ManifestToSpinService(spinText, t)
 	tr, _ := generator.NewTransformer(spinsvc, fakeClient, log.Log.WithName("spinnakerservice"))
 	return tr, spinsvc
 }

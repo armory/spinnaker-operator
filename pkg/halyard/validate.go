@@ -47,7 +47,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc interfaces
 
 	// Sanitize secrets before validating
 	// This will also serve as a secret validation step
-	sanitizedCfg, err := sanitizeSecrets(ctx, cfg.GetConfig())
+	sanitizedCfg, err := sanitizeSecrets(ctx, cfg.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc interfaces
 		return nil, err
 	}
 	// Add required files
-	for k := range cfg.GetFiles() {
+	for k := range cfg.Files {
 		if err := s.addPart(writer, k, cfg.GetFileContent(k)); err != nil {
 			return nil, err
 		}

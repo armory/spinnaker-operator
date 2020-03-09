@@ -68,7 +68,7 @@ func (s *secretsTransformer) TransformConfig(ctx context.Context) error {
 }
 
 // replaceK8sSecretsFromAwsKeys replaces any kubernetes secret references from aws credentials fields and saves them for later processing
-func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg interfaces.SpinnakerConfig, ctx context.Context) error {
+func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *interfaces.SpinnakerConfig, ctx context.Context) error {
 	persistenceKeys, err := s.getAndReplace("front50", awsPersistenceAccessKey, awsPersistenceSecretKey, spinCfg)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg interfaces.Spi
 	if artifactKeys != nil {
 		s.k8sSecrets.awsCredsByService["clouddriver"] = artifactKeys
 	}
-	can, ok := spinCfg.GetConfig()[awsCanary]
+	can, ok := spinCfg.Config[awsCanary]
 	if !ok {
 		return nil
 	}
@@ -98,11 +98,11 @@ func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg interfaces.Spi
 	if err != nil {
 		return err
 	}
-	spinCfg.GetConfig()[awsCanary] = newCan
+	spinCfg.Config[awsCanary] = newCan
 	return nil
 }
 
-func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp string, spinCfg interfaces.SpinnakerConfig) (*awsCredentials, error) {
+func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp string, spinCfg *interfaces.SpinnakerConfig) (*awsCredentials, error) {
 	secretRaw, source, err := spinCfg.GetRawConfigPropString(svc, secretKeyProp)
 	if err != nil {
 		return nil, nil
@@ -133,7 +133,7 @@ func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp str
 }
 
 // getAndReplaceArray retrieves a single aws access and secret key pair from an input array (last one wins)
-func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, secretKeyProp string, spinCfg interfaces.SpinnakerConfig) (*awsCredentials, error) {
+func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, secretKeyProp string, spinCfg *interfaces.SpinnakerConfig) (*awsCredentials, error) {
 	root, source, err := spinCfg.GetConfigObjectArray(svc, rootProp)
 	if err != nil {
 		// ignore error if key doesn't exist

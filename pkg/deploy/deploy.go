@@ -8,7 +8,7 @@ import (
 )
 
 type ManifestGenerator interface {
-	Generate(ctx context.Context, spinConfig interfaces.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
+	Generate(ctx context.Context, spinConfig *interfaces.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error)
 }
 
 type Deployer interface {

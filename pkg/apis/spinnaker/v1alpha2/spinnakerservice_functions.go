@@ -54,12 +54,8 @@ func (s *SpinnakerServiceList) DeepCopySpinnakerServiceList() interfaces.Spinnak
 
 var _ interfaces.SpinnakerServiceSpec = &SpinnakerServiceSpec{}
 
-func (s *SpinnakerServiceSpec) GetSpinnakerConfig() interfaces.SpinnakerConfig {
-	if interfaces.IsNil(s.SpinnakerConfig) {
-		return nil
-	} else {
-		return &s.SpinnakerConfig
-	}
+func (s *SpinnakerServiceSpec) GetSpinnakerConfig() *interfaces.SpinnakerConfig {
+	return &s.SpinnakerConfig
 }
 func (s *SpinnakerServiceSpec) GetValidation() interfaces.SpinnakerValidation {
 	if interfaces.IsNil(s.Validation) {
@@ -203,44 +199,44 @@ func (s *HashStatus) DeepCopyInterface() interfaces.HashStatus {
 	return s.DeepCopy()
 }
 
-var _ interfaces.SpinnakerConfig = &SpinnakerConfig{}
-
-func (s *SpinnakerConfig) GetFiles() map[string]string {
-	return s.Files
-}
-func (s *SpinnakerConfig) SetFiles(f map[string]string) {
-	s.Files = f
-}
-func (s *SpinnakerConfig) GetServiceSettings() map[string]interfaces.FreeForm {
-	if interfaces.IsNil(s.ServiceSettings) {
-		return nil
-	} else {
-		return s.ServiceSettings
-	}
-}
-func (s *SpinnakerConfig) GetProfiles() map[string]interfaces.FreeForm {
-	if interfaces.IsNil(s.Profiles) {
-		return nil
-	} else {
-		return s.Profiles
-	}
-}
-func (s *SpinnakerConfig) SetProfiles(p map[string]interfaces.FreeForm) {
-	s.Profiles = map[string]interfaces.FreeForm{}
-	for k, v := range p {
-		s.Profiles[k] = v
-	}
-}
-func (s *SpinnakerConfig) GetConfig() interfaces.FreeForm {
-	if interfaces.IsNil(s.Config) {
-		return nil
-	} else {
-		return s.Config
-	}
-}
-func (s *SpinnakerConfig) SetConfig(c interfaces.FreeForm) {
-	s.Config = c
-}
+//var _ interfaces.SpinnakerConfig = &SpinnakerConfig{}
+//
+//func (s *SpinnakerConfig) GetFiles() map[string]string {
+//	return s.Files
+//}
+//func (s *SpinnakerConfig) SetFiles(f map[string]string) {
+//	s.Files = f
+//}
+//func (s *SpinnakerConfig) GetServiceSettings() map[string]interfaces.FreeForm {
+//	if interfaces.IsNil(s.ServiceSettings) {
+//		return nil
+//	} else {
+//		return s.ServiceSettings
+//	}
+//}
+//func (s *SpinnakerConfig) GetProfiles() map[string]interfaces.FreeForm {
+//	if interfaces.IsNil(s.Profiles) {
+//		return nil
+//	} else {
+//		return s.Profiles
+//	}
+//}
+//func (s *SpinnakerConfig) SetProfiles(p map[string]interfaces.FreeForm) {
+//	s.Profiles = map[string]interfaces.FreeForm{}
+//	for k, v := range p {
+//		s.Profiles[k] = v
+//	}
+//}
+//func (s *SpinnakerConfig) GetConfig() interfaces.FreeForm {
+//	if interfaces.IsNil(s.Config) {
+//		return nil
+//	} else {
+//		return s.Config
+//	}
+//}
+//func (s *SpinnakerConfig) SetConfig(c interfaces.FreeForm) {
+//	s.Config = c
+//}
 
 var _ interfaces.SpinnakerValidation = &SpinnakerValidation{}
 
@@ -456,7 +452,7 @@ func (in *ExposeConfigServiceOverrides) SetAnnotations(a map[string]string) {
 
 type TypesFactory struct{}
 
-var _ interfaces.LatestTypesFactory = &TypesFactory{}
+var _ interfaces.TypesFactory = &TypesFactory{}
 
 func (f *TypesFactory) NewService() interfaces.SpinnakerService {
 	return &SpinnakerService{}
@@ -470,9 +466,6 @@ func (f *TypesFactory) NewAccount() interfaces.SpinnakerAccount {
 func (f *TypesFactory) NewAccountList() interfaces.SpinnakerAccountList {
 	return &SpinnakerAccountList{}
 }
-func (f *TypesFactory) NewSpinConfig() interfaces.SpinnakerConfig {
-	return &SpinnakerConfig{}
-}
 func (f *TypesFactory) NewSpinDeploymentStatus() interfaces.SpinnakerDeploymentStatus {
 	return &SpinnakerDeploymentStatus{}
 }
@@ -482,18 +475,9 @@ func (f *TypesFactory) NewKubernetesAuth() interfaces.KubernetesAuth {
 func (f *TypesFactory) NewHashStatus() interfaces.HashStatus {
 	return &HashStatus{}
 }
-func (f *TypesFactory) NewExposeConfigServiceOverrides() interfaces.ExposeConfigServiceOverrides {
-	return &ExposeConfigServiceOverrides{}
-}
-func (f *TypesFactory) NewSpinnakerValidation() interfaces.SpinnakerValidation {
-	return &SpinnakerValidation{}
-}
-func (f *TypesFactory) NewValidationSetting() interfaces.ValidationSetting {
-	return &ValidationSetting{}
-}
 func (f *TypesFactory) GetGroupVersion() schema.GroupVersion {
 	return SchemeGroupVersion
 }
-func (f *TypesFactory) DeepCopyLatestTypesFactory() interfaces.LatestTypesFactory {
+func (f *TypesFactory) DeepCopyLatestTypesFactory() interfaces.TypesFactory {
 	return f.DeepCopy()
 }
