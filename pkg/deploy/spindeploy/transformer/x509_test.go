@@ -16,7 +16,7 @@ func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
 	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
-	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(0)
+	spinSvc.GetSpec().Expose.Service.PublicPort = 0
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -37,7 +37,7 @@ func TestTransformManifests_ExposedWithCustomPort(t *testing.T) {
 	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
-	spinSvc.GetSpec().GetExpose().GetService().SetPublicPort(3333)
+	spinSvc.GetSpec().Expose.Service.PublicPort = 3333
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -102,7 +102,7 @@ func TestTransformManifests_RemoveX509Service(t *testing.T) {
 	test.ReadYamlFile("testdata/output_service_lb.yml", x509Svc, t)
 	x509Svc.Name = util.GateX509ServiceName
 	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t, x509Svc)
-	spinSvc.GetSpec().GetSpinnakerConfig().Profiles = map[string]interfaces.FreeForm{}
+	spinSvc.GetSpec().SpinnakerConfig.Profiles = map[string]interfaces.FreeForm{}
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
 

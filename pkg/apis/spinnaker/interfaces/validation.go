@@ -1,7 +1,6 @@
-package v1alpha2
+package interfaces
 
 import (
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 )
@@ -27,7 +26,7 @@ func (v *ValidationSetting) IsFatal() bool {
 
 // GetUpdateHash updates the hash at key `key` and returns the prior copy if one existed
 // LastDeployed should then contain the hash and the time if updateTime is true or if there was no hash
-func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.Time, updateTime bool) interfaces.HashStatus {
+func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.Time, updateTime bool) *HashStatus {
 	if s.LastDeployed == nil {
 		s.LastDeployed = make(map[string]HashStatus)
 	}
@@ -49,7 +48,7 @@ func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.T
 	return res
 }
 
-func (s *SpinnakerValidation) GetValidationSettings() interfaces.ValidationSetting {
+func (s *SpinnakerValidation) GetValidationSettings() *ValidationSetting {
 	return &ValidationSetting{
 		Enabled:          true,
 		FailOnError:      s.FailOnError,

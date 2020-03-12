@@ -59,7 +59,7 @@ func (v *accountValidatingController) Handle(ctx context.Context, req admission.
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
-		accType, err := accounts.GetType(acc.GetSpec().GetType())
+		accType, err := accounts.GetType(acc.GetSpec().Type)
 		if err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}

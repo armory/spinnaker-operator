@@ -28,7 +28,7 @@ spec:
 	ctx := context.TODO()
 	err := tg.TransformConfig(ctx)
 	if assert.Nil(t, err) {
-		s, err := svc.GetSpec().GetSpinnakerConfig().GetHalConfigPropString(ctx, "deploymentEnvironment.location")
+		s, err := svc.GetSpec().SpinnakerConfig.GetHalConfigPropString(ctx, "deploymentEnvironment.location")
 		assert.Nil(t, err)
 		assert.Equal(t, "ns2", s)
 	}

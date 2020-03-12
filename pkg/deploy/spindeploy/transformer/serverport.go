@@ -33,7 +33,7 @@ func (g *serverPortTransformerGenerator) GetName() string {
 }
 
 func (t *serverPortTransformer) transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1.Deployment) error {
-	if targetPort, _ := t.svc.GetSpec().GetSpinnakerConfig().GetServiceConfigPropString(ctx, deploymentName, "server.port"); targetPort != "" {
+	if targetPort, _ := t.svc.GetSpec().SpinnakerConfig.GetServiceConfigPropString(ctx, deploymentName, "server.port"); targetPort != "" {
 		intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
 		if err != nil {
 			return err

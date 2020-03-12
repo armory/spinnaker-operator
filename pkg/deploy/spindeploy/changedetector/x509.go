@@ -26,12 +26,12 @@ func (g *x509ChangeDetectorGenerator) NewChangeDetector(client client.Client, lo
 // IsSpinnakerUpToDate returns true if there is a x509 configuration with a matching service
 func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
-	exp := spinSvc.GetSpec().GetExpose()
-	if exp.GetType() == "" {
+	exp := spinSvc.GetSpec().Expose
+	if exp.Type == "" {
 		return true, nil
 	}
 	// ignore error as default.apiPort may not exist
-	apiPort, _ := spinSvc.GetSpec().GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "default.apiPort")
+	apiPort, _ := spinSvc.GetSpec().SpinnakerConfig.GetServiceConfigPropString(ctx, "gate", "default.apiPort")
 	svc, err := util.GetService(util.GateX509ServiceName, spinSvc.GetNamespace(), ch.client)
 	if err != nil {
 		rLogger.Info(fmt.Sprintf("Error retrieving service %s: %s", util.GateX509ServiceName, err.Error()))
@@ -80,8 +80,8 @@ func (ch *x509ChangeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
 }
 
 func (ch *x509ChangeDetector) getPortOverride(exp interfaces.ExposeConfig) int32 {
-	if c, ok := exp.GetService().GetOverrides()["gate-x509"]; ok {
-		return c.GetPublicPort()
+	if c, ok := exp.Service.Overrides["gate-x509"]; ok {
+		return c.PublicPort
 	}
 	return 0
 }

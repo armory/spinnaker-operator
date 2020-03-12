@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -141,12 +142,12 @@ spec:
 	}
 	assert.Nil(t, updateServiceSettings(context.TODO(), nil, g))
 
-	auth := th.TypesFactory.NewKubernetesAuth()
-	auth.SetKubeconfigFile("kube.yml")
 	accs := []account.Account{
 		&kubernetes.Account{
 			Name: "test",
-			Auth: auth,
+			Auth: &interfaces.KubernetesAuth{
+				KubeconfigFile: "kube.yml",
+			},
 		},
 	}
 	if !assert.Nil(t, updateServiceSettings(context.TODO(), accs, g)) {

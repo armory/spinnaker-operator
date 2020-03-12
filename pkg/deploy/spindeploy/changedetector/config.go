@@ -24,11 +24,11 @@ func (g *configChangeDetectorGenerator) NewChangeDetector(client client.Client, 
 
 // IsSpinnakerUpToDate returns true if the Config has changed compared to the last recorded status hash
 func (ch *configChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
-	h, err := spinSvc.GetSpec().GetSpinnakerConfig().GetHash()
+	h, err := spinSvc.GetSpec().SpinnakerConfig.GetHash()
 	if err != nil {
 		return false, err
 	}
 	st := spinSvc.GetStatus()
 	prior := st.UpdateHashIfNotExist(SpinnakerConfigHashKey, h, time.Now(), true)
-	return h == prior.GetHash(), nil
+	return h == prior.Hash, nil
 }

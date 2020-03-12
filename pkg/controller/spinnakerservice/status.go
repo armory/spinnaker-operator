@@ -37,22 +37,24 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 		return err
 	}
 
+	svcs := make([]interfaces.SpinnakerDeploymentStatus, 0)
 	svc := instance.DeepCopyInterface()
 	status := svc.GetStatus()
 	if len(list.Items) == 0 {
 		log.Info("Status: NA, there are still no deployments owned by the operator")
-		status.SetStatus(Na)
-		status.InitServices()
+		status.Status = Na
+		status.Services = []interfaces.SpinnakerDeploymentStatus{}
 	} else {
-		status.SetStatus(Ok)
+		status.Status = Ok
 		for i := range list.Items {
 			it := list.Items[i]
 
-			st := s.typesFactory.NewSpinDeploymentStatus()
-			st.SetName(it.ObjectMeta.Name)
-			st.SetReplicas(it.Status.Replicas)
-			st.SetReadyReplicas(it.Status.ReadyReplicas)
-			st.SetImage(s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec))
+			st := interfaces.SpinnakerDeploymentStatus{
+				Name:          it.ObjectMeta.Name,
+				Replicas:      it.Status.Replicas,
+				ReadyReplicas: it.Status.ReadyReplicas,
+				Image:         s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec),
+			}
 
 			var ac appsv1.DeploymentCondition
 			var fc appsv1.DeploymentCondition
@@ -66,26 +68,24 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 			if string(ac.Type) == "" {
 				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
 					log.Info(fmt.Sprintf("Status: Failure, deployment %s has no available condition but has failure condition: %s", it.ObjectMeta.Name, fc.Message))
-					status.SetStatus(Failure)
+					status.Status = Failure
 				} else {
 					log.Info(fmt.Sprintf("Status: Unavailable, deployment %s still has not reported available condition", it.ObjectMeta.Name))
-					status.SetStatus(Unavailable)
+					status.Status = Unavailable
 				}
 			} else if ac.Status != v1.ConditionTrue {
 				log.Info(fmt.Sprintf("Deployment %s is available: %s. Message: %s", it.ObjectMeta.Name, ac.Status, ac.Message))
 				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
-					status.SetStatus(Failure)
+					status.Status = Failure
 				} else {
-					status.SetStatus(Updating)
+					status.Status = Updating
 				}
 			}
-			err = status.AppendToServices(st)
-			if err != nil {
-				return err
-			}
+			svcs = append(svcs, st)
 		}
+		status.Services = svcs
 	}
-	status.SetServiceCount(len(list.Items))
+	status.ServiceCount = len(list.Items)
 	// Go through the list
 	return s.client.Status().Update(context.Background(), svc)
 }

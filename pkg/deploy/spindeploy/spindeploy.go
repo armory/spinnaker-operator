@@ -70,7 +70,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	}
 
 	rLogger.Info("Retrieving complete Spinnaker configuration")
-	v, err := svc.GetSpec().GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
+	v, err := svc.GetSpec().SpinnakerConfig.GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
 	}
@@ -93,7 +93,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	}
 
 	rLogger.Info("Generating manifests with Halyard")
-	l, err := d.m.Generate(ctx, nSvc.GetSpec().GetSpinnakerConfig())
+	l, err := d.m.Generate(ctx, &nSvc.GetSpec().SpinnakerConfig)
 	if err != nil {
 		return true, err
 	}
@@ -114,7 +114,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	d.evtRecorder.Eventf(nSvc, corev1.EventTypeNormal, "Config", "Spinnaker version %s deployment set", v)
 
 	st := nSvc.GetStatus()
-	st.SetVersion(v)
+	st.Version = v
 	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
 	err = d.commitConfigToStatus(ctx, nSvc)
 	return true, err

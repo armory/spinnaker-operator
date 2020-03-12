@@ -16,19 +16,19 @@ func init() {
 }
 
 func TestPrepareSettings(t *testing.T) {
-	authFile1 := TypesFactory.NewKubernetesAuth()
-	authFile1.SetKubeconfigFile("/tmp/kubeconfig-1.yml")
-	authFile2 := TypesFactory.NewKubernetesAuth()
-	authFile2.SetKubeconfigFile("/tmp/kubeconfig-2.yml")
 	acc1 := &kubernetes.Account{
-		Name:     "account1",
-		Auth:     authFile1,
+		Name: "account1",
+		Auth: &interfaces.KubernetesAuth{
+			KubeconfigFile: "/tmp/kubeconfig-1.yml",
+		},
 		Env:      kubernetes.Env{},
 		Settings: interfaces.FreeForm{},
 	}
 	acc2 := &kubernetes.Account{
-		Name:     "account2",
-		Auth:     authFile2,
+		Name: "account2",
+		Auth: &interfaces.KubernetesAuth{
+			KubeconfigFile: "/tmp/kubeconfig-2.yml",
+		},
 		Env:      kubernetes.Env{},
 		Settings: interfaces.FreeForm{},
 	}

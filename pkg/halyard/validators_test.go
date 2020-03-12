@@ -72,7 +72,7 @@ spec:
 			if !assert.Nil(t, yaml.Unmarshal([]byte(tt.settings), spinSvc)) {
 				return
 			}
-			sk := getValidationsToSkip(spinSvc.GetSpec().GetValidation())
+			sk := getValidationsToSkip(spinSvc.GetSpec().Validation)
 			assert.Equal(t, tt.expectedLen, len(sk))
 			tt.expected(t, sk)
 		})

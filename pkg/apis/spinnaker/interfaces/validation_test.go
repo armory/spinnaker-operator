@@ -1,4 +1,4 @@
-package v1alpha2
+package interfaces
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -57,8 +57,8 @@ func TestSetAndGetHash(t *testing.T) {
 	s := SpinnakerServiceStatus{}
 	n := time.Now()
 	p := s.UpdateHashIfNotExist("test", "abcdef", n, false)
-	assert.Equal(t, "", p.GetHash())
-	assert.True(t, p.GetLastUpdatedAt().Time.IsZero())
+	assert.Equal(t, "", p.Hash)
+	assert.True(t, p.LastUpdatedAt.Time.IsZero())
 	h := s.LastDeployed["test"]
 	assert.Equal(t, "abcdef", h.Hash)
 	assert.True(t, n.Equal(h.LastUpdatedAt.Time))
@@ -66,8 +66,8 @@ func TestSetAndGetHash(t *testing.T) {
 	// Now test with an existing hash
 	n2 := time.Now()
 	p = s.UpdateHashIfNotExist("test", "xyz", n2, false)
-	assert.Equal(t, "abcdef", p.GetHash())
-	assert.True(t, n.Equal(p.GetLastUpdatedAt().Time))
+	assert.Equal(t, "abcdef", p.Hash)
+	assert.True(t, n.Equal(p.LastUpdatedAt.Time))
 	h = s.LastDeployed["test"]
 	assert.Equal(t, "xyz", h.Hash)
 	assert.False(t, n2.Equal(h.LastUpdatedAt.Time))
@@ -75,8 +75,8 @@ func TestSetAndGetHash(t *testing.T) {
 	// Now test while updating time
 	n3 := time.Now()
 	p = s.UpdateHashIfNotExist("test", "mnop", n3, true)
-	assert.Equal(t, "xyz", p.GetHash())
-	assert.True(t, n.Equal(p.GetLastUpdatedAt().Time))
+	assert.Equal(t, "xyz", p.Hash)
+	assert.True(t, n.Equal(p.LastUpdatedAt.Time))
 	h = s.LastDeployed["test"]
 	assert.Equal(t, "mnop", h.Hash)
 	assert.True(t, n3.Equal(h.LastUpdatedAt.Time))

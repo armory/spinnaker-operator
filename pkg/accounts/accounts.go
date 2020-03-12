@@ -49,10 +49,10 @@ func AllValidCRDAccounts(ctx context.Context, c client.Client, ns string) ([]acc
 
 	accounts := make([]account.Account, 0)
 	for _, a := range spinAccounts.GetItems() {
-		if !a.GetSpec().IsEnabled() {
+		if !a.GetSpec().Enabled {
 			continue
 		}
-		accountType, err := GetType(a.GetSpec().GetType())
+		accountType, err := GetType(a.GetSpec().Type)
 		if err != nil {
 			continue
 		}

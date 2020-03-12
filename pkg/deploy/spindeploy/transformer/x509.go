@@ -43,8 +43,8 @@ func (g *x509TransformerGenerator) GetName() string {
 }
 
 func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
-	exp := t.svc.GetSpec().GetExpose()
-	if exp.GetType() == "" {
+	exp := t.svc.GetSpec().Expose
+	if exp.Type == "" {
 		return nil
 	}
 
@@ -53,7 +53,7 @@ func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtim
 		return nil
 	}
 	// ignore error as api port property may not exist
-	apiPort, err := t.svc.GetSpec().GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "default.apiPort")
+	apiPort, err := t.svc.GetSpec().SpinnakerConfig.GetServiceConfigPropString(ctx, "gate", "default.apiPort")
 	if err != nil || apiPort == "" {
 		return t.scheduleForRemovalIfNeeded(gateConfig, gen)
 	}
@@ -103,11 +103,11 @@ func (t *x509Transformer) scheduleForRemovalIfNeeded(gateConfig generated.Servic
 
 func (t *x509Transformer) getPublicPort(defaultPort int32) int32 {
 	publicPort := defaultPort
-	exp := t.svc.GetSpec().GetExpose()
-	if c, ok := exp.GetService().GetOverrides()["gate-x509"]; ok && c.GetPublicPort() != 0 {
-		publicPort = c.GetPublicPort()
-	} else if exp.GetService().GetPublicPort() != 0 {
-		publicPort = exp.GetService().GetPublicPort()
+	exp := t.svc.GetSpec().Expose
+	if c, ok := exp.Service.Overrides["gate-x509"]; ok && c.PublicPort != 0 {
+		publicPort = c.PublicPort
+	} else if exp.Service.PublicPort != 0 {
+		publicPort = exp.Service.PublicPort
 	}
 	return publicPort
 }

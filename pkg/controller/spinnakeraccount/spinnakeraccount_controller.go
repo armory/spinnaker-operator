@@ -101,7 +101,7 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	// Check if we need to redeploy
 	reqLogger.Info("Checking Spinnaker accounts")
 
-	aType, err := accounts.GetType(instance.GetSpec().GetType())
+	aType, err := accounts.GetType(instance.GetSpec().Type)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -123,7 +123,7 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 	}
 
 	// Check we can inject dynamic accounts in the SpinnakerService
-	if !spinsvc.GetSpec().GetAccounts().IsEnabled() || !spinsvc.GetSpec().GetAccounts().IsDynamic() {
+	if !spinsvc.GetSpec().Accounts.Enabled || !spinsvc.GetSpec().Accounts.Dynamic {
 		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", spinsvc.GetName())
 	}
 

@@ -55,18 +55,18 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc int
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, k.account.Settings, spinSvc.GetSpec().GetSpinnakerConfig())
+		return makeClientFromSettings(ctx, k.account.Settings, &spinSvc.GetSpec().SpinnakerConfig)
 	}
-	if auth.GetKubeconfigFile() != "" {
-		return makeClientFromFile(ctx, auth.GetKubeconfigFile(), nil, spinSvc.GetSpec().GetSpinnakerConfig())
+	if auth.KubeconfigFile != "" {
+		return makeClientFromFile(ctx, auth.KubeconfigFile, nil, &spinSvc.GetSpec().SpinnakerConfig)
 	}
-	if auth.GetKubeconfig() != nil {
-		return makeClientFromConfigAPI(auth.GetKubeconfig())
+	if auth.Kubeconfig != nil {
+		return makeClientFromConfigAPI(auth.Kubeconfig)
 	}
-	if auth.GetKubeconfigSecret() != nil {
-		return makeClientFromSecretRef(ctx, auth.GetKubeconfigSecret())
+	if auth.KubeconfigSecret != nil {
+		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
 	}
-	if auth.IsUseServiceAccount() {
+	if auth.UseServiceAccount {
 		return makeClientFromServiceAccount(ctx, spinSvc, c)
 	}
 	return nil, noAuthProvidedError
@@ -103,12 +103,12 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref interfaces.SecretInNamespaceReference) (*rest.Config, error) {
+func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamespaceReference) (*rest.Config, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
 	}
-	str, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, ref.GetName(), ref.GetKey())
+	str, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, ref.Name, ref.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func makeClientFromServiceAccount(ctx context.Context, spinSvc interfaces.Spinna
 	if err != nil {
 		return nil, err
 	}
-	an, err := spinSvc.GetSpec().GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
+	an, err := spinSvc.GetSpec().SpinnakerConfig.GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
 	if err != nil {
 		return nil, noServiceAccountName
 	}

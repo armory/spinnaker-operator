@@ -17,13 +17,13 @@ import (
 func (k *AccountType) FromCRD(account interfaces.SpinnakerAccount) (account.Account, error) {
 	a := k.newAccount()
 	a.Name = account.GetName()
-	a.Settings = account.GetSpec().GetSettings()
-	a.Auth = account.GetSpec().GetKubernetes()
+	a.Settings = account.GetSpec().Settings
+	a.Auth = account.GetSpec().Kubernetes
 	if a.Auth == nil {
 		return nil, noKubernetesDefinedError
 	}
 	// Parse settings relevant to the environment
-	if err := inspect.Source(&a.Env, account.GetSpec().GetSettings()); err != nil {
+	if err := inspect.Source(&a.Env, account.GetSpec().Settings); err != nil {
 		return nil, err
 	}
 	return a, nil
@@ -49,11 +49,11 @@ func (k *AccountType) FromSpinnakerConfig(ctx context.Context, settings map[stri
 	return a, nil
 }
 
-func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, settings map[string]interface{}) (interfaces.KubernetesAuth, error) {
-	res := TypesFactory.NewKubernetesAuth()
+func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, settings map[string]interface{}) (*interfaces.KubernetesAuth, error) {
+	res := &interfaces.KubernetesAuth{}
 	kubeconfigFile, err := inspect.GetObjectPropString(ctx, settings, "kubeconfigFile")
 	if err == nil {
-		res.SetKubeconfigFile(kubeconfigFile)
+		res.KubeconfigFile = kubeconfigFile
 		return res, nil
 	}
 	sa, ok := settings["serviceAccount"]
@@ -62,7 +62,7 @@ func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, 
 		if !sok {
 			return nil, fmt.Errorf("serviceAccount is not a boolean: %s", sa)
 		}
-		res.SetUseServiceAccount(s)
+		res.UseServiceAccount = s
 		return res, nil
 	}
 	kubeContent, ok := settings["kubeconfigContents"]
@@ -77,7 +77,7 @@ func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, 
 		if err != nil {
 			return nil, err
 		}
-		res.SetKubeconfig(c)
+		res.Kubeconfig = c
 		return res, nil
 	}
 	return nil, fmt.Errorf("unable to parse account %s: no valid kubeconfig file, kubeconfig content or service account information found", name)
@@ -96,27 +96,27 @@ func (k *Account) ToSpinnakerSettings(ctx context.Context) (map[string]interface
 }
 
 func (k *Account) kubeAuthToSpinnakerSettings(ctx context.Context, settings map[string]interface{}) error {
-	if k.Auth.GetKubeconfigFile() != "" {
+	if k.Auth.KubeconfigFile != "" {
 		// Must be referencing a file either as a secret or made available to Spinnaker out of band
 		// pass as is
-		settings[KubeconfigFileSettings] = k.Auth.GetKubeconfigFile()
+		settings[KubeconfigFileSettings] = k.Auth.KubeconfigFile
 		return nil
 	}
-	if k.Auth.GetKubeconfig() != nil {
+	if k.Auth.Kubeconfig != nil {
 		// Let's just serialize the inlined kubeconfig
-		b, err := yaml.Marshal(k.Auth.GetKubeconfig())
+		b, err := yaml.Marshal(k.Auth.Kubeconfig)
 		if err != nil {
 			return err
 		}
 		settings[KubeconfigFileContentSettings] = string(b)
 		return nil
 	}
-	if k.Auth.GetKubeconfigSecret() != nil {
+	if k.Auth.KubeconfigSecret != nil {
 		sc, err := secrets.FromContextWithError(ctx)
 		if err != nil {
 			return err
 		}
-		config, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, k.Auth.GetKubeconfigSecret().GetName(), k.Auth.GetKubeconfigSecret().GetKey())
+		config, err := util.GetSecretContent(sc.RestConfig, sc.Namespace, k.Auth.KubeconfigSecret.Name, k.Auth.KubeconfigSecret.Key)
 		if err != nil {
 			return err
 		}
@@ -124,8 +124,8 @@ func (k *Account) kubeAuthToSpinnakerSettings(ctx context.Context, settings map[
 		settings[KubeconfigFileContentSettings] = config
 		return nil
 	}
-	if k.Auth.IsUseServiceAccount() {
-		settings[UseServiceAccount] = k.Auth.IsUseServiceAccount()
+	if k.Auth.UseServiceAccount {
+		settings[UseServiceAccount] = k.Auth.UseServiceAccount
 		return nil
 	}
 	return errors.New("auth method not implemented")

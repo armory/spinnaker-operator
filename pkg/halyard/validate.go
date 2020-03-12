@@ -43,7 +43,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc interfaces
 	writer := multipart.NewWriter(body)
 
 	// Add config
-	cfg := spinsvc.GetSpec().GetSpinnakerConfig()
+	cfg := spinsvc.GetSpec().SpinnakerConfig
 
 	// Sanitize secrets before validating
 	// This will also serve as a secret validation step
@@ -83,7 +83,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc interfaces
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/v1/validation/config?failFast=%t&skipValidators=%s", s.url, failFast, strings.Join(getValidationsToSkip(spinsvc.GetSpec().GetValidation()), ","))
+	url := fmt.Sprintf("%s/v1/validation/config?failFast=%t&skipValidators=%s", s.url, failFast, strings.Join(getValidationsToSkip(spinsvc.GetSpec().Validation), ","))
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return req, err

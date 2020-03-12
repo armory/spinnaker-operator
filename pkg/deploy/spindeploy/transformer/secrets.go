@@ -63,8 +63,8 @@ func (s *secretsTransformerGenerator) GetName() string {
 }
 
 func (s *secretsTransformer) TransformConfig(ctx context.Context) error {
-	spinCfg := s.svc.GetSpec().GetSpinnakerConfig()
-	return s.replaceK8sSecretsFromAwsKeys(spinCfg, ctx)
+	spinCfg := s.svc.GetSpec().SpinnakerConfig
+	return s.replaceK8sSecretsFromAwsKeys(&spinCfg, ctx)
 }
 
 // replaceK8sSecretsFromAwsKeys replaces any kubernetes secret references from aws credentials fields and saves them for later processing

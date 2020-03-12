@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	testing2 "github.com/go-logr/logr/testing"
@@ -35,11 +36,11 @@ users:
   user:
     token: test-token
 `
-	authFile := TypesFactory.NewKubernetesAuth()
-	authFile.SetKubeconfigFile(fmt.Sprintf("encryptedFile:noop!%s", s))
 	a := &Account{
 		Name: "test",
-		Auth: authFile,
+		Auth: &interfaces.KubernetesAuth{
+			KubeconfigFile: fmt.Sprintf("encryptedFile:noop!%s", s),
+		},
 	}
 	kv := &kubernetesAccountValidator{account: a}
 	ctx := secrets.NewContext(context.TODO(), nil, "ns1")
@@ -84,11 +85,11 @@ spec:
 	if !assert.Nil(t, yaml.Unmarshal([]byte(y), spinSvc)) {
 		return
 	}
-	authFile := TypesFactory.NewKubernetesAuth()
-	authFile.SetKubeconfigFile("kubecfg")
 	a := &Account{
 		Name: "test",
-		Auth: authFile,
+		Auth: &interfaces.KubernetesAuth{
+			KubeconfigFile: "kubecfg",
+		},
 	}
 	kv := &kubernetesAccountValidator{account: a}
 	c, err := kv.makeClient(context.TODO(), spinSvc, nil)

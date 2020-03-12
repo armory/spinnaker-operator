@@ -42,10 +42,10 @@ func (k *AccountType) newAccount() *Account {
 	}
 }
 
-func (k *AccountType) GetValidationSettings(spinsvc interfaces.SpinnakerService) interfaces.ValidationSetting {
-	v := spinsvc.GetSpec().GetValidation()
-	if s, ok := v.GetProviders()[string(interfaces.KubernetesAccountType)]; ok {
-		return s
+func (k *AccountType) GetValidationSettings(spinsvc interfaces.SpinnakerService) *interfaces.ValidationSetting {
+	v := spinsvc.GetSpec().Validation
+	if s, ok := v.Providers[string(interfaces.KubernetesAccountType)]; ok {
+		return &s
 	}
 	return v.GetValidationSettings()
 }
@@ -67,7 +67,7 @@ type CustomKubernetesResource struct {
 type Account struct {
 	*account.BaseAccount
 	Name     string `json:"name,omitempty"`
-	Auth     interfaces.KubernetesAuth
+	Auth     *interfaces.KubernetesAuth
 	Env      Env                 `json:"env,omitempty"`
 	Settings interfaces.FreeForm `json:"settings,omitempty"`
 }
