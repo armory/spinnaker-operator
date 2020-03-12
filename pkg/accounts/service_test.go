@@ -4,28 +4,33 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
+	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
+func init() {
+	TypesFactory = test.TypesFactory
+}
+
 func TestPrepareSettings(t *testing.T) {
 	acc1 := &kubernetes.Account{
 		Name: "account1",
-		Auth: &v1alpha2.KubernetesAuth{
+		Auth: &interfaces.KubernetesAuth{
 			KubeconfigFile: "/tmp/kubeconfig-1.yml",
 		},
 		Env:      kubernetes.Env{},
-		Settings: v1alpha2.FreeForm{},
+		Settings: interfaces.FreeForm{},
 	}
 	acc2 := &kubernetes.Account{
 		Name: "account2",
-		Auth: &v1alpha2.KubernetesAuth{
+		Auth: &interfaces.KubernetesAuth{
 			KubeconfigFile: "/tmp/kubeconfig-2.yml",
 		},
 		Env:      kubernetes.Env{},
-		Settings: v1alpha2.FreeForm{},
+		Settings: interfaces.FreeForm{},
 	}
 	accountList := []account.Account{acc1, acc2}
 

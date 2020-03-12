@@ -1,0 +1,2 @@
+// +kubebuilder:skip
+package interfaces

@@ -2,32 +2,33 @@ package transformer
 
 import (
 	"context"
+	"sigs.k8s.io/yaml"
 	"testing"
-
-	spinnakerv1alpha2 "github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSetTarget(t *testing.T) {
-	svc := spinnakerv1alpha2.SpinnakerService{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "ns2"},
-		Spec: spinnakerv1alpha2.SpinnakerServiceSpec{
-			SpinnakerConfig: spinnakerv1alpha2.SpinnakerConfig{
-				Config: spinnakerv1alpha2.FreeForm{
-					"deploymentEnvironment": map[string]string{
-						"location": "ns1",
-					},
-				},
-			},
-		},
+	m := `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  namespace: ns2
+spec:
+  spinnakerConfig:
+    config:
+      deploymentEnvironment:
+        location: ns1
+`
+	svc := th.TypesFactory.NewService()
+	if !assert.Nil(t, yaml.Unmarshal([]byte(m), svc)) {
+		return
 	}
-	tg := &targetTransformer{svc: &svc}
+	tg := &targetTransformer{svc: svc}
 	ctx := context.TODO()
 	err := tg.TransformConfig(ctx)
 	if assert.Nil(t, err) {
-		s, err := svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "deploymentEnvironment.location")
+		s, err := svc.GetSpec().SpinnakerConfig.GetHalConfigPropString(ctx, "deploymentEnvironment.location")
 		assert.Nil(t, err)
 		assert.Equal(t, "ns2", s)
 	}

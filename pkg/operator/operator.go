@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/controller"
 	"github.com/armory/spinnaker-operator/pkg/controller/accountvalidating"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
@@ -180,8 +179,8 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 func getGVKs(m manager.Manager) ([]schema.GroupVersionKind, error) {
 	gvks := make([]schema.GroupVersionKind, 0)
 	objs := []kruntime.Object{
-		spinnakerservice.SpinnakerServiceBuilder.New(),
-		&v1alpha2.SpinnakerAccount{},
+		spinnakerservice.TypesFactory.NewService(),
+		spinnakerservice.TypesFactory.NewAccount(),
 	}
 	for _, obj := range objs {
 		gvk, err := apiutil.GVKForObject(obj, m.GetScheme())

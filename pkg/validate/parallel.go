@@ -2,14 +2,14 @@ package validate
 
 import (
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 )
 
 type ParallelValidator struct {
 	runInParallel []SpinnakerValidator
 }
 
-func (p *ParallelValidator) Validate(spinSvc v1alpha2.SpinnakerServiceInterface, options Options) ValidationResult {
+func (p *ParallelValidator) Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
 	var result ValidationResult
 	for _, v := range p.runInParallel {
 		options.Log.Info(fmt.Sprintf("Running validator %T", v))

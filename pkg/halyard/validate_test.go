@@ -3,7 +3,7 @@ package halyard
 import (
 	"context"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/ghodss/yaml"
 	testing2 "github.com/go-logr/logr/testing"
@@ -96,7 +96,7 @@ spec:
          - name: acc1
            kubeconfigFile: encryptedFile:noop!myfilecontent
 `
-	spinsvc := &v1alpha2.SpinnakerService{}
+	spinsvc := interfaces.DefaultTypesFactory.NewService()
 	err := yaml.Unmarshal([]byte(s), spinsvc)
 	if !assert.Nil(t, err) {
 		return

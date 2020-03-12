@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -26,7 +26,7 @@ func NewService() *Service {
 }
 
 // Generate calls Halyard to generate the required files and return a list of parsed objects
-func (s *Service) Generate(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
+func (s *Service) Generate(ctx context.Context, spinConfig *interfaces.SpinnakerConfig) (*generated.SpinnakerGeneratedConfig, error) {
 	req, err := s.buildGenManifestsRequest(ctx, spinConfig)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (s *Service) parseGenManifestsResponse(d []byte) (*generated.SpinnakerGener
 	return sgc, err
 }
 
-func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *v1alpha2.SpinnakerConfig) (*http.Request, error) {
+func (s *Service) buildGenManifestsRequest(ctx context.Context, spinConfig *interfaces.SpinnakerConfig) (*http.Request, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	if err := s.addObjectToRequest(writer, "config", spinConfig.Config); err != nil {

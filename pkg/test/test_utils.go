@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"io/ioutil"
@@ -14,6 +15,12 @@ import (
 	"sigs.k8s.io/yaml"
 	"testing"
 )
+
+func init() {
+	v1alpha2.RegisterTypes()
+}
+
+var TypesFactory = interfaces.DefaultTypesFactory
 
 type DummyK8sSecretEngine struct {
 	Secret string
@@ -28,10 +35,23 @@ func (s *DummyK8sSecretEngine) IsFile() bool {
 	return s.File
 }
 
-func ManifestToSpinService(manifestYaml string, t *testing.T) *v1alpha2.SpinnakerService {
-	svc := &v1alpha2.SpinnakerService{}
+func ManifestToSpinService(s string, t *testing.T) interfaces.SpinnakerService {
+	svc := TypesFactory.NewService()
+	ReadYamlString([]byte(s), svc, t)
+	return svc
+}
+
+func ManifestFileToSpinService(manifestYaml string, t *testing.T) interfaces.SpinnakerService {
+	svc := TypesFactory.NewService()
 	ReadYamlFile(manifestYaml, svc, t)
 	return svc
+}
+
+func ReadYamlString(s []byte, target interface{}, t *testing.T) {
+	err := yaml.Unmarshal(s, target)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func ReadYamlFile(path string, target interface{}, t *testing.T) {
@@ -39,10 +59,7 @@ func ReadYamlFile(path string, target interface{}, t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = yaml.Unmarshal(bytes, target)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ReadYamlString(bytes, target, t)
 }
 
 func FakeClient(t *testing.T, objs ...runtime.Object) client.Client {

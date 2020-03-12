@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +22,7 @@ import (
 
 var log = logf.Log.WithName("spinnakerservice")
 
-var SpinnakerServiceBuilder v1alpha2.SpinnakerServiceBuilderInterface
+var TypesFactory interfaces.TypesFactory
 
 // Add creates a new SpinnakerService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -48,7 +48,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource SpinnakerService
-	err = c.Watch(&source.Kind{Type: &v1alpha2.SpinnakerAccount{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: TypesFactory.NewAccount()}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		// Ignore no kind match
 		if _, ok := err.(*meta.NoKindMatchError); ok {
@@ -82,7 +82,7 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling SpinnakerAccount")
 
 	// Fetch the SpinnakerService instance
-	instance := &v1alpha2.SpinnakerAccount{}
+	instance := TypesFactory.NewAccount()
 	ctx := secrets.NewContext(context.TODO(), r.restConfig, request.Namespace)
 	defer secrets.Cleanup(ctx)
 
@@ -101,17 +101,17 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	// Check if we need to redeploy
 	reqLogger.Info("Checking Spinnaker accounts")
 
-	aType, err := accounts.GetType(instance.Spec.Type)
+	aType, err := accounts.GetType(instance.GetSpec().Type)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	cpInstance := instance.DeepCopy()
+	cpInstance := instance.DeepCopyInterface()
 	err = r.deploy(ctx, cpInstance, aType)
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account *v1alpha2.SpinnakerAccount, accountType account.SpinnakerAccountType) error {
-	spinsvc, err := util.FindSpinnakerService(r.client, account.Namespace, SpinnakerServiceBuilder)
+func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfaces.SpinnakerAccount, accountType account.SpinnakerAccountType) error {
+	spinsvc, err := util.FindSpinnakerService(r.client, account.GetNamespace(), TypesFactory)
 	if err != nil {
 		return err
 	}
@@ -123,12 +123,12 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account *v1alpha
 	}
 
 	// Check we can inject dynamic accounts in the SpinnakerService
-	if !spinsvc.GetAccountsConfig().Enabled || !spinsvc.GetAccountsConfig().Dynamic {
+	if !spinsvc.GetSpec().Accounts.Enabled || !spinsvc.GetSpec().Accounts.Dynamic {
 		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", spinsvc.GetName())
 	}
 
 	// Get all Spinnaker accounts
-	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, account.Namespace)
+	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, account.GetNamespace())
 	if err != nil {
 		return err
 	}

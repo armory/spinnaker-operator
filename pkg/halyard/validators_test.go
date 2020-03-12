@@ -1,7 +1,8 @@
 package halyard
 
 import (
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/test"
+	"github.com/ghodss/yaml"
 	"github.com/openshift/origin/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -9,25 +10,35 @@ import (
 func TestPersistentStorageValidators(t *testing.T) {
 	tests := []struct {
 		name        string
-		settings    v1alpha2.SpinnakerValidation
+		settings    string
 		expectedLen int
 		expected    func(*testing.T, []string)
 	}{
 		{
-			name:        "ok with no settings",
-			settings:    v1alpha2.SpinnakerValidation{},
+			name: "ok with no settings",
+			settings: `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  validation: {}
+`,
 			expectedLen: len(validationsToSkip),
 			expected:    func(t *testing.T, strings []string) {},
 		},
 		{
 			name: "disable google provider",
-			settings: v1alpha2.SpinnakerValidation{
-				Providers: map[string]v1alpha2.ValidationSetting{
-					"google": {
-						Enabled: false,
-					},
-				},
-			},
+			settings: `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  validation:
+    providers:
+      google:
+        enabled: false`,
 			expectedLen: len(validationsToSkip) + 4,
 			expected: func(t *testing.T, strings []string) {
 				assert.Contains(t, strings, "GoogleAccountValidator")
@@ -38,13 +49,16 @@ func TestPersistentStorageValidators(t *testing.T) {
 		},
 		{
 			name: "disable s3 persistent storage",
-			settings: v1alpha2.SpinnakerValidation{
-				PersistentStorage: map[string]v1alpha2.ValidationSetting{
-					"s3": {
-						Enabled: false,
-					},
-				},
-			},
+			settings: `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  validation:
+    persistentStorage:
+      s3:
+        enabled: false`,
 			expectedLen: len(validationsToSkip) + 1,
 			expected: func(t *testing.T, strings []string) {
 				assert.Contains(t, strings, "S3Validator")
@@ -54,7 +68,11 @@ func TestPersistentStorageValidators(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sk := getValidationsToSkip(tt.settings)
+			spinSvc := test.TypesFactory.NewService()
+			if !assert.Nil(t, yaml.Unmarshal([]byte(tt.settings), spinSvc)) {
+				return
+			}
+			sk := getValidationsToSkip(spinSvc.GetSpec().Validation)
 			assert.Equal(t, tt.expectedLen, len(sk))
 			tt.expected(t, sk)
 		})

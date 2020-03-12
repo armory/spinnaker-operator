@@ -192,7 +192,6 @@ github.com/modern-go/reflect2
 # github.com/openshift/origin v0.0.0-20160503220234-8f127d736703
 github.com/openshift/origin/Godeps/_workspace/src/github.com/stretchr/testify/assert
 # github.com/operator-framework/operator-sdk v0.10.1-0.20190926170752-c0a7fc360048 => github.com/operator-framework/operator-sdk v0.10.1-0.20191004014855-dc713e4d7890
-github.com/operator-framework/operator-sdk/cmd/operator-sdk/add
 github.com/operator-framework/operator-sdk/cmd/operator-sdk/generate
 github.com/operator-framework/operator-sdk/cmd/operator-sdk/internal/genutil
 github.com/operator-framework/operator-sdk/internal/pkg/scaffold

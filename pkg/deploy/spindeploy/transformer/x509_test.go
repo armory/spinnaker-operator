@@ -2,7 +2,7 @@ package transformer
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -13,10 +13,10 @@ import (
 )
 
 func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
-	tr, spinSvc := th.setupTransformer(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
+	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 0
+	spinSvc.GetSpec().Expose.Service.PublicPort = 0
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -34,10 +34,10 @@ func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedWithCustomPort(t *testing.T) {
-	tr, spinSvc := th.setupTransformer(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
+	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
-	spinSvc.Spec.Expose.Service.PublicPort = 3333
+	spinSvc.GetSpec().Expose.Service.PublicPort = 3333
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -55,10 +55,32 @@ func TestTransformManifests_ExposedWithCustomPort(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedWithOverridenPort(t *testing.T) {
-	tr, spinSvc := th.setupTransformer(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
+	s := `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    config: {}
+    profiles:
+      gate:
+        default:
+          apiPort: 8085
+  expose:
+    type: service
+    service:
+      type: LoadBalancer
+      publicPort: 80
+      annotations:
+        "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"
+      overrides: 
+        gate-x509:
+          publicPort: 5555
+`
+	tr, _ := th.setupTransformerFromSpinText(&x509TransformerGenerator{}, s, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
-	spinSvc.Spec.Expose.Service.Overrides["gate-x509"] = v1alpha2.ExposeConfigServiceOverrides{PublicPort: 5555}
 
 	err := tr.TransformManifests(context.TODO(), nil, gen)
 	assert.Nil(t, err)
@@ -79,8 +101,8 @@ func TestTransformManifests_RemoveX509Service(t *testing.T) {
 	x509Svc := &corev1.Service{}
 	test.ReadYamlFile("testdata/output_service_lb.yml", x509Svc, t)
 	x509Svc.Name = util.GateX509ServiceName
-	tr, spinSvc := th.setupTransformer(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t, x509Svc)
-	spinSvc.Spec.SpinnakerConfig.Profiles = map[string]v1alpha2.FreeForm{}
+	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t, x509Svc)
+	spinSvc.GetSpec().SpinnakerConfig.Profiles = map[string]interfaces.FreeForm{}
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
 

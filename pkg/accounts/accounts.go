@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
@@ -17,7 +17,8 @@ const (
 
 var ServicesWithAccountsFiles = []string{"clouddriver"}
 
-var Types = map[v1alpha2.AccountType]account.SpinnakerAccountType{}
+var TypesFactory interfaces.TypesFactory
+var Types = map[interfaces.AccountType]account.SpinnakerAccountType{}
 
 func Register(accountTypes ...account.SpinnakerAccountType) {
 	for _, a := range accountTypes {
@@ -29,7 +30,7 @@ func init() {
 	Register(&kubernetes.AccountType{})
 }
 
-func GetType(tp v1alpha2.AccountType) (account.SpinnakerAccountType, error) {
+func GetType(tp interfaces.AccountType) (account.SpinnakerAccountType, error) {
 	if t, ok := Types[tp]; ok {
 		return t, nil
 	}
@@ -41,21 +42,21 @@ func GetType(tp v1alpha2.AccountType) (account.SpinnakerAccountType, error) {
 }
 
 func AllValidCRDAccounts(ctx context.Context, c client.Client, ns string) ([]account.Account, error) {
-	spinAccounts := &v1alpha2.SpinnakerAccountList{}
+	spinAccounts := TypesFactory.NewAccountList()
 	if err := c.List(ctx, spinAccounts, client.InNamespace(ns)); err != nil {
 		return nil, err
 	}
 
 	accounts := make([]account.Account, 0)
-	for _, a := range spinAccounts.Items {
-		if !a.Spec.Enabled {
+	for _, a := range spinAccounts.GetItems() {
+		if !a.GetSpec().Enabled {
 			continue
 		}
-		accountType, err := GetType(a.Spec.Type)
+		accountType, err := GetType(a.GetSpec().Type)
 		if err != nil {
 			continue
 		}
-		acc, err := accountType.FromCRD(&a)
+		acc, err := accountType.FromCRD(a)
 		if err != nil {
 			return nil, err
 		}

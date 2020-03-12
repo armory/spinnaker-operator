@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -18,14 +18,14 @@ import (
 
 // accountsTransformer inserts accounts defined via CRD into Spinnaker's config
 type accountsTransformer struct {
-	svc    v1alpha2.SpinnakerServiceInterface
+	svc    interfaces.SpinnakerService
 	log    logr.Logger
 	client client.Client
 }
 
 type accountsTransformerGenerator struct{}
 
-func (a *accountsTransformerGenerator) NewTransformer(svc v1alpha2.SpinnakerServiceInterface,
+func (a *accountsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 	client client.Client, log logr.Logger) (Transformer, error) {
 	return &accountsTransformer{svc: svc, log: log, client: client}, nil
 }
@@ -40,7 +40,7 @@ func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
 }
 
 func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
-	if !a.svc.GetAccountsConfig().Enabled {
+	if !a.svc.GetSpec().Accounts.Enabled {
 		a.log.Info("accounts disabled, skipping")
 		return nil
 	}

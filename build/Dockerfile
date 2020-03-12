@@ -21,6 +21,7 @@ ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_NAME=spinnaker-operator \
     AWS_BINARY_RELEASE_DATE=2019-08-22 \
     KUBECTL_RELEASE=1.14.6 \
+    AWS_CLI_RELEASE=1.16.208 \
     OPERATOR_HOME=/opt/spinnaker-operator
 
 EXPOSE 8383
@@ -33,6 +34,11 @@ RUN curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/
   chmod +x ./aws-iam-authenticator && \
   mv ./aws-iam-authenticator /usr/local/bin/aws-iam-authenticator
 ENV PATH "$PATH:/usr/local/bin/aws-iam-authenticator"
+
+# Install aws-cli
+RUN wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
+    python /tmp/get-pip.py && \
+    pip install --upgrade awscli==${AWS_CLI_RELEASE}
 
 # Install gcloud
 RUN wget -nv https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.zip && \

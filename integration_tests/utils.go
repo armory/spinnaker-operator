@@ -231,13 +231,6 @@ func RandomString(prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, rand.Intn(999))
 }
 
-func InstallAwsCli(e *TestEnv, t *testing.T) bool {
-	c := "wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python /tmp/get-pip.py --user && /home/spinnaker-operator/.local/bin/pip install --user --upgrade awscli==1.16.208"
-	RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s exec -c spinnaker-operator %s -- bash -c \"%s\"",
-		e.KubectlPrefix(), e.Operator.Namespace, e.Operator.PodName, c), t)
-	return !t.Failed()
-}
-
 func RunCommandInOperatorAndAssert(c string, e *TestEnv, t *testing.T) bool {
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s exec -c spinnaker-operator %s -- bash -c \"%s\"",
 		e.KubectlPrefix(), e.Operator.Namespace, e.Operator.PodName, c), t)
@@ -254,7 +247,7 @@ func CopyFileToS3Bucket(f, dest string, e *TestEnv, t *testing.T) bool {
 	if t.Failed() {
 		return !t.Failed()
 	}
-	c := fmt.Sprintf("/home/spinnaker-operator/.local/bin/aws s3 mv /tmp/fileToCopy s3://%s/%s", e.Vars.S3Bucket, dest)
+	c := fmt.Sprintf("aws s3 mv /tmp/fileToCopy s3://%s/%s", e.Vars.S3Bucket, dest)
 	return RunCommandInOperatorAndAssert(c, e, t)
 }
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/armory/go-yaml-tools/pkg/secrets"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/ghodss/yaml"
 	v12 "k8s.io/api/apps/v1"
@@ -18,8 +18,8 @@ import (
 
 var errSecretNotFound = errors.New("secret not found")
 
-func FindSpinnakerService(c client.Client, ns string, builder v1alpha2.SpinnakerServiceBuilderInterface) (v1alpha2.SpinnakerServiceInterface, error) {
-	l := builder.NewList()
+func FindSpinnakerService(c client.Client, ns string, builder interfaces.TypesFactory) (interfaces.SpinnakerService, error) {
+	l := builder.NewServiceList()
 	if err := c.List(context.TODO(), l, client.InNamespace(ns)); err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func FindSpinnakerService(c client.Client, ns string, builder v1alpha2.Spinnaker
 	return nil, nil
 }
 
-func FindDeployment(c client.Client, spinsvc v1alpha2.SpinnakerServiceInterface, service string) (*v12.Deployment, error) {
+func FindDeployment(c client.Client, spinsvc interfaces.SpinnakerService, service string) (*v12.Deployment, error) {
 	dep := &v12.Deployment{}
 	err := c.Get(context.TODO(), client.ObjectKey{Namespace: spinsvc.GetNamespace(), Name: fmt.Sprintf("spin-%s", service)}, dep)
 	return dep, err
@@ -131,7 +131,7 @@ func GetServiceAccountData(ctx context.Context, name, ns string, c client.Client
 	return "", "", fmt.Errorf("no secret for service account %s was found on namespace %s", name, ns)
 }
 
-func GetSpinnakerServices(list v1alpha2.SpinnakerServiceListInterface, ns string, c client.Client) ([]v1alpha2.SpinnakerServiceInterface, error) {
+func GetSpinnakerServices(list interfaces.SpinnakerServiceList, ns string, c client.Client) ([]interfaces.SpinnakerService, error) {
 	var opts client.ListOption
 	opts = client.InNamespace(ns)
 	err := c.List(context.TODO(), list, opts)

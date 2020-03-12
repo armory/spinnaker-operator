@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -145,7 +145,7 @@ spec:
 	accs := []account.Account{
 		&kubernetes.Account{
 			Name: "test",
-			Auth: &v1alpha2.KubernetesAuth{
+			Auth: &interfaces.KubernetesAuth{
 				KubeconfigFile: "kube.yml",
 			},
 		},

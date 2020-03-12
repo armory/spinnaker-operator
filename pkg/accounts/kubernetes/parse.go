@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -14,16 +14,16 @@ import (
 	yamlk8s "sigs.k8s.io/yaml"
 )
 
-func (k *AccountType) FromCRD(account *v1alpha2.SpinnakerAccount) (account.Account, error) {
+func (k *AccountType) FromCRD(account interfaces.SpinnakerAccount) (account.Account, error) {
 	a := k.newAccount()
-	a.Name = account.Name
-	a.Settings = account.Spec.Settings
-	a.Auth = account.Spec.Kubernetes
+	a.Name = account.GetName()
+	a.Settings = account.GetSpec().Settings
+	a.Auth = account.GetSpec().Kubernetes
 	if a.Auth == nil {
 		return nil, noKubernetesDefinedError
 	}
 	// Parse settings relevant to the environment
-	if err := inspect.Source(&a.Env, account.Spec.Settings); err != nil {
+	if err := inspect.Source(&a.Env, account.GetSpec().Settings); err != nil {
 		return nil, err
 	}
 	return a, nil
@@ -49,10 +49,12 @@ func (k *AccountType) FromSpinnakerConfig(ctx context.Context, settings map[stri
 	return a, nil
 }
 
-func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, settings map[string]interface{}) (*v1alpha2.KubernetesAuth, error) {
+func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, settings map[string]interface{}) (*interfaces.KubernetesAuth, error) {
+	res := &interfaces.KubernetesAuth{}
 	kubeconfigFile, err := inspect.GetObjectPropString(ctx, settings, "kubeconfigFile")
 	if err == nil {
-		return &v1alpha2.KubernetesAuth{KubeconfigFile: kubeconfigFile}, nil
+		res.KubeconfigFile = kubeconfigFile
+		return res, nil
 	}
 	sa, ok := settings["serviceAccount"]
 	if ok {
@@ -60,7 +62,8 @@ func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, 
 		if !sok {
 			return nil, fmt.Errorf("serviceAccount is not a boolean: %s", sa)
 		}
-		return &v1alpha2.KubernetesAuth{UseServiceAccount: s}, nil
+		res.UseServiceAccount = s
+		return res, nil
 	}
 	kubeContent, ok := settings["kubeconfigContents"]
 	if ok {
@@ -74,7 +77,8 @@ func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, 
 		if err != nil {
 			return nil, err
 		}
-		return &v1alpha2.KubernetesAuth{Kubeconfig: c}, nil
+		res.Kubeconfig = c
+		return res, nil
 	}
 	return nil, fmt.Errorf("unable to parse account %s: no valid kubeconfig file, kubeconfig content or service account information found", name)
 }

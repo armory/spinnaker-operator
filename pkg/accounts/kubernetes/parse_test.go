@@ -3,11 +3,16 @@ package kubernetes
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"testing"
 )
+
+func init() {
+	TypesFactory = test.TypesFactory
+}
 
 func TestFromCRD(t *testing.T) {
 	tests := []struct {
@@ -81,7 +86,7 @@ spec:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sa := &v1alpha2.SpinnakerAccount{}
+			sa := TypesFactory.NewAccount()
 			if !assert.Nil(t, yaml.Unmarshal([]byte(tt.manifest), sa)) {
 				return
 			}
@@ -171,12 +176,12 @@ users:
 func TestToSpinnakerSettingsAuth(t *testing.T) {
 	tests := []struct {
 		name     string
-		auth     *v1alpha2.KubernetesAuth
+		auth     *interfaces.KubernetesAuth
 		expected func(t *testing.T, ss map[string]interface{}, err error)
 	}{
 		{
 			name: "service account auth",
-			auth: &v1alpha2.KubernetesAuth{UseServiceAccount: true},
+			auth: &interfaces.KubernetesAuth{UseServiceAccount: true},
 			expected: func(t *testing.T, ss map[string]interface{}, err error) {
 				assert.Nil(t, err)
 				assert.True(t, ss[UseServiceAccount].(bool))
@@ -188,9 +193,9 @@ func TestToSpinnakerSettingsAuth(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			k := &Account{
 				Name:     "kube-sa",
-				Auth:     &v1alpha2.KubernetesAuth{UseServiceAccount: true},
+				Auth:     &interfaces.KubernetesAuth{UseServiceAccount: true},
 				Env:      Env{},
-				Settings: v1alpha2.FreeForm{},
+				Settings: interfaces.FreeForm{},
 			}
 			ss, err := k.ToSpinnakerSettings(context.TODO())
 			tt.expected(t, ss, err)

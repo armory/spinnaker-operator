@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"k8s.io/client-go/rest"
@@ -18,6 +18,8 @@ import (
 )
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
+
+var TypesFactory interfaces.TypesFactory
 
 // spinnakerValidatingController performs preflight checks
 type accountValidatingController struct {
@@ -35,7 +37,7 @@ var log = logf.Log.WithName("accountvalidate")
 
 // Add adds the validating admission controller
 func Add(m manager.Manager) error {
-	gvk, err := apiutil.GVKForObject(&v1alpha2.SpinnakerAccount{}, m.GetScheme())
+	gvk, err := apiutil.GVKForObject(TypesFactory.NewAccount(), m.GetScheme())
 	if err != nil {
 		return err
 	}
@@ -46,8 +48,8 @@ func Add(m manager.Manager) error {
 // Handle is the entry point for spinnaker preflight validations
 func (v *accountValidatingController) Handle(ctx context.Context, req admission.Request) admission.Response {
 	log.Info(fmt.Sprintf("Handling admission request for: %s", req.AdmissionRequest.Kind.Kind))
-	gv := v1alpha2.SchemeGroupVersion
-	acc := &v1alpha2.SpinnakerAccount{}
+	gv := TypesFactory.GetGroupVersion()
+	acc := TypesFactory.NewAccount()
 
 	if "SpinnakerAccount" == req.AdmissionRequest.Kind.Kind &&
 		gv.Group == req.AdmissionRequest.Kind.Group &&
@@ -57,7 +59,7 @@ func (v *accountValidatingController) Handle(ctx context.Context, req admission.
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
-		accType, err := accounts.GetType(acc.Spec.Type)
+		accType, err := accounts.GetType(acc.GetSpec().Type)
 		if err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}

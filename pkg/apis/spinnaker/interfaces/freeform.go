@@ -1,4 +1,4 @@
-package v1alpha2
+package interfaces
 
 type FreeForm map[string]interface{}
 
@@ -6,6 +6,10 @@ func (f *FreeForm) DeepCopy() *FreeForm {
 	cp := FreeForm{}
 	copyInto(*f, cp)
 	return &cp
+}
+
+func (f *FreeForm) DeepCopyInto(out *FreeForm) {
+	copyInto(*out, *f)
 }
 
 func copyInto(m, cp map[string]interface{}) map[string]interface{} {
