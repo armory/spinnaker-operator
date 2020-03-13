@@ -18,30 +18,30 @@ import (
 const (
 	echoConfigFile     = "echo.yml"
 	kubernetesOperator = "kubernetes_operator"
-	telemetryKey       = "telemetry"
+	statsKey           = "stats"
 )
 
-type telemetryTransformer struct {
+type statsTransformer struct {
 	log logr.Logger
 }
 
-type telemetryTransformerGenerator struct{}
+type statsTransformerGenerator struct{}
 
-func (t *telemetryTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+func (t *statsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 	client client.Client, log logr.Logger) (Transformer, error) {
-	tr := telemetryTransformer{log: log}
+	tr := statsTransformer{log: log}
 	return &tr, nil
 }
 
-func (t *telemetryTransformerGenerator) GetName() string {
-	return "Telemetry"
+func (t *statsTransformerGenerator) GetName() string {
+	return "Stats"
 }
 
-func (t *telemetryTransformer) TransformConfig(ctx context.Context) error {
+func (t *statsTransformer) TransformConfig(ctx context.Context) error {
 	return nil
 }
 
-func (t *telemetryTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (t *statsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	n := "echo"
 	config, ok := gen.Config[n]
 	if !ok {
@@ -51,16 +51,16 @@ func (t *telemetryTransformer) TransformManifests(ctx context.Context, scheme *r
 	if sec == nil {
 		return nil
 	}
-	err := mapTelemetrySecret(sec)
+	err := mapStatsSecret(sec)
 	if err != nil {
-		t.log.Info(fmt.Sprintf("Error setting telemetry.DeploymentMethod: %s, ignoring", err))
+		t.log.Info(fmt.Sprintf("Error setting stats.DeploymentMethod: %s, ignoring", err))
 		return nil
 	}
 	return nil
 }
 
-// mapTelemetrySecret goes through echoConfigFile and set deployment method information
-func mapTelemetrySecret(secret *v1.Secret) error {
+// mapStatsSecret goes through echoConfigFile and set deployment method information
+func mapStatsSecret(secret *v1.Secret) error {
 	for key := range secret.Data {
 		if echoConfigFile == key {
 
@@ -70,7 +70,7 @@ func mapTelemetrySecret(secret *v1.Secret) error {
 				return err
 			}
 
-			data, err := setTelemetryDeploymentMethod(m)
+			data, err := setStatsDeploymentMethod(m)
 			if err != nil {
 				return err
 			}
@@ -81,26 +81,26 @@ func mapTelemetrySecret(secret *v1.Secret) error {
 	return nil
 }
 
-func setTelemetryDeploymentMethod(row map[string]interface{}) ([]byte, error) {
+func setStatsDeploymentMethod(row map[string]interface{}) ([]byte, error) {
 
-	// read telemetry property and map content
-	telemetryRowContent := make(map[string]interface{})
-	if err := inspect.Convert(row[telemetryKey], &telemetryRowContent); err != nil {
+	// read stats property and map content
+	rowContent := make(map[string]interface{})
+	if err := inspect.Convert(row[statsKey], &rowContent); err != nil {
 		return nil, err
 	}
 
-	if len(telemetryRowContent) == 0 {
-		telemetryRowContent = make(map[string]interface{})
+	if len(rowContent) == 0 {
+		rowContent = make(map[string]interface{})
 	}
 
 	deploymentmethodContent := make(map[string]interface{})
 	deploymentmethodContent["type"] = kubernetesOperator
 	deploymentmethodContent["version"] = version.GetOperatorVersion()
 
-	telemetryRowContent["deploymentMethod"] = deploymentmethodContent
+	rowContent["deploymentMethod"] = deploymentmethodContent
 
-	// override telemetry property
-	row[telemetryKey] = telemetryRowContent
+	// override stats property
+	row[statsKey] = rowContent
 
 	return yaml.Marshal(row)
 }
