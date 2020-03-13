@@ -24,7 +24,9 @@ data:
 	data := make(map[string][]byte)
 
 	secret := &v1.Secret{Data: data}
-	_ = yaml.Unmarshal([]byte(secretContent), secret)
+	if !assert.Nil(t, yaml.Unmarshal([]byte(secretContent), secret)) {
+		return
+	}
 
 	// when
 	err := mapStatsSecret(secret)
