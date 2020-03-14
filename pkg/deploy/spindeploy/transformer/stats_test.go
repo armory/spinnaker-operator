@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestMapTelemetrySecret(t *testing.T) {
+func TestMapStatsSecret(t *testing.T) {
 
 	// given
 	secretContent := `
@@ -19,20 +19,22 @@ metadata:
   name: spin-echo-files-287979322
   type: Opaque
 data:
-  echo.yml: dGVsZW1ldHJ5OgogIGVuYWJsZWQ6IHRydWUKICBkZXBsb3ltZW50TWV0aG9kOgogICAgdHlwZTogaGFseWFyZAogICAgdmVyc2lvbjogMS4zMi4wLTQz
+  echo.yml: c3RhdHM6CiAgZW5hYmxlZDogdHJ1ZQogIGRlcGxveW1lbnRNZXRob2Q6CiAgICB0eXBlOiBoYWx5YXJkCiAgICB2ZXJzaW9uOiAxLjMyLjAtNDM=
 `
 	data := make(map[string][]byte)
 
 	secret := &v1.Secret{Data: data}
-	_ = yaml.Unmarshal([]byte(secretContent), secret)
+	if !assert.Nil(t, yaml.Unmarshal([]byte(secretContent), secret)) {
+		return
+	}
 
 	// when
-	err := mapTelemetrySecret(secret)
+	err := mapStatsSecret(secret)
 
 	// then
 	assert.Empty(t, err)
 
-	assertTelemetry(t, secret.Data[telemetryKey])
+	assertStats(t, secret.Data[statsKey])
 }
 
 func TestSetDeploymentMethodWithExistingValues(t *testing.T) {
@@ -46,13 +48,13 @@ func TestSetDeploymentMethodWithExistingValues(t *testing.T) {
 	deploymentMethod["deploymentMethod"] = deploymentmethodContent
 
 	row := make(map[string]interface{})
-	row[telemetryKey] = deploymentMethod
+	row[statsKey] = deploymentMethod
 
 	// when
-	b, _ := setTelemetryDeploymentMethod(row)
+	b, _ := setStatsDeploymentMethod(row)
 
 	// then
-	assertTelemetry(t, b)
+	assertStats(t, b)
 }
 
 func TestSetDeploymentMethodWithNoValues(t *testing.T) {
@@ -61,21 +63,21 @@ func TestSetDeploymentMethodWithNoValues(t *testing.T) {
 	row := make(map[string]interface{})
 
 	// when
-	b, _ := setTelemetryDeploymentMethod(row)
+	b, _ := setStatsDeploymentMethod(row)
 
 	// then
-	assertTelemetry(t, b)
+	assertStats(t, b)
 }
 
-func assertTelemetry(t *testing.T, telemetryByteContent []byte) {
+func assertStats(t *testing.T, statsByteContent []byte) {
 	// Parse as map
 	m := make(map[string]interface{})
-	if !assert.Nil(t, yaml.Unmarshal(telemetryByteContent, &m)) {
-		v, err := inspect.GetObjectPropString(context.TODO(), m, "telemetry.deploymentMethod.type")
+	if !assert.Nil(t, yaml.Unmarshal(statsByteContent, &m)) {
+		v, err := inspect.GetObjectPropString(context.TODO(), m, "stats.deploymentMethod.type")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "kubernetes_operator", v)
 		}
-		v, err = inspect.GetObjectPropString(context.TODO(), m, "telemetry.deploymentMethod.version")
+		v, err = inspect.GetObjectPropString(context.TODO(), m, "stats.deploymentMethod.version")
 		if assert.Nil(t, err) {
 			assert.Equal(t, "Unknown", v)
 		}
