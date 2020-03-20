@@ -70,7 +70,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	}
 
 	rLogger.Info("Retrieving complete Spinnaker configuration")
-	v, err := svc.GetSpec().SpinnakerConfig.GetHalConfigPropString(ctx, "version")
+	v, err := svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
 	}
@@ -93,7 +93,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	}
 
 	rLogger.Info("Generating manifests with Halyard")
-	l, err := d.m.Generate(ctx, &nSvc.GetSpec().SpinnakerConfig)
+	l, err := d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
 	if err != nil {
 		return true, err
 	}

@@ -123,7 +123,7 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 	}
 
 	// Check we can inject dynamic accounts in the SpinnakerService
-	if !spinsvc.GetSpec().Accounts.Enabled || !spinsvc.GetSpec().Accounts.Dynamic {
+	if !spinsvc.GetAccountConfig().Enabled || !spinsvc.GetAccountConfig().Dynamic {
 		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", spinsvc.GetName())
 	}
 

@@ -26,12 +26,12 @@ func (g *exposeLbChangeDetectorGenerator) NewChangeDetector(client client.Client
 
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services
 func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
-	exp := svc.GetSpec().Expose
+	exp := svc.GetExposeConfig()
 	switch strings.ToLower(exp.Type) {
 	case "":
 		return true, nil
 	case "service":
-		isDeckSSLEnabled, err := svc.GetSpec().SpinnakerConfig.GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
+		isDeckSSLEnabled, err := svc.GetSpinnakerConfig().GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
 		if err != nil {
 			isDeckSSLEnabled = false
 		}
@@ -39,7 +39,7 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc i
 		if !upToDateDeck || err != nil {
 			return false, err
 		}
-		isGateSSLEnabled, err := svc.GetSpec().SpinnakerConfig.GetHalConfigPropBool(util.GateSSLEnabledProp, false)
+		isGateSSLEnabled, err := svc.GetSpinnakerConfig().GetHalConfigPropBool(util.GateSSLEnabledProp, false)
 		if err != nil {
 			isGateSSLEnabled = false
 		}
@@ -77,7 +77,7 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, s
 
 	// annotations are different, redeploy
 	simpleServiceName := serviceName[len("spin-"):]
-	exp := spinSvc.GetSpec().Expose
+	exp := spinSvc.GetExposeConfig()
 	expectedAnnotations := exp.GetAggregatedAnnotations(simpleServiceName)
 	if !ch.areAnnotationsEqual(svc.Annotations, expectedAnnotations) {
 		rLogger.Info(fmt.Sprintf("Service annotations for %s: expected: %s, actual: %s", serviceName,
@@ -108,7 +108,7 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, s
 func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, spinSvc interfaces.SpinnakerService, svc *corev1.Service) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	formattedServiceName := serviceName[len("spin-"):]
-	exp := spinSvc.GetSpec().Expose
+	exp := spinSvc.GetExposeConfig()
 	if c, ok := exp.Service.Overrides[formattedServiceName]; ok && c.Type != "" {
 		if string(svc.Spec.Type) != c.Type {
 			rLogger.Info(fmt.Sprintf("Service type for %s: expected: %s, actual: %s", serviceName,

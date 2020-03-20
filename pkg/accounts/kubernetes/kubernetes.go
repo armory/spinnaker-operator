@@ -43,7 +43,7 @@ func (k *AccountType) newAccount() *Account {
 }
 
 func (k *AccountType) GetValidationSettings(spinsvc interfaces.SpinnakerService) *interfaces.ValidationSetting {
-	v := spinsvc.GetSpec().Validation
+	v := spinsvc.GetSpinnakerValidation()
 	if s, ok := v.Providers[string(interfaces.KubernetesAccountType)]; ok {
 		return &s
 	}

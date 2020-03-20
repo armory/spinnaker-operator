@@ -49,7 +49,10 @@ type TypesFactory interface {
 type SpinnakerService interface {
 	v1.Object
 	runtime.Object
-	GetSpec() *SpinnakerServiceSpec
+	GetSpinnakerConfig() *SpinnakerConfig
+	GetSpinnakerValidation() *SpinnakerValidation
+	GetExposeConfig() *ExposeConfig
+	GetAccountConfig() *AccountConfig
 	GetStatus() *SpinnakerServiceStatus
 	DeepCopyInterface() SpinnakerService
 	DeepCopySpinnakerService() SpinnakerService

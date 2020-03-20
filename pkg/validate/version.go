@@ -9,7 +9,7 @@ import (
 type versionValidator struct{}
 
 func (v *versionValidator) Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
-	config := spinSvc.GetSpec().SpinnakerConfig
+	config := spinSvc.GetSpinnakerConfig()
 	version, err := config.GetHalConfigPropString(options.Ctx, "version")
 	if err != nil {
 		return NewResultFromError(fmt.Errorf("unable to read spinnaker version from manifest: %s", err.Error()), true)
