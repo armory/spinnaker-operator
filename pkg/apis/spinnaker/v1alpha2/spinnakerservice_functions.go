@@ -11,9 +11,22 @@ func RegisterTypes() {
 
 var _ interfaces.SpinnakerService = &SpinnakerService{}
 
-func (s *SpinnakerService) GetSpec() *interfaces.SpinnakerServiceSpec {
-	return &s.Spec
+func (s *SpinnakerService) GetSpinnakerConfig() *interfaces.SpinnakerConfig {
+	return &s.Spec.SpinnakerConfig
 }
+
+func (s *SpinnakerService) GetSpinnakerValidation() *interfaces.SpinnakerValidation {
+	return &s.Spec.Validation
+}
+
+func (s *SpinnakerService) GetExposeConfig() *interfaces.ExposeConfig {
+	return &s.Spec.Expose
+}
+
+func (s *SpinnakerService) GetAccountConfig() *interfaces.AccountConfig {
+	return &s.Spec.Accounts
+}
+
 func (s *SpinnakerService) GetStatus() *interfaces.SpinnakerServiceStatus {
 	return &s.Status
 }

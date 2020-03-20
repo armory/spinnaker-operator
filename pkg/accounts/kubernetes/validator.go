@@ -55,10 +55,10 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc int
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, k.account.Settings, &spinSvc.GetSpec().SpinnakerConfig)
+		return makeClientFromSettings(ctx, k.account.Settings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.KubeconfigFile != "" {
-		return makeClientFromFile(ctx, auth.KubeconfigFile, nil, &spinSvc.GetSpec().SpinnakerConfig)
+		return makeClientFromFile(ctx, auth.KubeconfigFile, nil, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.Kubeconfig != nil {
 		return makeClientFromConfigAPI(auth.Kubeconfig)
@@ -153,7 +153,7 @@ func makeClientFromServiceAccount(ctx context.Context, spinSvc interfaces.Spinna
 	if err != nil {
 		return nil, err
 	}
-	an, err := spinSvc.GetSpec().SpinnakerConfig.GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
+	an, err := spinSvc.GetSpinnakerConfig().GetServiceSettingsPropString(ctx, util.ClouddriverName, "kubernetes.serviceAccountName")
 	if err != nil {
 		return nil, noServiceAccountName
 	}

@@ -40,7 +40,7 @@ func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
 }
 
 func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
-	if !a.svc.GetSpec().Accounts.Enabled {
+	if !a.svc.GetAccountConfig().Enabled {
 		a.log.Info("accounts disabled, skipping")
 		return nil
 	}
