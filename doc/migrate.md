@@ -11,12 +11,13 @@ The migration process from halyard to Operator can be completed in n steps:
 2. Export Spinnaker configuration.
 3. Export Spinnaker profiles.
 4. Export Spinnaker settings.
-4. Export Spinnaker files.
-n. Prevalidate your spinnaker configuration (only cluster mode).
+5. Export Spinnaker files. 
+6. Prevalidate your spinnaker configuration (only cluster mode).
+7. Apply your SpinnakerService
 
 ### 1. Install Operator
 
-To get started, install [Spinnaker Operator](https://github.com/armory/spinnaker-operator/blob/master/README.md#L69). 
+To get started, [install](../README.md) Spinnaker Operator. 
 
 ### 2. Export Spinnaker configuration 
 
@@ -92,10 +93,48 @@ spec:
         <<CONTENT>>
 ```
 
+### 5. Export Spinnaker files
 
-### n. Prevalidate your spinnaker configuration (only cluster mode)
+If we have configured spinnaker files, we will need to migrate these files to `SpinnakerService` manifest.
+
+Let's identify the current files under  `~/.hal/default/profiles`
+
+For each file let's create an entry under `spec.spinnakerConfig.files`
+
+Lets say we have the following files 
+
+```bash
+$ tree -v ~/.hal/default/profiles
+├── echo.yml
+└── rosco
+    └── packer
+        └── example-packer-config.json
+
+2 directories, 2 files
+```
+
+We need to create new entry with the name of the file following  this instructions:
+ 
+- For each folder put the folder name followed by double underscores (__) and at the very end the name of the file.
+
+```yaml
+spec:
+  spinnakerConfig:
+    files: 
+      profiles__rosco__packer__example-packer-config.json:
+        <<CONTENT>>
+```
+
+### 6. Prevalidate your spinnaker configuration (only cluster mode)
 
 ```bash
 $ kubectl -n <namespace> apply -f <spinnaker service> --server-dry-run
 ```
 
+If something is wrong with your manifest, the validation service will throw an error.
+
+### 7. Apply your SpinnakerService
+
+```bash
+$ kubectl -n <namespace> apply -f <spinnaker service>
+```
