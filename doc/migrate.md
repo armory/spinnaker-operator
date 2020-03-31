@@ -135,7 +135,7 @@ spec:
 $ kubectl -n <namespace> apply -f <spinnaker service> --server-dry-run
 ```
 
-If something is wrong with your manifest, the validation service will throw an error.
+If something is wrong with your manifest validation service will throw an error.
 
 ### 7. Apply your SpinnakerService
 
