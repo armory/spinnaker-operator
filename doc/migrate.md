@@ -43,6 +43,8 @@ spec:
 
 Note: `config` is under `~/.hal`
 
+More details on [SpinnakerService Options](options.md) on `.spec.spinnakerConfig.config` section
+
 ### 3. Export Spinnaker profiles
 
 If we have configured spinnaker profiles, we will need to migrate these profiles to `SpinnakerService` manifest.
@@ -67,6 +69,8 @@ spec:
       echo: 
         <<CONTENT>>
 ```
+
+More details on [SpinnakerService Options](options.md) on `.spec.spinnakerConfig.profiles` section
 
 ### 4. Export Spinnaker settings
 
