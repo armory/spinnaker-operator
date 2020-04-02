@@ -32,7 +32,7 @@ type patchTransformerGenerator struct{}
 func (g *patchTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 	client client.Client, log logr.Logger) (Transformer, error) {
 
-	tr := serverPortTransformer{svc: svc, log: log}
+	tr := patchTransformer{svc: svc, log: log}
 	return &tr, nil
 }
 
@@ -139,9 +139,9 @@ func (p *patchTransformer) asService(data []byte) (*v1.Service, error) {
 	dser := scheme.Codecs.UniversalDecoder()
 	svc := &v1.Service{}
 	obj, _, err := dser.Decode(data, &schema.GroupVersionKind{
-		Group:   "apps",
+		Group:   "",
 		Version: "v1",
-		Kind:    "Deployment",
+		Kind:    "Service",
 	}, svc)
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func getPatchedJSON(patchType types.PatchType, originalJS, patchJS []byte, gvk s
 			msg := err.Error()
 			ix := strings.Index(msg, "key:")
 			key := msg[ix+5:]
-			return bytes, fmt.Errorf("Object to be patched is missing field (%s)", key)
+			return bytes, fmt.Errorf("object to be patched is missing field (%s)", key)
 		}
 		return bytes, err
 
@@ -193,12 +193,11 @@ func getPatchedJSON(patchType types.PatchType, originalJS, patchJS []byte, gvk s
 		// get a typed object for this GVK if we need to apply a strategic merge patch
 		obj, err := creater.New(gvk)
 		if err != nil {
-			return nil, fmt.Errorf("cannot apply strategic merge patch for %s locally, try --type merge", gvk.String())
+			return nil, fmt.Errorf("cannot apply strategic merge patch for %s locally", gvk.String())
 		}
 		return strategicpatch.StrategicMergePatch(originalJS, patchJS, obj)
 
 	default:
-		// only here as a safety net - go-restful filters content-type
-		return nil, fmt.Errorf("unknown Content-Type header for patch: %v", patchType)
+		return nil, fmt.Errorf("unknown patching method: %v", patchType)
 	}
 }
