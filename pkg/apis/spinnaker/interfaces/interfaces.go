@@ -54,6 +54,7 @@ type SpinnakerService interface {
 	GetExposeConfig() *ExposeConfig
 	GetAccountConfig() *AccountConfig
 	GetStatus() *SpinnakerServiceStatus
+	GetKustomization() map[string]ServiceKustomization
 	DeepCopyInterface() SpinnakerService
 	DeepCopySpinnakerService() SpinnakerService
 }
@@ -89,6 +90,39 @@ type SpinnakerConfig struct {
 	// Main deployment configuration to be passed to Halyard
 	Config FreeForm `json:"config,omitempty"`
 }
+
+// +k8s:openapi-gen=true
+type ServiceKustomization struct {
+	Service    *Kustomization `json:"service,omitempty"`
+	Deployment *Kustomization `json:"deployment,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type Kustomization struct {
+	// PatchesStrategicMerge specifies the relative path to a file
+	// containing a strategic merge patch.  Format documented at
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/strategic-merge-patch.md
+	// URLs and globs are not supported.
+	// +optional
+	// +listType=list
+	PatchesStrategicMerge []PatchStrategicMerge `json:"patchesStrategicMerge,omitempty" yaml:"patchesStrategicMerge,omitempty"`
+	// JSONPatches is a list of JSONPatch for applying JSON patch.
+	// Format documented at https://tools.ietf.org/html/rfc6902
+	// and http://jsonpatch.com
+	// +optional
+	PatchesJson6902 PatchJson6902 `json:"patchesJson6902,omitempty" yaml:"patchesJson6902,omitempty"`
+
+	// Patches is a list of patches, where each one can be either a
+	// Strategic Merge Patch or a JSON patch.
+	// Each patch can be applied to multiple target objects.
+	// +optional
+	// +listType=list
+	Patches []Patch `json:"patches,omitempty" yaml:"patches,omitempty"`
+}
+
+type PatchStrategicMerge string
+type PatchJson6902 string
+type Patch string
 
 // +k8s:openapi-gen=true
 type ValidationSetting struct {
@@ -172,6 +206,9 @@ type SpinnakerServiceSpec struct {
 	Expose ExposeConfig `json:"expose,omitempty"`
 	// +optional
 	Accounts AccountConfig `json:"accounts,omitempty"`
+	// Patch Kustomization of service and deployment per service
+	// +optional
+	Kustomize map[string]ServiceKustomization `json:"kustomize,omitempty"`
 }
 
 // SpinnakerDeploymentStatus represents the deployment status of a single service

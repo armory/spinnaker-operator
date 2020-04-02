@@ -11,10 +11,11 @@ Please let us know what would make your life easier when installing Spinnaker! Y
 - Keep secrets separate from your config. Store your config in `git` and have an easy Gitops workflow.
 - Validate your configuration before applying it (by using kubernetes's webhook validation).
 - Store Spinnaker secrets in Kubernetes secrets.
-- Patch versions, accounts or any setting with `kustomize`. 
+- Patch versions, accounts or any setting with `kustomize`.
 - Monitor the health of Spinnaker through `kubectl`.
 - Store kubeconfig inline, in [Kubernetes secrets](doc/managing-spinnaker.md#secrets-in-kubernetes-secrets), in S3, or GCS.
 - Define Kubernetes accounts in `SpinnakerAccount` objects **[experimental]**
+- Total control over generated manifests with [inline kustomization](doc/options.md#speckustomize)
 
 ## Requirements
 The validating admission controller [requires](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#prerequisites):

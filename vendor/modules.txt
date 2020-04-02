@@ -591,6 +591,13 @@ k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
 # k8s.io/code-generator v0.0.0-20190311093542-50b561225d70 => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
+k8s.io/code-generator/_examples/apiserver/apis/example
+k8s.io/code-generator/_examples/apiserver/apis/example/install
+k8s.io/code-generator/_examples/apiserver/apis/example/v1
+k8s.io/code-generator/_examples/apiserver/apis/example2
+k8s.io/code-generator/_examples/apiserver/apis/example2/install
+k8s.io/code-generator/_examples/apiserver/apis/example2/v1
+k8s.io/code-generator/_examples/apiserver/clientset/internalversion/scheme
 k8s.io/code-generator/cmd/client-gen
 k8s.io/code-generator/cmd/client-gen/args
 k8s.io/code-generator/cmd/client-gen/generators
