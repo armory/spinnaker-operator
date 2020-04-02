@@ -145,6 +145,9 @@ Set your own values in `deploy/spinnaker/kustomize/kustomization.yml`, then:
 $ kubectl create ns <spinnaker-namespace>
 $ kustomize build deploy/spinnaker/kustomize/ | kubectl -n <spinnaker-namespace> apply -f -
 ```
+
+## Migrate from Halyard to Operator
+See [how to migrate from halyard to Spinnaker Operatr](doc/migrate.md).
  
 ## SpinnakerService options
 See [all SpinnakerService options](doc/options.md).
