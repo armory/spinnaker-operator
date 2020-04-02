@@ -11,8 +11,8 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerAccount": schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref),
-		"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2.SpinnakerService": schema_pkg_apis_spinnaker_v1alpha2_SpinnakerService(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerAccount": schema_pkg_apis_spinnaker_v1alpha2_SpinnakerAccount(ref),
+		"./pkg/apis/spinnaker/v1alpha2.SpinnakerService": schema_pkg_apis_spinnaker_v1alpha2_SpinnakerService(ref),
 	}
 }
 

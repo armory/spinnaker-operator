@@ -27,6 +27,10 @@ func (s *SpinnakerService) GetAccountConfig() *interfaces.AccountConfig {
 	return &s.Spec.Accounts
 }
 
+func (s *SpinnakerService) GetKustomization() map[string]interfaces.ServiceKustomization {
+	return s.Spec.Kustomize
+}
+
 func (s *SpinnakerService) GetStatus() *interfaces.SpinnakerServiceStatus {
 	return &s.Status
 }

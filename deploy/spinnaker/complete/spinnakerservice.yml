@@ -63,7 +63,6 @@ spec:
   #        #!/bin/bash -e
   #        echo "hello world!"
 
-
   # spec.expose - This section defines how Spinnaker should be publicly exposed
   expose:
     type: service  # Kubernetes LoadBalancer type (service/ingress), note: only "service" is supported for now
@@ -94,4 +93,21 @@ spec:
 #           service.beta.kubernetes.io/aws-load-balancer-ssl-cert: null
 #         publicPort: 443
 
-  validation:
+  validation: {}
+
+  # Patching of generated service or deployment by Spinnaker service.
+  # Like in Kustomize, several patch types are supported. See
+  # https://github.com/armory/spinnaker-operator/blob/master/doc/options.md#speckustomize
+  kustomize: {}
+    # An example to change Gate's image name using a strategic merge patch
+#    gate:
+#      deployment:
+#        patchesStrategicMerge:
+#          - |
+#            spec:
+#              template:
+#                spec:
+#                  containers:
+#                  - name: gate
+#                    image: gate:1.0.0
+
