@@ -147,7 +147,7 @@ $ kustomize build deploy/spinnaker/kustomize/ | kubectl -n <spinnaker-namespace>
 ```
 
 ## Migrate from Halyard to Operator
-See [how to migrate from halyard to Spinnaker Operatr](doc/migrate.md).
+See [how to migrate from Halyard to Spinnaker Operator](doc/migrate.md).
  
 ## SpinnakerService options
 See [all SpinnakerService options](doc/options.md).
