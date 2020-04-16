@@ -22,12 +22,13 @@ require (
 	github.com/prometheus/procfs v0.0.4 // indirect
 	github.com/rogpeppe/go-internal v1.3.2 // indirect
 	github.com/spf13/pflag v1.0.3
+	github.com/spinnaker/kleat v0.0.0-20200409155927-2858643e50a5
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/atomic v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f
 	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
