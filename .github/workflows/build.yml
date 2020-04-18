@@ -18,25 +18,32 @@ jobs:
           echo "github.ref: ${{ github.ref }}"
           if [[ ${{ github.ref }} = "refs/heads/master" ]]
           then
-            echo "Building release candidate"
+            version=$(make version VERSION_TYPE=rc)
+            echo "Building release candidate $version"
             echo "##[set-output name=build_type;]rc"
             echo "##[set-output name=registry;]dockerhub"
+            echo "##[set-output name=version;]$version"
             echo "##[set-output name=make_args;]VERSION_TYPE=rc REGISTRY=docker.io REGISTRY_ORG=armory"
           elif [[ ${{ github.ref }} =~ ^refs/heads/release-* ]]
           then
-            echo "Building final release"
+            version=$(make version VERSION_TYPE=release)
+            echo "Building final release $version"
             echo "##[set-output name=build_type;]release"
             echo "##[set-output name=registry;]dockerhub"
+            echo "##[set-output name=version;]$version"
             echo "##[set-output name=make_args;]VERSION_TYPE=release REGISTRY=docker.io REGISTRY_ORG=armory"
           else
-            echo "Building snapshot"
+            version=$(make version VERSION_TYPE=snapshot)
+            echo "Building snapshot $version"
             echo "##[set-output name=build_type;]snapshot"
             echo "##[set-output name=registry;]jfrog"
+            echo "##[set-output name=version;]$version"
             echo "##[set-output name=make_args;]VERSION_TYPE=snapshot REGISTRY=armory-docker-local.jfrog.io REGISTRY_ORG=armory"
           fi
 
       - name: Build
         run: |
+          make manifest ${{ steps.build_type.outputs.make_args }}
           make docker-build ${{ steps.build_type.outputs.make_args }}
 
       - name: Unit tests
@@ -61,3 +68,30 @@ jobs:
       - name: Push
         run: |
           make docker-push ${{ steps.build_type.outputs.make_args }}
+          if [[ ${{ github.ref }} = "refs/heads/master" ]]
+          then
+            make docker-push-dev ${{ steps.build_type.outputs.make_args }}
+          fi
+
+      - name: Create Release
+        if: steps.build_type.outputs.build_type = 'release'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.build_type.outputs.version }}
+          release_name: v${{ steps.build_type.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload manifests
+        if: steps.build_type.outputs.build_type = 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/manifests.tgz
+          asset_name: manifests.tgz
+          asset_content_type: application/zip
