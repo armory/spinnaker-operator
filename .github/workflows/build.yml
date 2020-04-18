@@ -12,10 +12,6 @@ jobs:
       - name: Fetch full history
         run: git fetch --prune --tags --unshallow
 
-      - name: Login to Dockerhub
-        run: |
-          docker login -u ${{ secrets.DOCKERHUB_USER }} -p "${{ secrets.DOCKERHUB_PASSWORD }}" docker.io
-
       - name: Determine build type
         id: build_type
         run: |
@@ -24,15 +20,18 @@ jobs:
           then
             echo "Building release candidate"
             echo "##[set-output name=build_type;]rc"
+            echo "##[set-output name=registry;]dockerhub"
             echo "##[set-output name=make_args;]VERSION_TYPE=rc REGISTRY=docker.io REGISTRY_ORG=armory"
           elif [[ ${{ github.ref }} =~ ^refs/heads/release-* ]]
           then
             echo "Building final release"
             echo "##[set-output name=build_type;]release"
+            echo "##[set-output name=registry;]dockerhub"
             echo "##[set-output name=make_args;]VERSION_TYPE=release REGISTRY=docker.io REGISTRY_ORG=armory"
           else
             echo "Building snapshot"
             echo "##[set-output name=build_type;]snapshot"
+            echo "##[set-output name=registry;]jfrog"
             echo "##[set-output name=make_args;]VERSION_TYPE=snapshot REGISTRY=armory-docker-local.jfrog.io REGISTRY_ORG=armory"
           fi
 
@@ -47,6 +46,17 @@ jobs:
       - name: Package
         run: |
           make docker-package ${{ steps.build_type.outputs.make_args }}
+
+      - name: Login to docker registry
+        run: |
+          if [[ ${{ steps.build_type.outputs.registry }} = "dockerhub" ]]
+          then
+            echo "Logging in to dockerhub"
+            docker login -u ${{ secrets.DOCKERHUB_USER }} -p "${{ secrets.DOCKERHUB_PASSWORD }}" docker.io
+          else
+            echo "Logging in to jfrog"
+            docker login -u ${{ secrets.JFROG_USER }} -p "${{ secrets.JFROG_PASSWORD }}" armory-docker-local.jfrog.io
+          fi
 
       - name: Push
         run: |

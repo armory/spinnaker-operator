@@ -58,7 +58,7 @@ build: build-dirs manifest Makefile ## Compiles the code to produce binaries
 docker-build: Makefile ## Runs "make build" in a docker container
 	@echo "Running \"make build\" in docker"
 	@docker build \
-	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
+	-t docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
 	--build-arg VERSION_TYPE=${VERSION_TYPE} \
 	-f build-tools/Dockerfile.compile .
 
@@ -70,8 +70,8 @@ test: Makefile ## Run unit tests. Doesn't need to compile the code.
 docker-test: Makefile ## Runs "make test" in a docker container
 	@echo "Running \"make test\" in docker"
 	@docker build \
-	--build-arg BUILDER=$(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
-	-f build-tools/Dockerfile.test build
+	--build-arg BUILDER=docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
+	-f build-tools/Dockerfile.test build-tools
 
 .PHONY: integration-test
 integration-test: build-dirs Makefile ## Run integration tests. See requirements in integration_tests/README.md
@@ -82,9 +82,9 @@ docker-package: Makefile ## Builds the docker image to distribute
 	@echo "Packaging final docker image"
 	@docker build \
 	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) \
-	--build-arg BUILDER=$(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
+	--build-arg BUILDER=docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
 	--build-arg CACHE_DATE=$(shell date +%s) \
-	-f build-tools/Dockerfile build
+	-f build-tools/Dockerfile build-tools
 	@echo "Successfully built image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)"
 
 .PHONY: docker-push

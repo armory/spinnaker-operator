@@ -41,8 +41,8 @@ USER ${USER_NAME}
 ARG CACHE_DATE
 
 RUN echo "CACHE_DATE: ${CACHE_DATE}"
-COPY --from=builder /opt/spinnaker-operator/build/bin/linux_amd64/spinnaker-operator ${OPERATOR}
-COPY --from=builder /opt/spinnaker-operator/build/bin/linux_amd64/MANIFEST ${OPERATOR_HOME}/MANIFEST
-COPY --from=builder /opt/spinnaker-operator/build/build/entrypoint /usr/local/bin/entrypoint
+COPY --from=builder /opt/spinnaker-operator/build/build/bin/linux_amd64/spinnaker-operator ${OPERATOR}
+COPY --from=builder /opt/spinnaker-operator/build/build/bin/linux_amd64/MANIFEST ${OPERATOR_HOME}/MANIFEST
+COPY --from=builder /opt/spinnaker-operator/build/build-tools/entrypoint /usr/local/bin/entrypoint
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
