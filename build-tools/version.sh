@@ -10,7 +10,7 @@ VERSION_TYPE=$1
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 case $BRANCH in
-  ^release-*)
+  release-*)
     tmp=$(echo "$BRANCH" | cut -d'-' -f 2)
     read -r br_major br_minor br_patch <<< "${tmp//./ }"
     v=$(git tag --sort=-v:refname | grep "v$br_major.$br_minor" | head -1 | sed 's|v||g') ;;
