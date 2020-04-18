@@ -14,7 +14,7 @@ jobs:
 
       - name: Login to Dockerhub
         run: |
-          docker login -u ${{ secrets.DOCKERHUB_USER }} -p ${{ secrets.DOCKERHUB_PASSWORD }} docker.io
+          docker login -u ${{ secrets.DOCKERHUB_USER }} -p "${{ secrets.DOCKERHUB_PASSWORD }}" docker.io
 
       - name: Determine build type
         id: build_type
