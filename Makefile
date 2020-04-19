@@ -60,7 +60,7 @@ docker-build: Makefile ## Runs "make build" in a docker container
 	@echo "Running \"make build\" in docker"
 	@docker build \
 	-t docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
-	--build-arg VERSION_TYPE=${VERSION_TYPE} \
+	--build-arg VERSION=${VERSION} \
 	-f build-tools/Dockerfile.compile .
 
 .PHONY: test

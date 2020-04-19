@@ -1,7 +1,6 @@
 FROM golang:1.13.8-alpine3.11
 
-# Must be one of: "snapshot", "rc" or "release"
-ARG VERSION_TYPE=snapshot
+ARG VERSION
 
 # vendor flags conflict with `go get`
 # so we fetch golint before running make
@@ -12,4 +11,4 @@ RUN go get -u golang.org/x/lint/golint
 ENV GO111MODULE=on GOOS=linux GOARCH=amd64
 WORKDIR /opt/spinnaker-operator/build/
 ADD ./ /opt/spinnaker-operator/build/
-RUN make build VERSION_TYPE=${VERSION_TYPE} OS=linux ARCH=amd64
+RUN make build VERSION=${VERSION} OS=linux ARCH=amd64
