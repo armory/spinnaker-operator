@@ -21,7 +21,10 @@ jobs:
         run: |
           echo "github.ref: ${{ github.ref }}"
           echo "github.base_ref: ${{ github.base_ref }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
           echo "branch: $(git rev-parse --abbrev-ref HEAD)"
+
+          if [[ ${{github.event_name }} = "pull_request" ]] ; then branch_override=${{ github.head_ref }} ; fi
 
           # On PRs to release branches, build RC releases for target release branch
           if [[ ${{github.event_name }} = "pull_request" && ${{ github.base_ref }} =~ ^release-* ]]
