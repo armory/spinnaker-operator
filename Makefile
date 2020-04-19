@@ -14,13 +14,14 @@
 
 # Inspired by MySQL Operator Makefile: https://github.com/oracle/mysql-operator/blob/master/Makefile
 
-VERSION_TYPE ?= "snapshot" # Must be one of: "snapshot", "rc", or "release"
-VERSION 	 ?= $(shell build-tools/version.sh $(VERSION_TYPE))
-REGISTRY_ORG ?= "armory"
-OS      	 ?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 1)
-ARCH    	 ?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 2)
-NAMESPACE 	 ?= "spinnaker-operator"
-PWD 		  = $(shell pwd)
+VERSION_TYPE    ?= "snapshot" # Must be one of: "snapshot", "rc", or "release"
+BRANCH_OVERRIDE ?=
+VERSION 	 	?= $(shell build-tools/version.sh $(VERSION_TYPE) $(BRANCH_OVERRIDE))
+REGISTRY_ORG    ?= "armory"
+OS      	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 1)
+ARCH    	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 2)
+NAMESPACE 	 	?= "spinnaker-operator"
+PWD 		  	= $(shell pwd)
 
 REGISTRY        ?= docker.io
 SRC_DIRS        := cmd pkg integration-tests

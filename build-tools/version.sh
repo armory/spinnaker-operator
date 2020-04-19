@@ -1,13 +1,23 @@
 #!/bin/bash
 
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------
 # Calculates the next version based on git tags and current branch.
-#-----------------------------------------------------------------------------
+#
+# Examples:
+# * Snapshot version: 0.1.0-snapshot.[uncommitted].chore.foo.bar.test.050f9cd
+# * RC version:       0.1.0-rc.9
+# * Release version:  0.1.0
+#
+# Step logic:
+# * On release branch, only patch version is stepped depending on the latest git tag matching the branch name
+# * On all other branches, if latest tag is not rc, step minor and set patch=0. Otherwise, step rc number
+#------------------------------------------------------------------------------------------------------------------
 
 VERSION_TYPE=$1
-[[ ! $VERSION_TYPE =~ snapshot|rc|release ]] && echo "Usage: $(basename "$0") snapshot|rc|release" && exit 1
+BRANCH_OVERRIDE=$2
+[[ ! $VERSION_TYPE =~ snapshot|rc|release ]] && echo "Usage: $(basename "$0") snapshot|rc|release [branch-name]" && exit 1
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ -z $BRANCH_OVERRIDE ]] ; then BRANCH=$(git rev-parse --abbrev-ref HEAD) ; else BRANCH=$BRANCH_OVERRIDE ; fi
 
 case $BRANCH in
   release-*)

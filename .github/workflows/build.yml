@@ -15,30 +15,47 @@ jobs:
         id: build_type
         run: |
           echo "github.ref: ${{ github.ref }}"
-          if [[ ${{ github.ref }} = "refs/heads/master" ]]
+          echo "github.base_ref: ${{ github.base_ref }}"
+          echo "branch: $(git rev-parse --abbrev-ref HEAD)"
+
+          # On PRs to release branches, build RC releases for target release branch
+          if [[ ${{github.event_name }} = "pull_request" && ${{ github.base_ref }} =~ ^release-* ]]
           then
-            version=$(make version VERSION_TYPE=rc)
-            echo "Building release candidate $version"
-            echo "##[set-output name=build_type;]rc"
-            echo "##[set-output name=registry;]dockerhub"
-            echo "##[set-output name=version;]$version"
-            echo "##[set-output name=make_args;]VERSION_TYPE=rc REGISTRY=docker.io REGISTRY_ORG=armory"
+            echo "Building release candidate"
+            build_type=rc
+            branch_override=${{ github.base_ref }}
+            registry=docker.io
+
+          # On any build running on master branch, build RC versions
+          elif [[ ${{ github.ref }} = "refs/heads/master" ]]
+          then
+            echo "Building release candidate"
+            build_type=rc
+            registry=docker.io
+
+          # On any build running on release branches, build final release
           elif [[ ${{ github.ref }} =~ ^refs/heads/release-* ]]
           then
-            version=$(make version VERSION_TYPE=release)
-            echo "Building final release $version"
-            echo "##[set-output name=build_type;]release"
-            echo "##[set-output name=registry;]dockerhub"
-            echo "##[set-output name=version;]$version"
-            echo "##[set-output name=make_args;]VERSION_TYPE=release REGISTRY=docker.io REGISTRY_ORG=armory"
+            echo "Building final release"
+            build_type=release
+            registry=docker.io
+
           else
-            version=$(make version VERSION_TYPE=snapshot)
-            echo "Building snapshot $version"
-            echo "##[set-output name=build_type;]snapshot"
-            echo "##[set-output name=registry;]jfrog"
-            echo "##[set-output name=version;]$version"
-            echo "##[set-output name=make_args;]VERSION_TYPE=snapshot REGISTRY=armory-docker-local.jfrog.io REGISTRY_ORG=armory"
+            echo "Building snapshot"
+            build_type=snapshot
+            registry=armory-docker-local.jfrog.io
           fi
+
+          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
+          version=$(make version $make_args)
+          echo "Version: $version"
+          # Make sure the version can be used as a tag
+          git tag v$version
+
+          echo "##[set-output name=build_type;]$build_type"
+          echo "##[set-output name=registry;]$registry"
+          echo "##[set-output name=version;]$version"
+          echo "##[set-output name=make_args;]$make_args"
 
       - name: Build
         run: |
@@ -55,7 +72,7 @@ jobs:
 
       - name: Login to docker registry
         run: |
-          if [[ ${{ steps.build_type.outputs.registry }} = "dockerhub" ]]
+          if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
           then
             echo "Logging in to dockerhub"
             docker login -u ${{ secrets.DOCKERHUB_USER }} -p "${{ secrets.DOCKERHUB_PASSWORD }}" docker.io
@@ -71,6 +88,11 @@ jobs:
           then
             make docker-push-dev ${{ steps.build_type.outputs.make_args }}
           fi
+
+      - name: Push git tag
+        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        run: |
+          git push origin v${{ steps.build_type.outputs.version }}
 
       - name: Create Release
         if: steps.build_type.outputs.build_type == 'release'
