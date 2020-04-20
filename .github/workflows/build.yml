@@ -57,8 +57,10 @@ jobs:
           make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
           version=$(make version $make_args)
           echo "Version: $version"
+
           # Make sure the version can be used as a tag
           git tag v$version
+          git tag -d v$version
 
           echo "##[set-output name=build_type;]$build_type"
           echo "##[set-output name=registry;]$registry"
@@ -100,6 +102,7 @@ jobs:
       - name: Push git tag
         if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
+          git tag v${{ steps.build_type.outputs.version }}
           git push origin v${{ steps.build_type.outputs.version }}
 
       - name: Create Release
