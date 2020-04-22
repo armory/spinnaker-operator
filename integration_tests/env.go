@@ -240,7 +240,7 @@ func (e *TestEnv) VerifyAccountsExist(endpoint string, t *testing.T, accts ...Ac
 			}
 		}
 	}
-	assert.Equal(t, len(accts), found, fmt.Sprintf("Unable to find all accounts in spinnaker. Expected: %v but found: %v", accts, credentials))
+	assert.Equal(t, len(accts), found, fmt.Sprintf("Unable to find all accounts in spinnaker. Expected: %v but found: %v. Requested url: %s, response: %s", accts, credentials, endpoint, o))
 	return !t.Failed()
 }
 
