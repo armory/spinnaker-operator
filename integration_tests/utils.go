@@ -20,7 +20,7 @@ const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 25  // (25 * 2s) = 50 seconds
-	MaxChecksWaitingForSpinnakerStability  = 350 // (350 * 2s) / 60 = 11.6 minutes
+	MaxChecksWaitingForSpinnakerStability  = 450 // (450 * 2s) / 60 = 15 minutes
 	MaxChecksWaitingForLBStability         = 90  // (90 * 2s) / 60 = 3 minutes
 )
 

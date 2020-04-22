@@ -76,7 +76,7 @@ docker-test: Makefile ## Runs "make test" in a docker container
 
 .PHONY: integration-test
 integration-test: build-dirs Makefile ## Run integration tests. See requirements in integration_tests/README.md
-	@go test -tags=integration -timeout=30m ./integration_tests/...
+	@go test -tags=integration -mod=vendor -timeout=30m ./integration_tests/...
 
 .PHONY: docker-package
 docker-package: Makefile ## Builds the docker image to distribute
@@ -137,7 +137,7 @@ manifest: build-dirs ## Copies and packages kubernetes manifest files with final
 	@echo "Build-Go-Version="$(shell go version) >> $(BUILD_BIN_DIR)/MANIFEST
 	@echo "Copying kubernetes manifests"
 	@cp -R deploy ${BUILD_MF_DIR}
-	@rm ${BUILD_MF_DIR}/deploy/role.yaml
+	@if [[ -f ${BUILD_MF_DIR}/deploy/role.yaml ]] ; then rm ${BUILD_MF_DIR}/deploy/role.yaml ; fi
 	@cat ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new
 	@mv ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml
 	@cat ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new

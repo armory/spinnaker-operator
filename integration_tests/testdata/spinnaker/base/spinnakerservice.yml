@@ -5,7 +5,7 @@ metadata:
 spec:
   spinnakerConfig:
     config:
-      version: 1.17.0
+      version: 1.19.5
       persistentStorage:
         persistentStoreType: s3
         s3:

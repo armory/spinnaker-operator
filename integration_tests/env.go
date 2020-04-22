@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 const (
@@ -218,6 +219,7 @@ func (e *TestEnv) InstallSpinnaker(ns, kustPath string, t *testing.T) bool {
 
 func (e *TestEnv) VerifyAccountsExist(endpoint string, t *testing.T, accts ...Account) bool {
 	LogMainStep(t, "Verifying spinnaker accounts")
+	time.Sleep(15 * time.Second) // wait a bit for gate to cache credentials from clouddriver
 	o := ExecuteGetRequest(fmt.Sprintf("%s%s", e.SpinGateUrl, endpoint), t)
 	if t.Failed() {
 		return !t.Failed()
