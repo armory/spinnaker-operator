@@ -126,10 +126,16 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 	// Check we can inject dynamic accounts in the SpinnakerService
 	if !spinsvc.GetAccountConfig().Enabled || !spinsvc.GetAccountConfig().Dynamic {
 		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", spinsvc.GetName())
+		return nil
 	}
 
 	// Get all Spinnaker accounts
 	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, account.GetNamespace())
+	if err != nil {
+		return err
+	}
+
+	ver, err := spinsvc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		return err
 	}
@@ -144,14 +150,24 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 		if err != nil {
 			return err
 		}
-		sec, err := util.FindSecretInDeployment(r.client, dep, svc, "/opt/spinnaker/config")
+
+		var filename, filepath string
+
+		if accounts.IsDynamicFileSupported(svc, ver) {
+			filepath = accounts.DynamicFilePath
+			filename = accounts.DynamicFileName
+		} else {
+			filepath = "/opt/spinnaker/config"
+			filename = fmt.Sprintf("%s-%s", svc, accounts.SpringProfile)
+		}
+
+		sec, err := util.FindSecretInDeployment(r.client, dep, svc, filepath)
 		if err != nil {
 			return err
 		}
-		if err = util.UpdateSecret(sec, ss, fmt.Sprintf("%s-%s", svc, accounts.SpringProfile)); err != nil {
+		if err = util.UpdateSecret(sec, ss, filename); err != nil {
 			return err
 		}
-
 		if err = r.client.Update(ctx, sec); err != nil {
 			return err
 		}

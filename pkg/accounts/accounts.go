@@ -18,6 +18,9 @@ const (
 var ServicesWithAccountsFiles = []string{"clouddriver"}
 var MinSpinnakerVersionAccountCRD = "1.19.0"
 
+const DynamicFilePath = "/opt/spinnaker/config/dynamic"
+const DynamicFileName = "account-dynamic.yml"
+
 var TypesFactory interfaces.TypesFactory
 var Types = map[interfaces.AccountType]account.SpinnakerAccountType{}
 

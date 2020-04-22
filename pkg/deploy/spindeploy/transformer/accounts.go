@@ -18,9 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const dynamicFilePath = "/opt/spinnaker/config/dynamic"
-const dynamicFileName = "account-dynamic.yml"
-
 // accountsTransformer inserts accounts defined via CRD into Spinnaker's config
 type accountsTransformer struct {
 	svc            interfaces.SpinnakerService
@@ -108,12 +105,13 @@ func (a *accountsTransformer) enableDynamicFile(ctx context.Context, svc string)
 	if a.svc.GetSpinnakerConfig().Profiles == nil {
 		a.svc.GetSpinnakerConfig().Profiles = map[string]interfaces.FreeForm{}
 	}
+	filename := filepath.Join(accounts.DynamicFilePath, accounts.DynamicFilePath)
 	ff := a.svc.GetSpinnakerConfig().Profiles[svc]
 	if ff == nil {
 		a.svc.GetSpinnakerConfig().Profiles[svc] = map[string]interface{}{
 			"dynamic-config": map[string]interface{}{
 				"enabled": true,
-				"files":   filepath.Join(dynamicFilePath, dynamicFileName),
+				"files":   filename,
 			},
 		}
 		return nil
@@ -126,9 +124,9 @@ func (a *accountsTransformer) enableDynamicFile(ctx context.Context, svc string)
 			return err
 		}
 		if s == "" {
-			s = filepath.Join(dynamicFilePath, dynamicFileName)
+			s = filename
 		} else {
-			s = s + "," + filepath.Join(dynamicFilePath, dynamicFileName)
+			s = s + "," + filename
 		}
 		return inspect.SetObjectProp(ff, "dynamic-config.files", s)
 	}
@@ -201,7 +199,7 @@ func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[strin
 		},
 		Data: map[string][]byte{},
 	}
-	err := util.UpdateSecret(sec, settings, dynamicFileName)
+	err := util.UpdateSecret(sec, settings, accounts.DynamicFileName)
 	if err != nil {
 		return err
 	}
@@ -227,7 +225,7 @@ func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[strin
 		if c.Name == svc {
 			cfg.Deployment.Spec.Template.Spec.Containers[i].VolumeMounts = append(c.VolumeMounts, v1.VolumeMount{
 				Name:      secName,
-				MountPath: dynamicFilePath,
+				MountPath: accounts.DynamicFilePath,
 			})
 			return nil
 		}
