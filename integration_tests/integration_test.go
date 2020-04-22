@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+	"time"
 )
 
 var defaults Defaults
@@ -14,7 +15,7 @@ var defaults Defaults
 func init() {
 	defaults = Defaults{
 		OperatorImageDefault:  "armory/spinnaker-operator:dev",
-		HalyardImageDefault:   "armory/halyard:operator-0.4.x",
+		HalyardImageDefault:   "armory/halyard:operator-dev",
 		BucketDefault:         "operator-int-tests",
 		BucketRegionDefault:   "us-west-2",
 		OperatorKustomizeBase: "testdata/operator/base",
@@ -80,12 +81,13 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	// upgrade
 	LogMainStep(t, "Upgrading spinnaker")
 	v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-	if t.Failed() || !assert.Equal(t, "1.17.0", strings.TrimSpace(v)) {
+	if t.Failed() || !assert.Equal(t, "1.19.5", strings.TrimSpace(v)) {
 		return
 	}
 	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_upgrade", t) {
 		return
 	}
+	time.Sleep(10 * time.Second)
 	v = RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), ns, SpinServiceName), t)
 	if t.Failed() || !assert.Equal(t, "1.17.1", strings.TrimSpace(v)) {
 		return

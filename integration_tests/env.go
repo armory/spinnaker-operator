@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 const (
@@ -19,6 +20,8 @@ const (
 	HalyardImageVar  = "HALYARD_IMAGE"
 	BucketVar        = "S3_BUCKET"
 	BucketRegionVar  = "S3_BUCKET_REGION"
+
+	MaxChecksWaitingForAccountsAvailable = 20 // 20 * 2s = 40 seconds
 )
 
 type Defaults struct {
@@ -218,27 +221,35 @@ func (e *TestEnv) InstallSpinnaker(ns, kustPath string, t *testing.T) bool {
 
 func (e *TestEnv) VerifyAccountsExist(endpoint string, t *testing.T, accts ...Account) bool {
 	LogMainStep(t, "Verifying spinnaker accounts")
-	o := ExecuteGetRequest(fmt.Sprintf("%s%s", e.SpinGateUrl, endpoint), t)
-	if t.Failed() {
-		return !t.Failed()
-	}
+	o := ""
 	var credentials []Account
-	found := 0
-	if assert.Nil(t, json.Unmarshal([]byte(o), &credentials)) {
-		for _, a := range accts {
-			for _, c := range credentials {
-				if a.Type != "" && a.Type == c.Type && a.Name == c.Name {
-					found++
-					break
-				}
-				if a.Types != nil && len(a.Types) > 0 && len(c.Types) > 0 && a.Types[0] == c.Types[0] && a.Name == c.Name {
-					found++
-					break
+	for counter := 0; counter < MaxChecksWaitingForAccountsAvailable; counter++ {
+		o = ExecuteGetRequest(fmt.Sprintf("%s%s", e.SpinGateUrl, endpoint), t)
+		if t.Failed() {
+			return !t.Failed()
+		}
+		found := 0
+		credentials = make([]Account, 0)
+		if assert.Nil(t, json.Unmarshal([]byte(o), &credentials)) {
+			for _, a := range accts {
+				for _, c := range credentials {
+					if a.Type != "" && a.Type == c.Type && a.Name == c.Name {
+						found++
+						break
+					}
+					if a.Types != nil && len(a.Types) > 0 && len(c.Types) > 0 && a.Types[0] == c.Types[0] && a.Name == c.Name {
+						found++
+						break
+					}
 				}
 			}
 		}
+		if len(accts) == found {
+			return !t.Failed()
+		}
+		time.Sleep(2 * time.Second)
 	}
-	assert.Equal(t, len(accts), found, fmt.Sprintf("Unable to find all accounts in spinnaker. Expected: %v but found: %v", accts, credentials))
+	t.Errorf("Unable to find all accounts in spinnaker. Expected: %v but found: %v. Requested url: %s, response: %s", accts, credentials, endpoint, o)
 	return !t.Failed()
 }
 

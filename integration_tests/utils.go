@@ -20,8 +20,8 @@ const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 25  // (25 * 2s) = 50 seconds
-	MaxChecksWaitingForSpinnakerStability  = 350 // (350 * 2s) / 60 = 11.6 minutes
-	MaxChecksWaitingForLBStability         = 90  // (90 * 2s) / 60 = 3 minutes
+	MaxChecksWaitingForSpinnakerStability  = 450 // (450 * 2s) / 60 = 15 minutes
+	MaxChecksWaitingForLBStability         = 180 // (180 * 2s) / 60 = 6 minutes
 )
 
 var SpinBaseSvcs []string
@@ -279,5 +279,5 @@ func SubstituteOverlayVars(overlayHome string, vars interface{}, t *testing.T) b
 }
 
 func GetPodName(ns, svc string, e *TestEnv, t *testing.T) string {
-	return strings.TrimSpace(RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep %s | awk '{print $1}'", e.KubectlPrefix(), ns, svc), t))
+	return strings.TrimSpace(RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep %s | grep \"1/1\" | grep \"Running\" | awk '{print $1}'", e.KubectlPrefix(), ns, svc), t))
 }
