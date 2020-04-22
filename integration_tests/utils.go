@@ -279,5 +279,5 @@ func SubstituteOverlayVars(overlayHome string, vars interface{}, t *testing.T) b
 }
 
 func GetPodName(ns, svc string, e *TestEnv, t *testing.T) string {
-	return strings.TrimSpace(RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep %s | grep \"Running\" | awk '{print $1}'", e.KubectlPrefix(), ns, svc), t))
+	return strings.TrimSpace(RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep %s | grep \"1/1\" | grep \"Running\" | awk '{print $1}'", e.KubectlPrefix(), ns, svc), t))
 }
