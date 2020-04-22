@@ -16,6 +16,7 @@ const (
 )
 
 var ServicesWithAccountsFiles = []string{"clouddriver"}
+var MinSpinnakerVersionAccountCRD = "1.19.0"
 
 var TypesFactory interfaces.TypesFactory
 var Types = map[interfaces.AccountType]account.SpinnakerAccountType{}

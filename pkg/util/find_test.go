@@ -103,7 +103,7 @@ spec:
 	}
 
 	// when
-	s := GetSecretConfigFromConfig(*config, "echo")
+	s := GetSecretForDefaultConfigPath(*config, "echo")
 
 	// then
 	assert.NotNil(t, s)

@@ -7,27 +7,45 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var dynamicFilePath = "/opt/spinnaker/config/dynamic"
+var dynamicFileName = "account-dynamic.yml"
+
 // accountsTransformer inserts accounts defined via CRD into Spinnaker's config
 type accountsTransformer struct {
-	svc    interfaces.SpinnakerService
-	log    logr.Logger
+	svc            interfaces.SpinnakerService
+	log            logr.Logger
+	dynamicFileSvc []string
+	accountFetcher accountFetcher
+}
+
+type accountFetcher interface {
+	fetch(context.Context, string) ([]account.Account, error)
+}
+
+type defaultAccountFetcher struct {
 	client client.Client
+}
+
+func (d *defaultAccountFetcher) fetch(ctx context.Context, ns string) ([]account.Account, error) {
+	return accounts.AllValidCRDAccounts(ctx, d.client, ns)
 }
 
 type accountsTransformerGenerator struct{}
 
 func (a *accountsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 	client client.Client, log logr.Logger) (Transformer, error) {
-	return &accountsTransformer{svc: svc, log: log, client: client}, nil
+	return &accountsTransformer{svc: svc, log: log, accountFetcher: &defaultAccountFetcher{client}}, nil
 }
 
 func (g *accountsTransformerGenerator) GetName() string {
@@ -36,24 +54,95 @@ func (g *accountsTransformerGenerator) GetName() string {
 
 // TransformConfig is a nop
 func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
+	// Use dynamic-config files support
+	if !a.svc.GetAccountConfig().Enabled {
+		return nil
+	}
+
+	v, err := a.svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
+	if err != nil {
+		return err
+	}
+
+	if a.svc.GetAccountConfig().Dynamic && !accounts.IsDynamicAccountSupported(v) {
+		return fmt.Errorf("dynamic account is not supported for version %s of Spinnaker", v)
+	}
+
+	// Use dynamicConfig prop if service supports it, otherwise use additional Spring profile
+	for _, s := range accounts.GetAllServicesWithAccounts() {
+		if accounts.IsDynamicFileSupported(s, v) {
+			err = a.enableDynamicFile(ctx, s)
+		} else {
+			err = a.addSpringProfile(s, accounts.SpringProfile)
+		}
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
+// addSpringProfile sets or appends to the environment variable SPRING_PROFILES_ACTIVE the given profile name
+// for the given service
+func (a *accountsTransformer) addSpringProfile(svc string, p string) error {
+	if a.svc.GetSpinnakerConfig().ServiceSettings == nil {
+		a.svc.GetSpinnakerConfig().ServiceSettings = map[string]interfaces.FreeForm{}
+	}
+	ff := a.svc.GetSpinnakerConfig().ServiceSettings[svc]
+	if ff == nil {
+		a.svc.GetSpinnakerConfig().ServiceSettings[svc] = map[string]interface{}{
+			"env": map[string]interface{}{
+				"SPRING_PROFILES_ACTIVE": p,
+			},
+		}
+		return nil
+	} else {
+		return inspect.SetObjectProp(ff, "env.SPRING_PROFILES_ACTIVE", p)
+	}
+}
+
+// enableDynamicFile sets dynamic-config.enabled and dynamic-config.files for the given service
+func (a *accountsTransformer) enableDynamicFile(ctx context.Context, svc string) error {
+	a.dynamicFileSvc = append(a.dynamicFileSvc, svc)
+	if a.svc.GetSpinnakerConfig().Profiles == nil {
+		a.svc.GetSpinnakerConfig().Profiles = map[string]interfaces.FreeForm{}
+	}
+	ff := a.svc.GetSpinnakerConfig().Profiles[svc]
+	if ff == nil {
+		a.svc.GetSpinnakerConfig().Profiles[svc] = map[string]interface{}{
+			"dynamic-config": map[string]interface{}{
+				"enabled": true,
+				"files":   filepath.Join(dynamicFilePath, dynamicFileName),
+			},
+		}
+		return nil
+	} else {
+		if err := inspect.SetObjectProp(ff, "dynamic-config.enabled", true); err != nil {
+			return err
+		}
+		s, err := inspect.GetObjectPropString(ctx, ff, "dynamic-config.files")
+		if err == nil {
+			return err
+		}
+		if s == "" {
+			s = filepath.Join(dynamicFilePath, dynamicFileName)
+		} else {
+			s = s + "," + filepath.Join(dynamicFilePath, dynamicFileName)
+		}
+		return inspect.SetObjectProp(ff, "dynamic-config.files", s)
+	}
+}
+
+// TransformManifests will either add accounts to the secret that resolves to {svc}-{accounts.SpringProfile}
+// or to the dynamic config files for the service via a new secret
 func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	if !a.svc.GetAccountConfig().Enabled {
 		a.log.Info("accounts disabled, skipping")
 		return nil
 	}
 
-	// Enable "accounts" Spring profile for each potential service
-	for _, s := range accounts.GetAllServicesWithAccounts() {
-		if err := addSpringProfile(gen.Config[s].Deployment, s, accounts.SpringProfile); err != nil {
-			return err
-		}
-	}
-
 	// Get CRD accounts if enabled
-	crdAccs, err := accounts.AllValidCRDAccounts(ctx, a.client, a.svc.GetNamespace())
+	crdAccs, err := a.accountFetcher.fetch(ctx, a.svc.GetNamespace())
 	if err != nil {
 		// Ignore no kind match
 		if _, ok := err.(*meta.NoKindMatchError); ok {
@@ -63,55 +152,91 @@ func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *ru
 		return err
 	}
 	a.log.Info(fmt.Sprintf("found %d accounts to deploy", len(crdAccs)))
-	return updateServiceSettings(ctx, crdAccs, gen)
+	return a.updateServiceSettings(ctx, crdAccs, gen)
 }
 
-func updateServiceSettings(ctx context.Context, crdAccounts []account.Account, gen *generated.SpinnakerGeneratedConfig) error {
-	for k := range gen.Config {
+func (a *accountsTransformer) updateServiceSettings(ctx context.Context, crdAccounts []account.Account, gen *generated.SpinnakerGeneratedConfig) error {
+	for k, cfg := range gen.Config {
 		settings, err := accounts.PrepareSettings(ctx, k, crdAccounts)
 		if err != nil {
 			return err
 		}
-		config, ok := gen.Config[k]
-		if !ok {
-			continue
+		if contains(a.dynamicFileSvc, k) {
+			// Add secret
+			err := a.addAccountToDynamicConfigSecret(settings, k, &cfg)
+			if err != nil {
+				return err
+			}
+		} else {
+			sec := util.GetSecretForDefaultConfigPath(cfg, k)
+			if sec == nil {
+				continue
+			}
+			if err = util.UpdateSecret(sec, settings, fmt.Sprintf("%s-%s.yml", k, accounts.SpringProfile)); err != nil {
+				return err
+			}
 		}
-		sec := util.GetSecretConfigFromConfig(config, k)
-		if sec == nil {
-			continue
-		}
-
-		if err = util.UpdateSecret(sec, k, settings, accounts.SpringProfile); err != nil {
-			return err
-		}
+		gen.Config[k] = cfg
 	}
 	return nil
 }
 
-func addSpringProfile(dep *appsv1.Deployment, svc string, p string) error {
-	c := util.GetContainerInDeployment(dep, svc)
-	if c == nil {
-		return fmt.Errorf("unable to find container %s in deployment", svc)
+// addAccountToDynamicConfigSecret adds a Secret called "spin-{svc}-dynamic-accounts" containing a single key
+// (dynamicFileName) with the dynamic account settings passed as parameter. That secret is then mounted on the deployment
+// to dynamicFilePath (/opt/spinnaker/config/dynamic)
+func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[string]interface{}, svc string, cfg *generated.ServiceConfig) error {
+	secName := fmt.Sprintf("spin-%s-dynamic-accounts", svc)
+	// Create the secret with the computed settings
+	// We do not version the secret because it has a different lifecycle
+	sec := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: a.svc.GetNamespace(),
+			Name:      secName,
+			Labels: map[string]string{
+				"app":     "spin",
+				"cluster": fmt.Sprintf("spin-%s", svc),
+			},
+		},
+		Data: map[string][]byte{},
 	}
-	for i := range c.Env {
-		ev := &c.Env[i]
-		if ev.Name == "SPRING_PROFILES_ACTIVE" {
-			if ev.ValueFrom != nil {
-				return fmt.Errorf("SPRING_PROFILES_ACTIVE set from a source not supported")
-			}
-			if ev.Value != "" {
-				ev.Value = fmt.Sprintf("%s,%s", ev.Value, p)
-			} else {
-				ev.Value = p
-			}
+	err := util.UpdateSecret(sec, settings, dynamicFileName)
+	if err != nil {
+		return err
+	}
+	// Add secret to resources
+	cfg.Resources = append(cfg.Resources, sec)
 
+	// Add the secret to the deployment
+	spec := cfg.Deployment.Spec.Template.Spec
+	mode := int32(384)
+	cfg.Deployment.Spec.Template.Spec.Volumes = append(spec.Volumes, v1.Volume{
+		Name: fmt.Sprintf("%s-dynamic-accounts", svc),
+		VolumeSource: v1.VolumeSource{
+			Secret: &v1.SecretVolumeSource{
+				SecretName:  secName,
+				DefaultMode: &mode,
+			},
+		},
+	})
+	for i := range spec.Containers {
+		c := spec.Containers[i]
+		if c.Name == svc {
+			cfg.Deployment.Spec.Template.Spec.Containers[i].VolumeMounts = append(c.VolumeMounts, v1.VolumeMount{
+				Name:      secName,
+				MountPath: dynamicFilePath,
+			})
 			return nil
 		}
 	}
-	// Add the prop
-	c.Env = append(c.Env, v1.EnvVar{
-		Name:  "SPRING_PROFILES_ACTIVE",
-		Value: p,
-	})
-	return nil
+	return fmt.Errorf("unable to find container %s in deployment", svc)
+}
+
+func contains(array []string, str string) bool {
+	for _, s := range array {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }

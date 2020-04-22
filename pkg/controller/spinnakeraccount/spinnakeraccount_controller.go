@@ -147,7 +147,7 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 		if err != nil {
 			return err
 		}
-		if err = util.UpdateSecret(sec, svc, ss, accounts.SpringProfile); err != nil {
+		if err = util.UpdateSecret(sec, ss, accounts.SpringProfile); err != nil {
 			return err
 		}
 

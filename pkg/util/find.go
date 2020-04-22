@@ -94,13 +94,12 @@ func GetContainerInDeployment(dep *v12.Deployment, containerName string) *v1.Con
 	return nil
 }
 
-func UpdateSecret(secret *v1.Secret, svc string, settings map[string]interface{}, profileName string) error {
-	k := fmt.Sprintf("%s-%s.yml", svc, profileName)
+func UpdateSecret(secret *v1.Secret, settings map[string]interface{}, fileName string) error {
 	b, err := yaml.Marshal(settings)
 	if err != nil {
 		return err
 	}
-	secret.Data[k] = b
+	secret.Data[fileName] = b
 	return nil
 }
 
@@ -141,8 +140,12 @@ func GetSpinnakerServices(list interfaces.SpinnakerServiceList, ns string, c cli
 	return list.GetItems(), nil
 }
 
-func GetSecretConfigFromConfig(config generated.ServiceConfig, n string) *v1.Secret {
-	secretName := GetMountedSecretNameInDeployment(config.Deployment, n, "/opt/spinnaker/config")
+func GetSecretForDefaultConfigPath(config generated.ServiceConfig, container string) *v1.Secret {
+	return GetSecretForPath(config, container, "/opt/spinnaker/config")
+}
+
+func GetSecretForPath(config generated.ServiceConfig, container, path string) *v1.Secret {
+	secretName := GetMountedSecretNameInDeployment(config.Deployment, container, path)
 	if secretName != "" {
 		for i := range config.Resources {
 			o := config.Resources[i]

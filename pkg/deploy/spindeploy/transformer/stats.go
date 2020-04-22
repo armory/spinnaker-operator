@@ -47,7 +47,7 @@ func (t *statsTransformer) TransformManifests(ctx context.Context, scheme *runti
 	if !ok {
 		return nil
 	}
-	sec := util.GetSecretConfigFromConfig(config, n)
+	sec := util.GetSecretForDefaultConfigPath(config, n)
 	if sec == nil {
 		return nil
 	}
