@@ -21,7 +21,7 @@ const (
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 25  // (25 * 2s) = 50 seconds
 	MaxChecksWaitingForSpinnakerStability  = 450 // (450 * 2s) / 60 = 15 minutes
-	MaxChecksWaitingForLBStability         = 90  // (90 * 2s) / 60 = 3 minutes
+	MaxChecksWaitingForLBStability         = 180 // (180 * 2s) / 60 = 6 minutes
 )
 
 var SpinBaseSvcs []string
