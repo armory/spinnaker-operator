@@ -1,0 +1,129 @@
+name: spinnaker-operator
+on:
+  push:
+    branches:
+      - master
+      - release-*
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Fetch full history
+        run: git fetch --prune --tags --unshallow
+
+      - name: Determine build type
+        id: build_type
+        run: |
+          echo "github.ref: ${{ github.ref }}"
+          echo "github.base_ref: ${{ github.base_ref }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
+          echo "branch: $(git rev-parse --abbrev-ref HEAD)"
+
+          if [[ ${{github.event_name }} = "pull_request" ]] ; then branch_override=${{ github.head_ref }} ; fi
+
+          # On PRs to release branches, build RC releases for target release branch
+          if [[ ${{github.event_name }} = "pull_request" && "x${{ github.base_ref }}" =~ ^xrelease-* ]]
+          then
+            echo "Building release candidate"
+            build_type=rc
+            branch_override=${{ github.base_ref }}
+            registry=docker.io
+
+          # On any build running on master branch, build RC versions
+          elif [[ ${{ github.ref }} = "refs/heads/master" ]]
+          then
+            echo "Building release candidate"
+            build_type=rc
+            registry=docker.io
+
+          # On any build running on release branches, build final release
+          elif [[ ${{ github.ref }} =~ ^refs/heads/release-* ]]
+          then
+            echo "Building final release"
+            build_type=release
+            registry=docker.io
+
+          else
+            echo "Building snapshot"
+            build_type=snapshot
+            registry=armory-docker-local.jfrog.io
+          fi
+
+          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
+          version=$(make version $make_args)
+          echo "Version: $version"
+
+          # Make sure the version can be used as a tag
+          git tag v$version
+          git tag -d v$version
+
+          echo "##[set-output name=build_type;]$build_type"
+          echo "##[set-output name=registry;]$registry"
+          echo "##[set-output name=version;]$version"
+          echo "##[set-output name=make_args;]$make_args"
+
+      - name: Build
+        run: |
+          make manifest ${{ steps.build_type.outputs.make_args }}
+          make docker-build ${{ steps.build_type.outputs.make_args }}
+
+      - name: Unit tests
+        run: |
+          make docker-test ${{ steps.build_type.outputs.make_args }}
+
+      - name: Package
+        run: |
+          make docker-package ${{ steps.build_type.outputs.make_args }}
+
+      - name: Login to docker registry
+        run: |
+          if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
+          then
+            echo "Logging in to dockerhub"
+            docker login -u ${{ secrets.DOCKERHUB_USER }} -p "${{ secrets.DOCKERHUB_PASSWORD }}" docker.io
+          else
+            echo "Logging in to jfrog"
+            docker login -u ${{ secrets.JFROG_USER }} -p "${{ secrets.JFROG_PASSWORD }}" armory-docker-local.jfrog.io
+          fi
+
+      - name: Push
+        run: |
+          make docker-push ${{ steps.build_type.outputs.make_args }}
+          if [[ ${{ github.ref }} = "refs/heads/master" ]]
+          then
+            make docker-push-dev ${{ steps.build_type.outputs.make_args }}
+          fi
+
+      - name: Push git tag
+        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        run: |
+          git tag v${{ steps.build_type.outputs.version }}
+          git push origin v${{ steps.build_type.outputs.version }}
+
+      - name: Create Release
+        if: steps.build_type.outputs.build_type == 'release'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.build_type.outputs.version }}
+          release_name: v${{ steps.build_type.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload manifests
+        if: steps.build_type.outputs.build_type == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/manifests.tgz
+          asset_name: manifests.tgz
+          asset_content_type: application/zip

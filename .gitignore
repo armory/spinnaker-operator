@@ -1,7 +1,3 @@
-# Temporary Build Files
-build/_output
-build/_test
-build/MANIFEST
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
 # -*- mode: gitignore; -*-
@@ -60,6 +56,7 @@ anaconda-mode/
 *.dylib
 # Test binary, build with 'go test -c'
 *.test
+!Dockerfile.test
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 ### Vim ###
@@ -76,7 +73,7 @@ tags
 .vscode/*
 .history
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
-bin/
+build/
 
 # Intellij
 .idea

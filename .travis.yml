@@ -1,6 +1,0 @@
-language: go
-sudo: false
-go: 1.12.1
-env:
-  - GO111MODULE=on
-install: true

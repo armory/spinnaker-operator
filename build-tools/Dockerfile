@@ -1,21 +1,8 @@
-FROM golang:1.13.8-alpine3.11 as builder
-
-# vendor flags conflict with `go get`
-# so we fetch golint before running make
-# and setting the env variable
-RUN apk update && apk add git make bash build-base gcc bc
-RUN go get -u golang.org/x/lint/golint
-
-ENV GO111MODULE=on GOOS=linux GOARCH=amd64
-WORKDIR /opt/spinnaker-operator/build/
-ADD ./ /opt/spinnaker-operator/build/
-ARG OPERATOR_VERSION
-ENV OPERATOR_VERSION=$OPERATOR_VERSION
-RUN make
+ARG BUILDER
+FROM ${BUILDER} as builder
 
 FROM alpine:3.9.3
 
-ARG OPERATOR_PATH
 ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_UID=1001 \
     USER_NAME=spinnaker-operator \
@@ -48,12 +35,14 @@ RUN wget -nv https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.zip && \
     rm -rf ~/.config/gcloud
 ENV PATH=$PATH:/opt/google-cloud-sdk/bin/
 
-COPY --from=builder /opt/spinnaker-operator/build/$OPERATOR_PATH ${OPERATOR}
-COPY --from=builder /opt/spinnaker-operator/build/build/entrypoint /usr/local/bin/entrypoint
-COPY --from=builder /opt/spinnaker-operator/build/build/MANIFEST ${OPERATOR_HOME}/MANIFEST
-
 USER ${USER_NAME}
+
+# Everything after this line is never cached
+ARG CACHE_DATE
+
+RUN echo "CACHE_DATE: ${CACHE_DATE}"
+COPY --from=builder /opt/spinnaker-operator/build/build/bin/linux_amd64/spinnaker-operator ${OPERATOR}
+COPY --from=builder /opt/spinnaker-operator/build/build/bin/linux_amd64/MANIFEST ${OPERATOR_HOME}/MANIFEST
+COPY --from=builder /opt/spinnaker-operator/build/build-tools/entrypoint /usr/local/bin/entrypoint
+
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
-
-
-
