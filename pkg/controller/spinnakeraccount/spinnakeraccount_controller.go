@@ -2,6 +2,7 @@ package spinnakeraccount
 
 import (
 	"context"
+	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
@@ -147,7 +148,7 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 		if err != nil {
 			return err
 		}
-		if err = util.UpdateSecret(sec, ss, accounts.SpringProfile); err != nil {
+		if err = util.UpdateSecret(sec, ss, fmt.Sprintf("%s-%s", svc, accounts.SpringProfile)); err != nil {
 			return err
 		}
 
