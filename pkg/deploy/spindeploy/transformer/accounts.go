@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var dynamicFilePath = "/opt/spinnaker/config/dynamic"
-var dynamicFileName = "account-dynamic.yml"
+const dynamicFilePath = "/opt/spinnaker/config/dynamic"
+const dynamicFileName = "account-dynamic.yml"
 
 // accountsTransformer inserts accounts defined via CRD into Spinnaker's config
 type accountsTransformer struct {
@@ -52,7 +52,8 @@ func (g *accountsTransformerGenerator) GetName() string {
 	return "AccountsCRD"
 }
 
-// TransformConfig is a nop
+// TransformConfig sets up each Spinnaker service with potential account to accept either dynamicConfig files
+// or a new Spring profile
 func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
 	// Use dynamic-config files support
 	if !a.svc.GetAccountConfig().Enabled {
@@ -209,7 +210,8 @@ func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[strin
 
 	// Add the secret to the deployment
 	spec := cfg.Deployment.Spec.Template.Spec
-	mode := int32(384)
+	// Mounted with default mode = 0400
+	mode := int32(256)
 	cfg.Deployment.Spec.Template.Spec.Volumes = append(spec.Volumes, v1.Volume{
 		Name: fmt.Sprintf("%s-dynamic-accounts", svc),
 		VolumeSource: v1.VolumeSource{
@@ -219,6 +221,7 @@ func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[strin
 			},
 		},
 	})
+
 	for i := range spec.Containers {
 		c := spec.Containers[i]
 		if c.Name == svc {
