@@ -62,7 +62,7 @@ func generateParallelValidators(spinSvc interfaces.SpinnakerService, options Opt
 	}
 	vs = append(vs, ParallelValidators...)
 	// Add outsources Halyard validation
-	vs = append(vs, &halValidator{})
+	vs = append(vs, &halValidator{}, &dynamicAccountValidator{})
 	return vs, nil
 }
 

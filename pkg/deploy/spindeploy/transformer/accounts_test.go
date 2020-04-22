@@ -98,7 +98,7 @@ spec:
       version: 1.18.0
 `,
 			func(t *testing.T, err error, transformer *accountsTransformer) {
-				assert.Errorf(t, err, "dynamic account is not supported for version 1.18.0 of Spinnaker")
+				assert.Nil(t, err)
 				assert.Equal(t, 0, len(transformer.dynamicFileSvc))
 			},
 		},

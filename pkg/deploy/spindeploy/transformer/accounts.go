@@ -63,7 +63,7 @@ func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
 	}
 
 	if a.svc.GetAccountConfig().Dynamic && !accounts.IsDynamicAccountSupported(v) {
-		return fmt.Errorf("dynamic account is not supported for version %s of Spinnaker", v)
+		a.log.Info(fmt.Sprintf("dynamic account is not supported for version %s of Spinnaker", v))
 	}
 
 	// Use dynamicConfig prop if service supports it, otherwise use additional Spring profile
