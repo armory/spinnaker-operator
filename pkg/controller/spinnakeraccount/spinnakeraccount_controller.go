@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
-	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -90,10 +89,8 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
+			// If deleted, update all accounts for all services
+			err = r.deployForServices(ctx, request.Namespace, nil)
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
@@ -101,18 +98,20 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 
 	// Check if we need to redeploy
 	reqLogger.Info("Checking Spinnaker accounts")
-
-	aType, err := accounts.GetType(instance.GetSpec().Type)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	cpInstance := instance.DeepCopyInterface()
-	err = r.deploy(ctx, cpInstance, aType)
+	err = r.deployForAccount(ctx, instance.DeepCopyInterface())
 	return reconcile.Result{}, err
 }
 
-func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfaces.SpinnakerAccount, accountType account.SpinnakerAccountType) error {
-	spinsvc, err := util.FindSpinnakerService(r.client, account.GetNamespace(), TypesFactory)
+func (r *ReconcileSpinnakerAccount) deployForAccount(ctx context.Context, account interfaces.SpinnakerAccount) error {
+	accountType, err := accounts.GetType(account.GetSpec().Type)
+	if err != nil {
+		return err
+	}
+	return r.deployForServices(ctx, account.GetNamespace(), accountType.GetServices())
+}
+
+func (r *ReconcileSpinnakerAccount) deployForServices(ctx context.Context, ns string, svcs []string) error {
+	spinsvc, err := util.FindSpinnakerService(r.client, ns, TypesFactory)
 	if err != nil {
 		return err
 	}
@@ -130,7 +129,7 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 	}
 
 	// Get all Spinnaker accounts
-	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, account.GetNamespace())
+	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, ns)
 	if err != nil {
 		return err
 	}
@@ -140,8 +139,13 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 		return err
 	}
 
+	// If services not specified, update all accounts
+ 	if len(svcs) == 0 {
+ 		svcs = accounts.GetAllServicesWithAccounts()
+	}
+
 	// Go through all affected services and update dynamic config secret
-	for _, svc := range accountType.GetServices() {
+	for _, svc := range svcs {
 		ss, err := accounts.PrepareSettings(ctx, svc, allAccounts)
 		if err != nil {
 			return err

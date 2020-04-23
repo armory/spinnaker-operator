@@ -26,8 +26,8 @@ func (s *SpinnakerAccountList) GetItems() []interfaces.SpinnakerAccount {
 		return nil
 	} else {
 		var result []interfaces.SpinnakerAccount
-		for _, i := range s.Items {
-			result = append(result, &i)
+		for i := range s.Items {
+			result = append(result, &s.Items[i])
 		}
 		return result
 	}
