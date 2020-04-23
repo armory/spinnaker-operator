@@ -19,7 +19,7 @@ import (
 const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
-	MaxChecksWaitingForDeploymentStability = 25  // (25 * 2s) = 50 seconds
+	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
 	MaxChecksWaitingForSpinnakerStability  = 450 // (450 * 2s) / 60 = 15 minutes
 	MaxChecksWaitingForLBStability         = 180 // (180 * 2s) / 60 = 6 minutes
 )
