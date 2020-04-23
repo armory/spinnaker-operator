@@ -105,6 +105,16 @@ jobs:
           git tag v${{ steps.build_type.outputs.version }}
           git push origin v${{ steps.build_type.outputs.version }}
 
+      - name: Trigger integration tests
+        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        run: |
+          branch=$(git rev-parse --abbrev-ref HEAD)
+          if [[ ${{github.event_name }} = "pull_request" ]] ; then branch=${{ github.head_ref }} ; fi
+          halyard=$(cat halyard-version | head -1)
+          curl -H "Content-Type: application/json" \
+              -d "{\"secret\": \"${{ secrets.SPINNAKER_TOKEN }}\", \"parameters\": { \"OPERATOR_IMAGE\": \"${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}\", \"HALYARD_IMAGE\": \"armory/halyard:$halyard\", \"TESTS_BRANCH\": \"$branch\" } }" \
+              -X POST https://spinnaker-api.armory.io/webhooks/webhook/operator-int-tests
+
       - name: Create Release
         if: steps.build_type.outputs.build_type == 'release'
         id: create_release
