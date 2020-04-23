@@ -63,7 +63,7 @@ func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
 	}
 
 	if a.svc.GetAccountConfig().Dynamic && !accounts.IsDynamicAccountSupported(v) {
-		a.log.Info(fmt.Sprintf("dynamic account is not supported for version %s of Spinnaker", v))
+		a.log.Info(fmt.Sprintf("dynamic account is not supported in version %s of Spinnaker", v))
 	}
 
 	// Use dynamicConfig prop if service supports it, otherwise use additional Spring profile
@@ -105,7 +105,7 @@ func (a *accountsTransformer) enableDynamicFile(ctx context.Context, svc string)
 	if a.svc.GetSpinnakerConfig().Profiles == nil {
 		a.svc.GetSpinnakerConfig().Profiles = map[string]interfaces.FreeForm{}
 	}
-	filename := filepath.Join(accounts.DynamicFilePath, accounts.DynamicFilePath)
+	filename := filepath.Join(accounts.DynamicFilePath, accounts.DynamicFileName)
 	ff := a.svc.GetSpinnakerConfig().Profiles[svc]
 	if ff == nil {
 		a.svc.GetSpinnakerConfig().Profiles[svc] = map[string]interface{}{
@@ -185,10 +185,14 @@ func (a *accountsTransformer) updateServiceSettings(ctx context.Context, crdAcco
 // to dynamicFilePath (/opt/spinnaker/config/dynamic)
 func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[string]interface{}, svc string, cfg *generated.ServiceConfig) error {
 	secName := fmt.Sprintf("spin-%s-dynamic-accounts", svc)
+	volName := fmt.Sprintf("%s-dynamic-accounts", svc)
 	// Create the secret with the computed settings
 	// We do not version the secret because it has a different lifecycle
 	sec := &v1.Secret{
-		TypeMeta: metav1.TypeMeta{},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: a.svc.GetNamespace(),
 			Name:      secName,
@@ -198,6 +202,7 @@ func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[strin
 			},
 		},
 		Data: map[string][]byte{},
+		Type: v1.SecretTypeOpaque,
 	}
 	err := util.UpdateSecret(sec, settings, accounts.DynamicFileName)
 	if err != nil {
@@ -208,10 +213,10 @@ func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[strin
 
 	// Add the secret to the deployment
 	spec := cfg.Deployment.Spec.Template.Spec
-	// Mounted with default mode = 0400
-	mode := int32(256)
+	// Mounted with default mode = 0420
+	mode := int32(420)
 	cfg.Deployment.Spec.Template.Spec.Volumes = append(spec.Volumes, v1.Volume{
-		Name: fmt.Sprintf("%s-dynamic-accounts", svc),
+		Name: volName,
 		VolumeSource: v1.VolumeSource{
 			Secret: &v1.SecretVolumeSource{
 				SecretName:  secName,
@@ -224,7 +229,7 @@ func (a *accountsTransformer) addAccountToDynamicConfigSecret(settings map[strin
 		c := spec.Containers[i]
 		if c.Name == svc {
 			cfg.Deployment.Spec.Template.Spec.Containers[i].VolumeMounts = append(c.VolumeMounts, v1.VolumeMount{
-				Name:      secName,
+				Name:      volName,
 				MountPath: accounts.DynamicFilePath,
 			})
 			return nil

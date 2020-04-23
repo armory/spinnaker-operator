@@ -50,6 +50,9 @@ spec:
 					b, err := inspect.GetObjectPropBool(p, "dynamic-config.enabled", false)
 					assert.Nil(t, err)
 					assert.True(t, b)
+					s, err := inspect.GetObjectPropString(context.TODO(), p, "dynamic-config.files")
+					assert.Nil(t, err)
+					assert.Equal(t, accounts.DynamicFilePath+"/"+accounts.DynamicFileName, s)
 				}
 			},
 		},
@@ -262,7 +265,13 @@ spec:
 		accountFetcher: &testAccountFetcher{
 			accounts: []account.Account{
 				&kubernetes.Account{
-					Name: "test",
+					Name: "test1",
+					Auth: &interfaces.KubernetesAuth{
+						KubeconfigFile: "kube.yml",
+					},
+				},
+				&kubernetes.Account{
+					Name: "test2",
 					Auth: &interfaces.KubernetesAuth{
 						KubeconfigFile: "kube.yml",
 					},
