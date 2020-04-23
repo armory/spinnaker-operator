@@ -106,7 +106,7 @@ jobs:
           git push origin v${{ steps.build_type.outputs.version }}
 
       - name: Trigger integration tests
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release' || steps.build_type.outputs.build_type == 'snapshot'
+        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
           branch=$(git rev-parse --abbrev-ref HEAD)
           if [[ ${{github.event_name }} = "pull_request" ]] ; then branch=${{ github.head_ref }} ; fi
