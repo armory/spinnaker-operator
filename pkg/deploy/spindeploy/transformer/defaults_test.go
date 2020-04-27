@@ -18,6 +18,8 @@ spec:
       gate: {}
 `
 	tr, spinsvc := th.setupTransformerFromSpinText(&defaultsTransformerGenerator{}, s, t)
+	before_ := spinsvc.GetSpinnakerConfig().Profiles["gate"]
+	before := *before_.DeepCopy()
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
 
@@ -30,6 +32,7 @@ spec:
 
 	archaius := archaius_.(map[string]interface{})
 	assert.Equal(t, false, archaius["enabled"])
+	assert.NotEqual(t, before, gate)
 }
 
 func TestConfig_SetArchaiusDefaults_alreadyTrue(t *testing.T) {
@@ -46,6 +49,8 @@ spec:
           enabled: true
 `
 	tr, spinsvc := th.setupTransformerFromSpinText(&defaultsTransformerGenerator{}, s, t)
+	before_ := spinsvc.GetSpinnakerConfig().Profiles["gate"]
+	before := *before_.DeepCopy()
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
 
@@ -58,4 +63,28 @@ spec:
 
 	archaius := archaius_.(map[string]interface{})
 	assert.Equal(t, true, archaius["enabled"])
+	assert.Equal(t, before, gate)
+}
+
+func TestConfig_SetArchaiusDefaults_unexpected(t *testing.T) {
+	s := `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    profiles:
+      gate:
+        archaius: 'unexpected'
+`
+	tr, spinsvc := th.setupTransformerFromSpinText(&defaultsTransformerGenerator{}, s, t)
+	before_ := spinsvc.GetSpinnakerConfig().Profiles["gate"]
+	before := *before_.DeepCopy()
+	err := tr.TransformConfig(context.TODO())
+	assert.NotNil(t, err)
+
+	config := spinsvc.GetSpinnakerConfig()
+	gate := config.Profiles["gate"]
+	assert.Equal(t, before, gate)
 }
