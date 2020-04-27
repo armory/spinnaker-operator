@@ -2,7 +2,6 @@ package transformer
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -27,9 +26,9 @@ spec:
 	assert.NotNil(t, gate)
 
 	archaius_ := gate["archaius"]
-	assert.IsType(t, interfaces.FreeForm{}, archaius_)
+	assert.IsType(t, map[string]interface{}{}, archaius_)
 
-	archaius := archaius_.(interfaces.FreeForm)
+	archaius := archaius_.(map[string]interface{})
 	assert.Equal(t, false, archaius["enabled"])
 }
 

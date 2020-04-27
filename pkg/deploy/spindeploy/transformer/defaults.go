@@ -49,13 +49,13 @@ func (a *defaultsTransformer) SetArchaiusDefaults(profile interfaces.FreeForm, p
 	var ok bool
 	archaius_, ok := profile["archaius"]
 	if !ok {
-		archaius := interfaces.FreeForm{}
+		archaius := map[string]interface{}{}
 		archaius["enabled"] = false
 		profile["archaius"] = archaius
 		a.log.Info("Archaius defaults: Applied to %", profileName)
 		return nil // Created new map and saved into profile
 	}
-	archaius, ok := archaius_.(interfaces.FreeForm)
+	archaius, ok := archaius_.(map[string]interface{})
 	if !ok {
 		// Archaius is defined but not an object (idk why)
 		return fmt.Errorf("archaius expected to be an object, but found %s instead", archaius)
