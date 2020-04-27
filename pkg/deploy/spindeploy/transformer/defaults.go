@@ -34,19 +34,17 @@ func (a *defaultsTransformerGenerator) NewTransformer(
 func (a *defaultsTransformer) TransformConfig(ctx context.Context) error {
 	config := a.svc.GetSpinnakerConfig()
 	for profileName, p := range config.Profiles {
-		handled, err := SetArchaiusDefaults(p, profileName)
-		if handled {
-			a.log.Info("Archaius defaults: Applied to %s, errors %e", profileName, err)
-		} else {
-			a.log.Info("Archaius defaults: Skipped %s", profileName)
+		err := a.SetArchaiusDefaults(p, profileName)
+		if err != nil {
+			return fmt.Errorf("found error while handling profile %s: %e", profileName, err)
 		}
 	}
 	return nil
 }
 
-func SetArchaiusDefaults(profile interfaces.FreeForm, profileName string) (bool, error) {
+func (a *defaultsTransformer) SetArchaiusDefaults(profile interfaces.FreeForm, profileName string) error {
 	if !isJavaService(profileName) {
-		return false, nil // We only handle Java services
+		return nil // We only handle Java services
 	}
 	var ok bool
 	archaius_, ok := profile["archaius"]
@@ -54,20 +52,22 @@ func SetArchaiusDefaults(profile interfaces.FreeForm, profileName string) (bool,
 		archaius := interfaces.FreeForm{}
 		archaius["enabled"] = false
 		profile["archaius"] = archaius
-		return true, nil // Created new map and saved into profile
+		a.log.Info("Archaius defaults: Applied to %", profileName)
+		return nil // Created new map and saved into profile
 	}
 	archaius, ok := archaius_.(interfaces.FreeForm)
 	if !ok {
 		// Archaius is defined but not an object (idk why)
-		return true, fmt.Errorf("archaius expected to be an object, but found %s instead", archaius)
+		return fmt.Errorf("archaius expected to be an object, but found %s instead", archaius)
 	}
 	_, ok = archaius["enabled"]
 	if ok {
 		// Only handle profiles missing archaius.enabled
-		return false, nil
+		return nil
 	}
 	archaius["enabled"] = false
-	return true, nil
+	a.log.Info("Archaius defaults: Applied to %", profileName)
+	return nil
 }
 
 func (a *defaultsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
