@@ -35,7 +35,7 @@ func (a *defaultsTransformerGenerator) NewTransformer(
 func (a *defaultsTransformer) TransformConfig(ctx context.Context) error {
 	config := a.svc.GetSpinnakerConfig()
 	for profileName, _ := range util.SpinnakerServices {
-		p := config.Profiles[profileName]
+		p := a.assertProfile(config, profileName)
 		err := a.setArchaiusDefaults(p, profileName)
 		if err != nil {
 			return fmt.Errorf("found error while handling profile %s: %e", profileName, err)
@@ -54,7 +54,7 @@ func (a *defaultsTransformer) setArchaiusDefaults(profile interfaces.FreeForm, p
 		archaius := map[string]interface{}{}
 		archaius["enabled"] = false
 		profile["archaius"] = archaius
-		a.log.Info("Archaius defaults: Applied to %", profileName)
+		a.log.Info("Archaius defaults: applied", "profileName", profileName)
 		return nil // Created new map and saved into profile
 	}
 	archaius, ok := archaius_.(map[string]interface{})
@@ -68,7 +68,7 @@ func (a *defaultsTransformer) setArchaiusDefaults(profile interfaces.FreeForm, p
 		return nil
 	}
 	archaius["enabled"] = false
-	a.log.Info("Archaius defaults: Applied to %", profileName)
+	a.log.Info("Archaius defaults: applied", "profileName", profileName)
 	return nil
 }
 
@@ -79,4 +79,18 @@ func (a *defaultsTransformer) TransformManifests(ctx context.Context, scheme *ru
 func isJavaService(profileName string) bool {
 	_, ok := util.SpinnakerJavaServices[profileName]
 	return ok
+}
+
+func (a *defaultsTransformer) assertProfile(
+	config *interfaces.SpinnakerConfig,
+	profileName string) interfaces.FreeForm {
+	if config.Profiles == nil {
+		config.Profiles = map[string]interfaces.FreeForm{}
+	}
+	if p, ok := config.Profiles[profileName]; ok {
+		return p
+	}
+	p := interfaces.FreeForm{}
+	config.Profiles[profileName] = p
+	return p
 }
