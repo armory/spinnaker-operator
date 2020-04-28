@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/go-logr/logr"
@@ -33,8 +34,9 @@ func (a *defaultsTransformerGenerator) NewTransformer(
 
 func (a *defaultsTransformer) TransformConfig(ctx context.Context) error {
 	config := a.svc.GetSpinnakerConfig()
-	for profileName, p := range config.Profiles {
-		err := a.SetArchaiusDefaults(p, profileName)
+	for profileName, _ := range util.SpinnakerServices {
+		p := config.Profiles[profileName]
+		err := a.setArchaiusDefaults(p, profileName)
 		if err != nil {
 			return fmt.Errorf("found error while handling profile %s: %e", profileName, err)
 		}
@@ -42,7 +44,7 @@ func (a *defaultsTransformer) TransformConfig(ctx context.Context) error {
 	return nil
 }
 
-func (a *defaultsTransformer) SetArchaiusDefaults(profile interfaces.FreeForm, profileName string) error {
+func (a *defaultsTransformer) setArchaiusDefaults(profile interfaces.FreeForm, profileName string) error {
 	if !isJavaService(profileName) {
 		return nil // We only handle Java services
 	}
@@ -75,25 +77,6 @@ func (a *defaultsTransformer) TransformManifests(ctx context.Context, scheme *ru
 }
 
 func isJavaService(profileName string) bool {
-	switch profileName {
-	case "clouddriver":
-		return true
-	case "orca":
-		return true
-	case "echo":
-		return true
-	case "fiat":
-		return true
-	case "igor":
-		return true
-	case "rosco":
-		return true
-	case "front50":
-		return true
-	case "kayenta":
-		return true
-	case "gate":
-		return true
-	}
-	return false
+	_, ok := util.SpinnakerJavaServices[profileName]
+	return ok
 }
