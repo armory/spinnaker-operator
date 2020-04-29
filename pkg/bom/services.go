@@ -2,7 +2,7 @@ package bom
 
 type Service struct {
 	Name string
-	Java bool
+	Type string
 }
 
 var (
@@ -11,16 +11,16 @@ var (
 
 func init() {
 	// Add oss micro services
-	Add(Service{Name: "deck", Java: false})
-	Add(Service{Name: "gate", Java: true})
-	Add(Service{Name: "orca", Java: true})
-	Add(Service{Name: "clouddriver", Java: true})
-	Add(Service{Name: "front50", Java: true})
-	Add(Service{Name: "rosco", Java: true})
-	Add(Service{Name: "igor", Java: true})
-	Add(Service{Name: "echo", Java: true})
-	Add(Service{Name: "fiat", Java: true})
-	Add(Service{Name: "kayenta", Java: true})
+	Add(Service{Name: "deck", Type: "ui"})
+	Add(Service{Name: "gate", Type: "java"})
+	Add(Service{Name: "orca", Type: "java"})
+	Add(Service{Name: "clouddriver", Type: "java"})
+	Add(Service{Name: "front50", Type: "java"})
+	Add(Service{Name: "rosco", Type: "java"})
+	Add(Service{Name: "igor", Type: "java"})
+	Add(Service{Name: "echo", Type: "java"})
+	Add(Service{Name: "fiat", Type: "java"})
+	Add(Service{Name: "kayenta", Type: "java"})
 }
 
 func Add(service Service) {
@@ -30,7 +30,7 @@ func Add(service Service) {
 func JavaServices() []string {
 	services := make([]string, 0)
 	for name, service := range Services {
-		if service.Java {
+		if service.Type == "java" {
 			services = append(services, name)
 		}
 	}
