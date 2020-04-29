@@ -42,7 +42,7 @@ func (a *defaultsTransformer) TransformConfig(ctx context.Context) error {
 
 func (a *defaultsTransformer) setArchaiusDefaults(ctx context.Context) error {
 	config := a.svc.GetSpinnakerConfig()
-	for _, profileName := range a.archaiusServices() {
+	for _, profileName := range bom.JavaServices() {
 		p := a.assertProfile(config, profileName)
 		err := a.setArchaiusDefaultsForProfile(p, profileName)
 		if err != nil {
@@ -79,16 +79,6 @@ func (a *defaultsTransformer) setArchaiusDefaultsForProfile(profile interfaces.F
 
 func (a *defaultsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
 	return nil // noop
-}
-
-func (a *defaultsTransformer) archaiusServices() []string {
-	services := make([]string, 0)
-	for name, service := range bom.Services {
-		if service.Java {
-			services = append(services, name)
-		}
-	}
-	return services
 }
 
 func (a *defaultsTransformer) assertProfile(

@@ -25,3 +25,13 @@ func init() {
 func Add(serviceName string, service Service) {
 	Services[serviceName] = service
 }
+
+func JavaServices() []string {
+	services := make([]string, 0)
+	for name, service := range Services {
+		if service.Java {
+			services = append(services, name)
+		}
+	}
+	return services
+}
