@@ -1,6 +1,7 @@
 package bom
 
 type Service struct {
+	Name string
 	Java bool
 }
 
@@ -10,20 +11,20 @@ var (
 
 func init() {
 	// Add oss micro services
-	Add("deck", Service{Java: false})
-	Add("gate", Service{Java: true})
-	Add("orca", Service{Java: true})
-	Add("clouddriver", Service{Java: true})
-	Add("front50", Service{Java: true})
-	Add("rosco", Service{Java: true})
-	Add("igor", Service{Java: true})
-	Add("echo", Service{Java: true})
-	Add("fiat", Service{Java: true})
-	Add("kayenta", Service{Java: true})
+	Add(Service{Name: "deck", Java: false})
+	Add(Service{Name: "gate", Java: true})
+	Add(Service{Name: "orca", Java: true})
+	Add(Service{Name: "clouddriver", Java: true})
+	Add(Service{Name: "front50", Java: true})
+	Add(Service{Name: "rosco", Java: true})
+	Add(Service{Name: "igor", Java: true})
+	Add(Service{Name: "echo", Java: true})
+	Add(Service{Name: "fiat", Java: true})
+	Add(Service{Name: "kayenta", Java: true})
 }
 
-func Add(serviceName string, service Service) {
-	Services[serviceName] = service
+func Add(service Service) {
+	Services[service.Name] = service
 }
 
 func JavaServices() []string {
