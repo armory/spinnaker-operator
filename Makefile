@@ -104,7 +104,8 @@ reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug loc
 	sleep 5
 	kubectl --kubeconfig=${KUBECONFIG} port-forward deployment/spinnaker-operator-proxy 2222:22 & echo $$! > pf-pid
 	sleep 5
-	ssh -p 2222 -g -R 9876:localhost:9876 root@localhost
+	echo 'please set OPERATOR_NAME env var to spinnaker-operator-proxy' > /dev/stderr
+	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -TNngR 9876:localhost:9876 ssh://root@localhost:2222
 	kill `cat pf-pid` && rm pf-pid
 
 .PHONY: run-dev
