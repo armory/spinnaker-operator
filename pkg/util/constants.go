@@ -11,34 +11,3 @@ const (
 	DeckSSLEnabledProp      = "security.uiSecurity.ssl.enabled"
 	ClouddriverName         = "clouddriver"
 )
-
-var (
-	SpinnakerServices = map[string]struct{}{
-		"clouddriver": {},
-		"orca":        {},
-		"echo":        {},
-		"fiat":        {},
-		"igor":        {},
-		"rosco":       {},
-		"front50":     {},
-		"kayenta":     {},
-		"gate":        {},
-		"dinghy":      {},
-		"terraformer": {},
-	}
-	SpinnakerJavaServices = map[string]struct{}{
-		"clouddriver": {},
-		"orca":        {},
-		"echo":        {},
-		"fiat":        {},
-		"igor":        {},
-		"rosco":       {},
-		"front50":     {},
-		"kayenta":     {},
-		"gate":        {},
-	}
-	SpinnakerGoServices = map[string]struct{}{
-		"dinghy":      {},
-		"terraformer": {},
-	}
-)

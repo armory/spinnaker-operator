@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/bom"
 	"github.com/armory/spinnaker-operator/pkg/generated"
-	"github.com/armory/spinnaker-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/go-logr/logr"
@@ -33,21 +33,26 @@ func (a *defaultsTransformerGenerator) NewTransformer(
 }
 
 func (a *defaultsTransformer) TransformConfig(ctx context.Context) error {
+	err := a.setArchaiusDefaults(ctx)
+	if err != nil {
+		return fmt.Errorf("error while setting Archaius: %e", err)
+	}
+	return nil
+}
+
+func (a *defaultsTransformer) setArchaiusDefaults(ctx context.Context) error {
 	config := a.svc.GetSpinnakerConfig()
-	for profileName, _ := range util.SpinnakerServices {
+	for _, profileName := range a.archaiusServices() {
 		p := a.assertProfile(config, profileName)
-		err := a.setArchaiusDefaults(p, profileName)
+		err := a.setArchaiusDefaultsForProfile(p, profileName)
 		if err != nil {
-			return fmt.Errorf("found error while handling profile %s: %e", profileName, err)
+			return fmt.Errorf("error while handling profile %s: %e", profileName, err)
 		}
 	}
 	return nil
 }
 
-func (a *defaultsTransformer) setArchaiusDefaults(profile interfaces.FreeForm, profileName string) error {
-	if !isJavaService(profileName) {
-		return nil // We only handle Java services
-	}
+func (a *defaultsTransformer) setArchaiusDefaultsForProfile(profile interfaces.FreeForm, profileName string) error {
 	var ok bool
 	archaius_, ok := profile["archaius"]
 	if !ok {
@@ -76,9 +81,14 @@ func (a *defaultsTransformer) TransformManifests(ctx context.Context, scheme *ru
 	return nil // noop
 }
 
-func isJavaService(profileName string) bool {
-	_, ok := util.SpinnakerJavaServices[profileName]
-	return ok
+func (a *defaultsTransformer) archaiusServices() []string {
+	services := make([]string, 0)
+	for name, service := range bom.Services {
+		if service.Java {
+			services = append(services, name)
+		}
+	}
+	return services
 }
 
 func (a *defaultsTransformer) assertProfile(
