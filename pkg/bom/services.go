@@ -1,5 +1,9 @@
 package bom
 
+// Struct for describing the spinnaker micro services that
+// the operator might install.
+// Useful for doing transformations o generating configs
+// based on known services.
 type Service struct {
 	Name string
 	Type string
