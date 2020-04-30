@@ -87,7 +87,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_upgrade", t) {
 		return
 	}
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	v = RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), ns, SpinServiceName), t)
 	if t.Failed() || !assert.Equal(t, "1.17.1", strings.TrimSpace(v)) {
 		return
