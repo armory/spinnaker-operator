@@ -14,6 +14,7 @@ import (
 // Validators registered here should be stateless
 var ParallelValidators = []SpinnakerValidator{
 	&versionValidator{},
+	&dockerRegistryValidator{},
 }
 
 type SpinnakerValidator interface {

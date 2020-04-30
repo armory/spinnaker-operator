@@ -14,6 +14,7 @@ var validationsToSkip = []string{
 	"DeploymentEnvironmentValidator",
 	"KubernetesAccountValidator",
 	"DeploymentConfigurationValidator",
+	"DockerRegistryAccountValidator",
 }
 
 type validationEnableRule struct {
