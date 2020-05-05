@@ -8,7 +8,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
@@ -43,31 +42,10 @@ func getCertContext(operatorNamespace string, operatorServiceName string) (*cert
 	if err != nil && !os.IsExist(err) {
 		return nil, err
 	}
-	_, err = os.Stat(filepath.Join(CertsDir, caName))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return createCerts(operatorNamespace, operatorServiceName)
-		} else {
-			return nil, fmt.Errorf("error trying to load %s: %s", caName, err.Error())
-		}
-	}
-	_, err = os.Stat(filepath.Join(CertsDir, certName))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return createCerts(operatorNamespace, operatorServiceName)
-		} else {
-			return nil, fmt.Errorf("error trying to load %s: %s", certName, err.Error())
-		}
-	}
-	_, err = os.Stat(filepath.Join(CertsDir, keyName))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return createCerts(operatorNamespace, operatorServiceName)
-		} else {
-			return nil, fmt.Errorf("error trying to load %s: %s", keyName, err.Error())
-		}
-	}
-	return loadCerts(CertsDir)
+	_ = os.Remove(filepath.Join(CertsDir, caName))
+	_ = os.Remove(filepath.Join(CertsDir, certName))
+	_ = os.Remove(filepath.Join(CertsDir, keyName))
+	return createCerts(operatorNamespace, operatorServiceName)
 }
 
 func createCerts(operatorNamespace string, operatorServiceName string) (*certContext, error) {
@@ -111,27 +89,6 @@ func createCerts(operatorNamespace string, operatorServiceName string) (*certCon
 		key:         privateKeyPEM,
 		signingCert: encodeCertPEM(signingCert),
 		certDir:     CertsDir,
-	}, nil
-}
-
-func loadCerts(certDir string) (*certContext, error) {
-	caBytes, err := ioutil.ReadFile(filepath.Join(certDir, caName))
-	if err != nil {
-		return nil, err
-	}
-	certBytes, err := ioutil.ReadFile(filepath.Join(certDir, certName))
-	if err != nil {
-		return nil, err
-	}
-	keyBytes, err := ioutil.ReadFile(filepath.Join(certDir, keyName))
-	if err != nil {
-		return nil, err
-	}
-	return &certContext{
-		cert:        certBytes,
-		key:         keyBytes,
-		signingCert: caBytes,
-		certDir:     certDir,
 	}, nil
 }
 

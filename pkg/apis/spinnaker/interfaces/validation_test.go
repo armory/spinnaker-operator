@@ -22,7 +22,7 @@ func TestNeedsValidation(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "when no frequency skip validation",
+			name:     "when no frequency use default frequency",
 			time:     time.Now(),
 			seconds:  0,
 			expected: false,

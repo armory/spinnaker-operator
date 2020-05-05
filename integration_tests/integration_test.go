@@ -197,3 +197,42 @@ func TestProfilesOverlay(t *testing.T) {
 		`#!/bin/bash -e
 echo "hello world!"`, sh)
 }
+
+func TestValidations(t *testing.T) {
+	// setup
+	t.Parallel()
+	LogMainStep(t, `Test goals:
+- Validations can be enabled/disabled `)
+
+	spinOverlay := "testdata/spinnaker/overlay_validations"
+	ns := RandomString("spin-validations-test")
+	e := InstallCrdsAndOperator(ns, true, defaults, t)
+	if t.Failed() {
+		return
+	}
+	LogMainStep(t, "Installing spinnaker in namespace %s", ns)
+	if !CreateNamespace(ns, e, t) {
+		return
+	}
+
+	// Apply manifests with errors
+	vars := map[string]bool{"PersistentS3Enabled": true, "KubernetesEnabled": true, "DockerEnabled": true}
+	SubstituteOverlayVars(spinOverlay, vars, t)
+	o, err := ApplyKustomize(ns, spinOverlay, e, t)
+	assert.NotNil(t, err, fmt.Sprintf("Expected validation error. Output: %s", o))
+
+	vars["KubernetesEnabled"] = false
+	SubstituteOverlayVars(spinOverlay, vars, t)
+	o, err = ApplyKustomize(ns, spinOverlay, e, t)
+	assert.NotNil(t, err, fmt.Sprintf("Expected validation error. Output: %s", o))
+
+	vars["DockerEnabled"] = false
+	SubstituteOverlayVars(spinOverlay, vars, t)
+	o, err = ApplyKustomize(ns, spinOverlay, e, t)
+	assert.NotNil(t, err, fmt.Sprintf("Expected no errors of admission webhook. Output: %s", o))
+
+	vars["PersistentS3Enabled"] = false
+	SubstituteOverlayVars(spinOverlay, vars, t)
+	o, err = ApplyKustomize(ns, spinOverlay, e, t)
+	assert.Nil(t, err, fmt.Sprintf("Expected validation error. Output: %s", o))
+}

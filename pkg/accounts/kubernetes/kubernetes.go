@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"strings"
 )
 
 // Kubernetes accounts have a deeper integration than other accounts.
@@ -44,8 +45,10 @@ func (k *AccountType) newAccount() *Account {
 
 func (k *AccountType) GetValidationSettings(spinsvc interfaces.SpinnakerService) *interfaces.ValidationSetting {
 	v := spinsvc.GetSpinnakerValidation()
-	if s, ok := v.Providers[string(interfaces.KubernetesAccountType)]; ok {
-		return &s
+	for n, s := range v.Providers {
+		if strings.ToLower(n) == strings.ToLower(string(interfaces.KubernetesAccountType)) {
+			return &s
+		}
 	}
 	return v.GetValidationSettings()
 }
