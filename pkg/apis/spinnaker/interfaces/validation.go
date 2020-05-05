@@ -2,7 +2,12 @@ package interfaces
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
+)
+
+var (
+	DefaultValidationFreqSeconds = intstr.IntOrString{Type: intstr.Int, IntVal: 30}
 )
 
 func (v *ValidationSetting) NeedsValidation(lastValid metav1.Time) bool {
@@ -11,7 +16,7 @@ func (v *ValidationSetting) NeedsValidation(lastValid metav1.Time) bool {
 	}
 	secs := v.FrequencySeconds.IntValue()
 	if secs == 0 {
-		return false
+		secs = DefaultValidationFreqSeconds.IntValue()
 	}
 	n := lastValid.Time.Add(time.Duration(secs) * time.Second)
 	return time.Now().After(n)
@@ -49,9 +54,13 @@ func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.T
 }
 
 func (s *SpinnakerValidation) GetValidationSettings() *ValidationSetting {
+	f := s.FrequencySeconds
+	if f.IntValue() == 0 {
+		f = DefaultValidationFreqSeconds
+	}
 	return &ValidationSetting{
 		Enabled:          true,
 		FailOnError:      s.FailOnError,
-		FrequencySeconds: s.FrequencySeconds,
+		FrequencySeconds: f,
 	}
 }

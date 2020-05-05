@@ -59,7 +59,7 @@ func (a *defaultsTransformer) setArchaiusDefaultsForProfile(profile interfaces.F
 		archaius := map[string]interface{}{}
 		archaius["enabled"] = false
 		profile["archaius"] = archaius
-		a.log.Info("Archaius defaults: applied", "profileName", profileName)
+		a.log.V(10).Info("Archaius defaults: applied", "profileName", profileName)
 		return nil // Created new map and saved into profile
 	}
 	archaius, ok := archaius_.(map[string]interface{})
@@ -73,7 +73,7 @@ func (a *defaultsTransformer) setArchaiusDefaultsForProfile(profile interfaces.F
 		return nil
 	}
 	archaius["enabled"] = false
-	a.log.Info("Archaius defaults: applied", "profileName", profileName)
+	a.log.V(10).Info("Archaius defaults: applied", "profileName", profileName)
 	return nil
 }
 
