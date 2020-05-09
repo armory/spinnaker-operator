@@ -1,0 +1,61 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  validation:
+    providers:
+      kubernetes:
+        enabled: {{.KubernetesEnabled}}
+      docker:
+        enabled: {{.DockerEnabled}}
+    persistentStorage:
+      s3:
+        enabled: {{.PersistentS3Enabled}}
+  spinnakerConfig:
+    config:
+      persistentStorage:
+        s3:
+          accessKeyId: XXX
+          secretAccessKey: XXX
+      providers:
+        kubernetes:
+          enabled: true
+          accounts:
+            - name: kube-no-sa
+              serviceAccount: true
+              requiredGroupMembership: []
+              providerVersion: V2
+              permissions: {}
+              dockerRegistries: []
+              configureImagePullSecrets: true
+              cacheThreads: 1
+              namespaces:
+                - default
+              omitNamespaces: []
+              kinds: []
+              omitKinds: []
+              customResources: []
+              cachingPolicies: []
+              oAuthScopes: []
+              onlySpinnakerManaged: false
+          primaryAccount: kube-no-sa
+        dockerRegistry:
+          enabled: true
+          accounts:
+            - name: dockerhub
+              requiredGroupMembership: []
+              providerVersion: V1
+              permissions: {}
+              address: https://fake.address
+              email: fake.email@spinnaker.io
+              cacheIntervalSeconds: 30
+              clientTimeoutMillis: 60000
+              cacheThreads: 1
+              paginateSize: 100
+              sortTagsByDate: false
+              trackDigests: false
+              insecureRegistry: false
+              repositories:
+                - library/nginx
+          primaryAccount: dockerhub
