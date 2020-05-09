@@ -94,6 +94,9 @@ func (s *dockerRegistryService) client(path string, params map[string]string) (*
 
 }
 
+/*
+ * Implements token request flow described here https://docs.docker.com/registry/spec/auth/token/
+ */
 func (s *dockerRegistryService) requestToken(authenticateDetails map[string]string) (string, error) {
 	headers := make(map[string]string)
 	requestParams := make(map[string]string)
@@ -111,6 +114,7 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 		return "", err
 	}
 
+	// for ECR's registries we need to use Basic auth
 	if authenticateDetails["auth"] == "Basic" {
 		return basicAuth(s.username, s.password), nil
 	}
