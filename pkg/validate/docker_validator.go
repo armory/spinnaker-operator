@@ -81,7 +81,7 @@ func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, 
 func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
 
 	if len(registry.Name) == 0 {
-		return false, fmt.Errorf("%s account missing name", "dockerRegistry")
+		return false, errors.New("dockerRegistry account missing name")
 	}
 
 	if len(regexp.MustCompile(namePattern).FindStringSubmatch(registry.Name)) == 0 {
@@ -151,7 +151,7 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 			}
 		}
 
-		return false, errors.New(fmt.Sprintf("Unable to establish a connection with docker registry %s with provided credentials", registry.GetAddress))
+		return false, errors.New(fmt.Sprintf("Unable to establish a connection with docker registry %s with provided credentials", registry.GetAddress()))
 	}
 
 	if len(registry.Repositories) != 0 {
