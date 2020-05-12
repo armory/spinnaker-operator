@@ -10,6 +10,7 @@ import (
 
 type ChangeDetector interface {
 	IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error)
+	AlwaysRun() bool
 }
 
 type Generator interface {
@@ -47,15 +48,25 @@ func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Clien
 // IsSpinnakerUpToDate returns true if all children change detectors return true
 func (ch *compositeChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
 	rLogger := ch.log.WithValues("Service", svc.GetName())
+	isUpToDate := true
 	for _, changeDetector := range ch.changeDetectors {
-		isUpToDate, err := changeDetector.IsSpinnakerUpToDate(ctx, svc)
+		// Don't run the change detector if we already know Spinnaker is not up to date
+		if !isUpToDate && !changeDetector.AlwaysRun() {
+			continue
+		}
+
+		upd, err := changeDetector.IsSpinnakerUpToDate(ctx, svc)
 		if err != nil {
 			return false, err
 		}
-		if !isUpToDate {
+		if !upd {
 			rLogger.Info(fmt.Sprintf("%T detected a change that needs to be reconciled", changeDetector))
-			return false, nil
+			isUpToDate = false
 		}
 	}
-	return true, nil
+	return isUpToDate, nil
+}
+
+func (ch *compositeChangeDetector) AlwaysRun() bool {
+	return true
 }

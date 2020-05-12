@@ -53,6 +53,10 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc i
 	}
 }
 
+func (ch *exposeLbChangeDetector) AlwaysRun() bool {
+	return false
+}
+
 func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService, serviceName string, hcSSLEnabled bool) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	ns := spinSvc.GetNamespace()
