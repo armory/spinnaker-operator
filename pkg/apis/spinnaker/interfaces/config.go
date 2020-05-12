@@ -2,23 +2,10 @@ package interfaces
 
 import (
 	"context"
-	"crypto/md5"
 	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 )
-
-// GetHash returns a hash of the config used
-func (s *SpinnakerConfig) GetHash() (string, error) {
-	data, err := json.Marshal(s)
-	if err != nil {
-		return "", err
-	}
-	m := md5.Sum(data)
-	return hex.EncodeToString(m[:]), nil
-}
 
 // GetServiceSettingsPropString returns a service settings prop for a given service
 func (s *SpinnakerConfig) GetServiceSettingsPropString(ctx context.Context, svc, prop string) (string, error) {

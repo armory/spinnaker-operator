@@ -2,6 +2,9 @@ package changedetector
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -9,26 +12,49 @@ import (
 )
 
 const SpinnakerConfigHashKey = "config"
+const KustomizeHashKey = "kustomize"
 
 type configChangeDetector struct {
-	client client.Client
-	log    logr.Logger
+	log logr.Logger
 }
 
-type configChangeDetectorGenerator struct {
-}
+type configChangeDetectorGenerator struct{}
 
 func (g *configChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error) {
-	return &configChangeDetector{client: client, log: log}, nil
+	return &configChangeDetector{log}, nil
 }
 
 // IsSpinnakerUpToDate returns true if the Config has changed compared to the last recorded status hash
 func (ch *configChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
-	h, err := spinSvc.GetSpinnakerConfig().GetHash()
+	upd, err := ch.isUpToDate(spinSvc.GetSpinnakerConfig(), SpinnakerConfigHashKey, spinSvc)
 	if err != nil {
 		return false, err
 	}
+
+	kUpd, err := ch.isUpToDate(spinSvc.GetKustomization(), KustomizeHashKey, spinSvc)
+	return upd && kUpd, err
+}
+
+func (ch *configChangeDetector) isUpToDate(config interface{}, hashKey string, spinSvc interfaces.SpinnakerService) (bool, error) {
+	h, err := ch.getHash(config)
+	if err != nil {
+		return false, err
+	}
+
 	st := spinSvc.GetStatus()
-	prior := st.UpdateHashIfNotExist(SpinnakerConfigHashKey, h, time.Now(), true)
+	prior := st.UpdateHashIfNotExist(hashKey, h, time.Now(), true)
 	return h == prior.Hash, nil
+}
+
+func (ch *configChangeDetector) getHash(config interface{}) (string, error) {
+	data, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	m := md5.Sum(data)
+	return hex.EncodeToString(m[:]), nil
+}
+
+func (ch *configChangeDetector) AlwaysRun() bool {
+	return true
 }

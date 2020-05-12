@@ -70,6 +70,10 @@ func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc i
 	return true, nil
 }
 
+func (ch *x509ChangeDetector) AlwaysRun() bool {
+	return false
+}
+
 func (ch *x509ChangeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
 	for _, p := range svc.Spec.Ports {
 		if p.Name == util.GateX509PortName {
