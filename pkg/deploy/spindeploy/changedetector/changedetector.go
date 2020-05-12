@@ -20,6 +20,7 @@ var Generators = []Generator{
 	&configChangeDetectorGenerator{},
 	&exposeLbChangeDetectorGenerator{},
 	&x509ChangeDetectorGenerator{},
+	&kustomizeChangeDetectorGenerator{},
 }
 
 type compositeChangeDetector struct {
