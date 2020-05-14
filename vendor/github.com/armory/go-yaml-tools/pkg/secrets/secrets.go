@@ -15,9 +15,10 @@ const (
 )
 
 var Engines = map[string]func(context.Context, bool, string) (Decrypter, error){
-	"s3":   NewS3Decrypter,
-	"gcs":  NewGcsDecrypter,
-	"noop": NewNoopDecrypter,
+	"gcs":             NewGcsDecrypter,
+	"noop":            NewNoopDecrypter,
+	"s3":              NewS3Decrypter,
+	"secrets-manager": NewAwsSecretsManagerDecrypter,
 }
 
 type Decrypter interface {
