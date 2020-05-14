@@ -52,6 +52,8 @@ github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmV
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/armory/go-yaml-tools v0.0.0-20200122014301-147e7afb982a h1:LEPmLRwcXtfy1y5UdQl/ipXoL9J8qtvn3qNVuIrMM/4=
 github.com/armory/go-yaml-tools v0.0.0-20200122014301-147e7afb982a/go.mod h1:xwVm5fsX+KogAY8C0DBdKo3IW/vR3jq33G2rY9mw2fg=
+github.com/armory/go-yaml-tools v0.0.0-20200316192928-75770481ad01 h1:Rei8EOlDdpBEA8xIf61c1HT8OpcpREYEJJXLSfRHqMc=
+github.com/armory/go-yaml-tools v0.0.0-20200316192928-75770481ad01/go.mod h1:QreIYVxaLk2qi8gRBvBBDVEWIL84lTVpqTohrmQEuA4=
 github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/aws/aws-sdk-go v1.25.8 h1:n7I+HUUXjun2CsX7JK+1hpRIkZrlKhd3nayeb+Xmavs=
 github.com/aws/aws-sdk-go v1.25.8/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
