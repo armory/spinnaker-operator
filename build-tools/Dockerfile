@@ -13,7 +13,7 @@ ENV OPERATOR=/usr/local/bin/spinnaker-operator \
 
 EXPOSE 8383
 RUN apk update                        \
-	&& apk add ca-certificates bash curl wget unzip 'python2>2.7.18' \
+	&& apk add ca-certificates bash curl wget unzip python3 py-pip \
 	&& adduser -D -u ${USER_UID} ${USER_NAME} \
 	&& apk upgrade
 
@@ -24,15 +24,13 @@ RUN curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/
 ENV PATH "$PATH:/usr/local/bin/aws-iam-authenticator"
 
 # Install aws-cli
-RUN wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
-    python /tmp/get-pip.py && \
-    pip install --upgrade awscli==${AWS_CLI_RELEASE}
+RUN pip install --upgrade awscli==${AWS_CLI_RELEASE}
 
 # Install gcloud
 RUN wget -nv https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.zip && \
     unzip -qq google-cloud-sdk.zip -d /opt && \
     rm google-cloud-sdk.zip && \
-    CLOUDSDK_PYTHON="python2.7" /opt/google-cloud-sdk/install.sh --usage-reporting=false --bash-completion=false && \
+    CLOUDSDK_PYTHON="python3" /opt/google-cloud-sdk/install.sh --usage-reporting=false --bash-completion=false && \
     rm -rf ~/.config/gcloud
 ENV PATH=$PATH:/opt/google-cloud-sdk/bin/
 
