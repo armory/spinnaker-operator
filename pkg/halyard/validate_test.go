@@ -106,7 +106,7 @@ spec:
 	// Validation fails on a non initialized secret context
 	_, err = h.buildValidationRequest(context.TODO(), spinsvc, true)
 	if assert.NotNil(t, err) {
-		assert.Equal(t, "secret context not initialized", err.Error())
+		assert.True(t, strings.Contains(err.Error(), "secret context not initialized"))
 	}
 
 	ctx := secrets.NewContext(context.TODO(), nil, "ns")
