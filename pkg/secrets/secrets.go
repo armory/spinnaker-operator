@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"context"
+	"fmt"
 	"github.com/armory/go-yaml-tools/pkg/secrets"
 	"os"
 )
@@ -19,13 +20,13 @@ func Decode(ctx context.Context, val string) (string, bool, error) {
 	// Get decrypter
 	dec, err := secrets.NewDecrypter(ctx, val)
 	if err != nil {
-		return val, false, err
+		return val, false, fmt.Errorf("Error creating decrypter for value '%s':\n  %w", val, err)
 	}
 
 	var v string
 	c, err := FromContextWithError(ctx)
 	if err != nil {
-		return "", false, err
+		return "", false, fmt.Errorf("Error creating secret context for value '%s':\n  %w", val, err)
 	}
 
 	// Check if in cache
@@ -40,7 +41,7 @@ func Decode(ctx context.Context, val string) (string, bool, error) {
 
 	v, err = dec.Decrypt()
 	if err != nil {
-		return "", false, err
+		return "", false, fmt.Errorf("Error decrypting secret value '%s':\n  %w", val, err)
 	}
 
 	// If we could get the cache, update it

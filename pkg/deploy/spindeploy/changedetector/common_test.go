@@ -5,6 +5,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"testing"
 )
@@ -19,7 +20,7 @@ var th = testHelpers{
 
 func (th *testHelpers) setupChangeDetector(generator Generator, t *testing.T, objs ...runtime.Object) ChangeDetector {
 	fakeClient := test.FakeClient(t, objs...)
-	ch, err := generator.NewChangeDetector(fakeClient, log.Log.WithName("spinnakerservice"))
+	ch, err := generator.NewChangeDetector(fakeClient, log.Log.WithName("spinnakerservice"), &record.FakeRecorder{})
 	assert.Nil(t, err)
 	return ch
 }

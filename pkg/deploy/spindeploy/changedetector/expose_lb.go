@@ -7,21 +7,23 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
 type exposeLbChangeDetector struct {
-	client client.Client
-	log    logr.Logger
+	client      client.Client
+	log         logr.Logger
+	evtRecorder record.EventRecorder
 }
 
 type exposeLbChangeDetectorGenerator struct {
 }
 
-func (g *exposeLbChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error) {
-	return &exposeLbChangeDetector{client: client, log: log}, nil
+func (g *exposeLbChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
+	return &exposeLbChangeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
 }
 
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services

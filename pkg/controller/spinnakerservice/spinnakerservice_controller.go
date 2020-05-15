@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -47,10 +48,11 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		deps = append(deps, g(h, mgr, rawClient, log))
 	}
 	return &ReconcileSpinnakerService{
-		client:     mgr.GetClient(),
-		restConfig: mgr.GetConfig(),
-		scheme:     mgr.GetScheme(),
-		deployers:  deps,
+		client:      mgr.GetClient(),
+		restConfig:  mgr.GetConfig(),
+		scheme:      mgr.GetScheme(),
+		deployers:   deps,
+		evtRecorder: mgr.GetEventRecorderFor("spinnaker-controller"),
 	}
 }
 
@@ -89,10 +91,11 @@ var _ reconcile.Reconciler = &ReconcileSpinnakerService{}
 type ReconcileSpinnakerService struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client     client.Client
-	restConfig *rest.Config
-	scheme     *runtime.Scheme
-	deployers  []deploy.Deployer
+	client      client.Client
+	restConfig  *rest.Config
+	scheme      *runtime.Scheme
+	deployers   []deploy.Deployer
+	evtRecorder record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a SpinnakerService object and makes changes based on the state read
@@ -121,20 +124,26 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
+	r.evtRecorder.Eventf(instance, corev1.EventTypeNormal, "DeployStart", "New configuration detected")
+
 	// Check if we need to redeploy
 	for _, d := range r.deployers {
 		reqLogger.Info(fmt.Sprintf("checking %s deployment", d.GetName()))
 		b, err := d.Deploy(ctx, instance, r.scheme)
 		if err != nil {
+			r.evtRecorder.Eventf(instance, corev1.EventTypeWarning, "DeployError", "Error deploying spinnaker: %s", err.Error())
 			return reconcile.Result{}, err
 		}
 		if b {
+			r.evtRecorder.Eventf(instance, corev1.EventTypeNormal, "DeployRequeued", "Requeued for further processing")
 			return reconcile.Result{Requeue: true}, nil
 		}
 	}
 	sc := newStatusChecker(r.client, reqLogger, TypesFactory)
 	if err = sc.checks(instance); err != nil {
+		r.evtRecorder.Eventf(instance, corev1.EventTypeWarning, "StatusError", "Error updating SpinnakerService status: %s", err.Error())
 		return reconcile.Result{}, err
 	}
+	r.evtRecorder.Eventf(instance, corev1.EventTypeNormal, "DeploySuccess", "Spinnaker updated")
 	return reconcile.Result{}, nil
 }
