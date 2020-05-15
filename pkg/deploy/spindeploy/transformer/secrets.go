@@ -114,7 +114,10 @@ func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp str
 	if err != nil || accessKeyRaw == "" {
 		return nil, fmt.Errorf("aws secret key configured without access key for property %s", secretKeyProp)
 	}
-	envVarName, secretName, secretKey := getEnvVarNameFromSecretRaw(svc, secretRaw)
+	envVarName, secretName, secretKey, err := getEnvVarNameFromSecretRaw(svc, secretRaw)
+	if err != nil {
+		return nil, err
+	}
 	switch source {
 	case interfaces.HalConfigSource:
 		err = spinCfg.SetHalConfigProp(secretKeyProp, getEnvVarNameReference(envVarName))
@@ -150,7 +153,10 @@ func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, se
 		if !isK8sEngine(secretRaw) {
 			continue
 		}
-		envVarName, secretName, secretKey := getEnvVarNameFromSecretRaw(svc, secretRaw)
+		envVarName, secretName, secretKey, err := getEnvVarNameFromSecretRaw(svc, secretRaw)
+		if err != nil {
+			return nil, err
+		}
 		i[secretKeyProp] = getEnvVarNameReference(envVarName)
 		accessKey, ok := i[accessKeyProp].(string)
 		if !ok {
@@ -294,7 +300,11 @@ func (k *kubernetesSecretCollector) sanitizeSecrets(obj interface{}) (interface{
 		if e != "k8s" {
 			return val, nil
 		}
-		name, key := secrets.ParseKubernetesSecretParams(p)
+		name, key, err := secrets.ParseKubernetesSecretParams(p)
+		if err != nil {
+			return val, err
+		}
+
 		if f {
 			return k.handleSecretFileReference(name, key)
 		}
@@ -420,10 +430,10 @@ func getEnvVarName(svc, secretName, key string) string {
 	return fmt.Sprintf("%s_%s_%s", safeEnvVarName(svc), safeEnvVarName(secretName), safeEnvVarName(key))
 }
 
-func getEnvVarNameFromSecretRaw(svc, secretRaw string) (envVarName, secretName, secretKey string) {
-	secretName, secretKey = secrets.ParseKubernetesSecretParams(secretRaw)
+func getEnvVarNameFromSecretRaw(svc, secretRaw string) (envVarName, secretName, secretKey string, err error) {
+	secretName, secretKey, err = secrets.ParseKubernetesSecretParams(secretRaw)
 	envVarName = getEnvVarName(svc, secretName, secretKey)
-	return
+	return envVarName, secretName, secretKey, err
 }
 
 func getEnvVarNameReference(varName string) string {

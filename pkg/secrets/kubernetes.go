@@ -53,31 +53,32 @@ func (s *KubernetesDecrypter) IsFile() bool {
 }
 
 func (k *KubernetesDecrypter) parse(params string) error {
-	name, key := ParseKubernetesSecretParams(params)
-	k.name = name
-	k.key = key
-	if k.name == "" {
-		return fmt.Errorf("secret format error - 'n' for name is required")
-	}
-	if k.key == "" {
-		return fmt.Errorf("secret format error - 'k' for secret key is required")
-	}
-	return nil
+	_, _, err := ParseKubernetesSecretParams(params)
+	return err
 }
 
-func ParseKubernetesSecretParams(params string) (string, string) {
+func ParseKubernetesSecretParams(params string) (string, string, error) {
 	var name, key string
 	tokens := strings.Split(params, "!")
 	for _, element := range tokens {
 		kv := strings.Split(element, ":")
-		if len(kv) == 2 {
-			switch kv[0] {
-			case "n":
-				name = kv[1]
-			case "k":
-				key = kv[1]
-			}
+		if len(kv) != 2 {
+			return "", "", fmt.Errorf("secret format error - 'n' for name is required, 'k' for secret key is required - got '%s'", element)
+		}
+
+		switch kv[0] {
+		case "n":
+			name = kv[1]
+		case "k":
+			key = kv[1]
 		}
 	}
-	return name, key
+
+	if name == "" {
+		return "", "", fmt.Errorf("secret format error - 'n' for name is required")
+	}
+	if key == "" {
+		return "", "", fmt.Errorf("secret format error - 'k' for secret key is required")
+	}
+	return name, key, nil
 }
