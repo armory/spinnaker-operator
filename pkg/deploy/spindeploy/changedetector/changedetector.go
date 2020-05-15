@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -14,7 +16,7 @@ type ChangeDetector interface {
 }
 
 type Generator interface {
-	NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error)
+	NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error)
 }
 
 var Generators = []Generator{
@@ -26,14 +28,15 @@ var Generators = []Generator{
 type compositeChangeDetector struct {
 	changeDetectors []ChangeDetector
 	log             logr.Logger
+	evtRecorder     record.EventRecorder
 }
 
 type CompositeChangeDetectorGenerator struct{}
 
-func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error) {
+func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
 	changeDetectors := make([]ChangeDetector, 0)
 	for _, generator := range Generators {
-		ch, err := generator.NewChangeDetector(client, log)
+		ch, err := generator.NewChangeDetector(client, log, evtRecorder)
 		if err != nil {
 			return nil, err
 		}
@@ -42,6 +45,7 @@ func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Clien
 	return &compositeChangeDetector{
 		changeDetectors: changeDetectors,
 		log:             log,
+		evtRecorder:     evtRecorder,
 	}, nil
 }
 
@@ -61,6 +65,7 @@ func (ch *compositeChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc 
 		}
 		if !upd {
 			rLogger.Info(fmt.Sprintf("%T detected a change that needs to be reconciled", changeDetector))
+			ch.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "ConfigChanged", "%T detected a change that needs to be reconciled", changeDetector)
 			isUpToDate = false
 		}
 	}

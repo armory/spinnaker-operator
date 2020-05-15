@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
@@ -15,13 +16,14 @@ const SpinnakerConfigHashKey = "config"
 const KustomizeHashKey = "kustomize"
 
 type configChangeDetector struct {
-	log logr.Logger
+	log         logr.Logger
+	evtRecorder record.EventRecorder
 }
 
 type configChangeDetectorGenerator struct{}
 
-func (g *configChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error) {
-	return &configChangeDetector{log}, nil
+func (g *configChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
+	return &configChangeDetector{log: log, evtRecorder: evtRecorder}, nil
 }
 
 // IsSpinnakerUpToDate returns true if the Config has changed compared to the last recorded status hash

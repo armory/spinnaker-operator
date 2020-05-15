@@ -109,10 +109,12 @@ jobs:
         if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
           branch=$(git rev-parse --abbrev-ref HEAD)
+          sha=${{ github.sha }}
           if [[ ${{github.event_name }} = "pull_request" ]] ; then branch=${{ github.head_ref }} ; fi
+          if [[ ${{github.event_name }} = "pull_request" ]] ; then sha=${{ github.event.pull_request.head.sha }} ; fi
           halyard=$(cat halyard-version | head -1)
           curl -H "Content-Type: application/json" \
-              -d "{\"secret\": \"${{ secrets.SPINNAKER_TOKEN }}\", \"parameters\": { \"OPERATOR_IMAGE\": \"${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}\", \"HALYARD_IMAGE\": \"armory/halyard:$halyard\", \"TESTS_BRANCH\": \"$branch\" } }" \
+              -d "{\"secret\": \"${{ secrets.SPINNAKER_TOKEN }}\", \"parameters\": { \"OPERATOR_IMAGE\": \"${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}\", \"HALYARD_IMAGE\": \"armory/halyard:$halyard\", \"TESTS_BRANCH\": \"$branch\", \"COMMIT_SHA\": \"$sha\" } }" \
               -X POST https://spinnaker-api.armory.io/webhooks/webhook/operator-int-tests
 
       - name: Create Release

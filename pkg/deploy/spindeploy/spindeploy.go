@@ -8,7 +8,6 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
@@ -44,14 +43,6 @@ func (d *Deployer) GetName() string {
 	return "spindeploy"
 }
 
-func (d *Deployer) isSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
-	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
-	if err != nil {
-		return false, err
-	}
-	return ch.IsSpinnakerUpToDate(ctx, svc)
-}
-
 // Deploy takes a SpinnakerService definition and transforms it into manifests to create.
 // - generates manifest with Halyard
 // - transform settings based on SpinnakerService options
@@ -59,7 +50,7 @@ func (d *Deployer) isSpinnakerUpToDate(ctx context.Context, svc interfaces.Spinn
 func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, scheme *runtime.Scheme) (bool, error) {
 	rLogger := d.log.WithValues("Service", svc.GetName())
 
-	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log)
+	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log, d.evtRecorder)
 	if err != nil {
 		return false, err
 	}
@@ -74,8 +65,6 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
 	}
-
-	d.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "Config", "New configuration detected, version: %s", v)
 
 	var transformers []transformer.Transformer
 
@@ -110,8 +99,6 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	if err = d.deployConfig(ctx, scheme, l, rLogger); err != nil {
 		return true, err
 	}
-
-	d.evtRecorder.Eventf(nSvc, corev1.EventTypeNormal, "Config", "Spinnaker version %s deployment set", v)
 
 	st := nSvc.GetStatus()
 	st.Version = v
