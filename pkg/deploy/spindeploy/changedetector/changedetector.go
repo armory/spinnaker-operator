@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ChangeDetector interface {
 	IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error)
+	AlwaysRun() bool
 }
 
 type Generator interface {
-	NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error)
+	NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error)
 }
 
 var Generators = []Generator{
@@ -25,14 +28,15 @@ var Generators = []Generator{
 type compositeChangeDetector struct {
 	changeDetectors []ChangeDetector
 	log             logr.Logger
+	evtRecorder     record.EventRecorder
 }
 
 type CompositeChangeDetectorGenerator struct{}
 
-func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error) {
+func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
 	changeDetectors := make([]ChangeDetector, 0)
 	for _, generator := range Generators {
-		ch, err := generator.NewChangeDetector(client, log)
+		ch, err := generator.NewChangeDetector(client, log, evtRecorder)
 		if err != nil {
 			return nil, err
 		}
@@ -41,21 +45,33 @@ func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Clien
 	return &compositeChangeDetector{
 		changeDetectors: changeDetectors,
 		log:             log,
+		evtRecorder:     evtRecorder,
 	}, nil
 }
 
 // IsSpinnakerUpToDate returns true if all children change detectors return true
 func (ch *compositeChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
 	rLogger := ch.log.WithValues("Service", svc.GetName())
+	isUpToDate := true
 	for _, changeDetector := range ch.changeDetectors {
-		isUpToDate, err := changeDetector.IsSpinnakerUpToDate(ctx, svc)
+		// Don't run the change detector if we already know Spinnaker is not up to date
+		if !isUpToDate && !changeDetector.AlwaysRun() {
+			continue
+		}
+
+		upd, err := changeDetector.IsSpinnakerUpToDate(ctx, svc)
 		if err != nil {
 			return false, err
 		}
-		if !isUpToDate {
+		if !upd {
 			rLogger.Info(fmt.Sprintf("%T detected a change that needs to be reconciled", changeDetector))
-			return false, nil
+			ch.evtRecorder.Eventf(svc, corev1.EventTypeNormal, "ConfigChanged", "%T detected a change that needs to be reconciled", changeDetector)
+			isUpToDate = false
 		}
 	}
-	return true, nil
+	return isUpToDate, nil
+}
+
+func (ch *compositeChangeDetector) AlwaysRun() bool {
+	return true
 }

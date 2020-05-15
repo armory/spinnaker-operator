@@ -91,7 +91,7 @@ func getAccountsFromConfig(ctx context.Context, spinSvc interfaces.SpinnakerServ
 func (a *accountValidator) Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
 	err := a.v.Validate(spinSvc, options.Client, options.Ctx, options.Log.WithValues("Accounts.Name", a.name))
 	if err != nil {
-		return NewResultFromError(err, a.fatal)
+		return NewResultFromError(fmt.Errorf("Validator for account '%s' detected an error:\n  %w", a.name, err), a.fatal)
 	}
 	return ValidationResult{}
 }

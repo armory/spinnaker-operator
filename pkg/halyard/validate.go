@@ -49,7 +49,7 @@ func (s *Service) buildValidationRequest(ctx context.Context, spinsvc interfaces
 	// This will also serve as a secret validation step
 	sanitizedCfg, err := sanitizeSecrets(ctx, cfg.Config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error decrypting secrets in config:\n  %w", err)
 	}
 
 	if err := s.addObjectToRequest(writer, "config", sanitizedCfg); err != nil {
@@ -103,7 +103,11 @@ func sanitizeSecrets(ctx context.Context, object interface{}) (interface{}, erro
 			if err == nil && f {
 				s = path.Join(SecretRelativeFilenames, path.Base(s))
 			}
-			return s, err
+			if err == nil {
+				return s, nil
+			} else {
+				return s, fmt.Errorf("Error decrypting secret for value '%s':\n  %w", val, err)
+			}
 		}
 		return val, nil
 	}

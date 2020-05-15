@@ -1,20 +1,21 @@
 ARG BUILDER
 FROM ${BUILDER} as builder
 
-FROM alpine:3.9.3
+FROM alpine:3.11
 
 ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_UID=1001 \
     USER_NAME=spinnaker-operator \
     AWS_BINARY_RELEASE_DATE=2019-08-22 \
     KUBECTL_RELEASE=1.14.6 \
-    AWS_CLI_RELEASE=1.16.208 \
+    AWS_CLI_RELEASE=1.18.58 \
     OPERATOR_HOME=/opt/spinnaker-operator
 
 EXPOSE 8383
 RUN apk update                        \
-	&& apk add ca-certificates bash curl wget unzip 'python2>2.7.9' \
-	&& adduser -D -u ${USER_UID} ${USER_NAME}
+	&& apk add ca-certificates bash curl wget unzip 'python2>2.7.18' \
+	&& adduser -D -u ${USER_UID} ${USER_NAME} \
+	&& apk upgrade
 
 # Install aws iam authenticator
 RUN curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/${KUBECTL_RELEASE}/${AWS_BINARY_RELEASE_DATE}/bin/linux/amd64/aws-iam-authenticator && \

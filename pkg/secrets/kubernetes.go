@@ -33,11 +33,11 @@ func NewKubernetesSecretDecrypter(ctx context.Context, isFile bool, params strin
 func (k *KubernetesDecrypter) Decrypt() (string, error) {
 	client, err := corev1.NewForConfig(k.restConfig)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error creating kubernetes client:\n  %w", err)
 	}
 	sec, err := client.Secrets(k.namespace).Get(k.name, metav1.GetOptions{})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error reading secret with name '%s' from kubernetes:\n  %w", k.name, err)
 	}
 	if d, ok := sec.Data[k.key]; ok {
 		if k.isFile {
@@ -45,7 +45,7 @@ func (k *KubernetesDecrypter) Decrypt() (string, error) {
 		}
 		return string(d), nil
 	}
-	return "", fmt.Errorf("cannot find key %s in secret %s", k.key, k.name)
+	return "", fmt.Errorf("Cannot find key %s in secret %s", k.key, k.name)
 }
 
 func (s *KubernetesDecrypter) IsFile() bool {
@@ -53,31 +53,34 @@ func (s *KubernetesDecrypter) IsFile() bool {
 }
 
 func (k *KubernetesDecrypter) parse(params string) error {
-	name, key := ParseKubernetesSecretParams(params)
+	name, key, err := ParseKubernetesSecretParams(params)
 	k.name = name
 	k.key = key
-	if k.name == "" {
-		return fmt.Errorf("secret format error - 'n' for name is required")
-	}
-	if k.key == "" {
-		return fmt.Errorf("secret format error - 'k' for secret key is required")
-	}
-	return nil
+	return err
 }
 
-func ParseKubernetesSecretParams(params string) (string, string) {
+func ParseKubernetesSecretParams(params string) (string, string, error) {
 	var name, key string
 	tokens := strings.Split(params, "!")
 	for _, element := range tokens {
 		kv := strings.Split(element, ":")
-		if len(kv) == 2 {
-			switch kv[0] {
-			case "n":
-				name = kv[1]
-			case "k":
-				key = kv[1]
-			}
+		if len(kv) != 2 {
+			return "", "", fmt.Errorf("Secret format error - 'n' for name is required, 'k' for secret key is required - got '%s'", element)
+		}
+
+		switch kv[0] {
+		case "n":
+			name = kv[1]
+		case "k":
+			key = kv[1]
 		}
 	}
-	return name, key
+
+	if name == "" {
+		return "", "", fmt.Errorf("Secret format error - 'n' for name is required")
+	}
+	if key == "" {
+		return "", "", fmt.Errorf("Secret format error - 'k' for secret key is required")
+	}
+	return name, key, nil
 }

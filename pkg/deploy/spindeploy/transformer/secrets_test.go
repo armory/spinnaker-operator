@@ -242,7 +242,10 @@ config:
 	assert.Nil(t, yaml.Unmarshal([]byte(cfg), spinCfg))
 	tr := &secretsTransformer{k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
 	secups.Engines["k8s"] = func(ctx context.Context, isFile bool, params string) (secups.Decrypter, error) {
-		_, k := secrets.ParseKubernetesSecretParams(params)
+		_, k, err := secrets.ParseKubernetesSecretParams(params)
+		if err != nil {
+			return nil, err
+		}
 		return &test.DummyK8sSecretEngine{Secret: k}, nil
 	}
 	ctx := secrets.NewContext(context.TODO(), nil, "")
@@ -318,7 +321,11 @@ profiles:
 	assert.Nil(t, yaml.Unmarshal([]byte(cfg), spinCfg))
 	tr := &secretsTransformer{k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
 	secups.Engines["k8s"] = func(ctx context.Context, isFile bool, params string) (secups.Decrypter, error) {
-		_, k := secrets.ParseKubernetesSecretParams(params)
+		_, k, err := secrets.ParseKubernetesSecretParams(params)
+		if err != nil {
+			return nil, err
+		}
+
 		return &test.DummyK8sSecretEngine{Secret: k}, nil
 	}
 	ctx := secrets.NewContext(context.TODO(), nil, "")

@@ -78,7 +78,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		errorMsg := validationResult.GetErrorMessage()
 		err := fmt.Errorf(errorMsg)
 		log.Error(err, errorMsg, "metadata.name", svc)
-		return admission.Errored(http.StatusBadRequest, err)
+		return admission.Denied(errorMsg)
 	}
 	// Update the status with any admission status change, only if there's already an existing SpinnakerService
 	if req.AdmissionRequest.Operation == v1beta1.Update {

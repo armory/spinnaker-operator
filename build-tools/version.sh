@@ -29,6 +29,7 @@ case $BRANCH in
 esac
 
 read -r major minor patch rc <<< "${v//./ }" && patch=$(echo "$patch" | sed 's|[^0-9]*||g')
+[[ "x$(git tag -l "v$major.$minor.$patch")" != "x" ]] && rc=""
 
 case $VERSION_TYPE in
     snapshot)

@@ -7,20 +7,22 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 )
 
 type x509ChangeDetector struct {
-	client client.Client
-	log    logr.Logger
+	client      client.Client
+	log         logr.Logger
+	evtRecorder record.EventRecorder
 }
 
 type x509ChangeDetectorGenerator struct {
 }
 
-func (g *x509ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger) (ChangeDetector, error) {
-	return &x509ChangeDetector{client: client, log: log}, nil
+func (g *x509ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
+	return &x509ChangeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
 }
 
 // IsSpinnakerUpToDate returns true if there is a x509 configuration with a matching service
@@ -68,6 +70,10 @@ func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc i
 	}
 
 	return true, nil
+}
+
+func (ch *x509ChangeDetector) AlwaysRun() bool {
+	return false
 }
 
 func (ch *x509ChangeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
