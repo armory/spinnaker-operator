@@ -139,3 +139,4 @@ jobs:
           asset_path: ./build/manifests.tgz
           asset_name: manifests.tgz
           asset_content_type: application/zip
+
