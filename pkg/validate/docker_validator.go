@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 )
 
@@ -119,7 +120,7 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 		out, err := exec.Command("bash", "-c", registry.PasswordCommand).Output()
 
 		if err != nil {
-			return false, errors.New(fmt.Sprintf("password command returned non 0 return code, stderr/stdout was: %s", err))
+			return false, fmt.Errorf("password command returned non 0 return code, stderr/stdout was: %s", err)
 		}
 
 		resolvedPassword = strings.Trim(string(out), "\n")
@@ -137,7 +138,7 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 
 	service := dockerRegistryService{address: registry.GetAddress(), username: registry.Username, password: resolvedPassword, httpService: util.HttpService{}}
 
-	ok, err := service.GetBase()
+	ok, err := service.GetBase(ctx)
 
 	if err != nil {
 		return false, err
@@ -155,20 +156,41 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 	}
 
 	if len(registry.Repositories) != 0 {
-		for _, repository := range registry.Repositories {
-			tagCount, err := service.GetTags(repository)
-
-			if err != nil {
-				return false, err
-			}
-
-			if tagCount == 0 {
-				return false, errors.New(fmt.Sprintf("Repository %s contain any tags. Spinnaker will not be able to deploy any docker images, Push some images to your registry.", repository))
-			}
-		}
+		validator := repoValidator{}
+		validateRepository(registry, ctx, service)
 	}
 
 	return true, nil
+}
+
+type repoValidator struct {
+}
+
+func validateRepository(registry dockerRegistryAccount, ctx context.Context, service dockerRegistryService) {
+	wg := sync.WaitGroup{}
+	var errs []error
+	for _, repository := range registry.Repositories {
+		wg.Add(1)
+		go func() {
+			err := validateImagesTags(ctx, repository, &service)
+			errs = append(errs, err)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func validateImagesTags(ctx context.Context, repository string, service *dockerRegistryService) error {
+	tagCount, err := service.GetTagsCount(ctx, repository)
+
+	if err != nil {
+		return err
+	}
+
+	if tagCount == 0 {
+		return fmt.Errorf("Repository %s contain any tags. Spinnaker will not be able to deploy any docker images, Push some images to your registry.", repository)
+	}
 }
 
 func (d *dockerRegistryValidator) loadPasswordFromFile(passwordFile string, ctx context.Context, spinCfg *interfaces.SpinnakerConfig) (string, error) {

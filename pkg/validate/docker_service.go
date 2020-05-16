@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -17,18 +18,18 @@ type dockerRegistryService struct {
 	httpService util.HttpService
 }
 
-func (s *dockerRegistryService) GetBase() (bool, error) {
-	if _, err := s.client("/v2/", nil); err != nil {
+func (s *dockerRegistryService) GetBase(ctx context.Context) (bool, error) {
+	if _, err := s.client(ctx, "/v2/", nil); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (s *dockerRegistryService) GetTags(image string) (int, error) {
+func (s *dockerRegistryService) GetTagsCount(ctx context.Context, image string) (int, error) {
 	// Pagination is not working currently, It'll work once https://github.com/docker/distribution/pull/3143 be merged
 	params := make(map[string]string)
 	params["n"] = "1"
-	resp, err := s.client(fmt.Sprintf("/v2/%s/tags/list", image), params)
+	resp, err := s.client(ctx, fmt.Sprintf("/v2/%s/tags/list", image), params)
 
 	if err != nil {
 		return 0, err
@@ -43,7 +44,7 @@ func (s *dockerRegistryService) GetTags(image string) (int, error) {
 	return len(tags), nil
 }
 
-func (s *dockerRegistryService) client(path string, params map[string]string) (*http.Response, error) {
+func (s *dockerRegistryService) client(ctx context.Context, path string, params map[string]string) (*http.Response, error) {
 	url := fmt.Sprintf("%s%s", s.address, path)
 
 	headers := make(map[string]string)
@@ -52,17 +53,17 @@ func (s *dockerRegistryService) client(path string, params map[string]string) (*
 
 	var req *http.Request
 	var err error
-	req, err = s.httpService.Request(util.GET, url, params, headers, nil)
+	req, err = s.httpService.Request(ctx, util.GET, url, params, headers, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
 	var resp *http.Response
-	resp, err = s.httpService.Execute(req)
+	resp, err = s.httpService.Execute(ctx, req)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error making request to %s:\n %w", url, err)
 	}
 
 	if resp.StatusCode == 200 {

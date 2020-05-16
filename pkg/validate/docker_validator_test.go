@@ -159,3 +159,30 @@ spec:
 	}
 	return spinsvc, nil
 }
+
+func Test_validateRepository(t *testing.T) {
+	type args struct {
+		registry dockerRegistryAccount
+		ctx      context.Context
+		service  dockerRegistryService
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "",
+			args: args{
+				registry: dockerRegistryAccount{
+					Repositories: []string{"one", "two", "three"},
+				},
+				ctx:     nil,
+				service: dockerRegistryService{},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+		})
+	}
+}
