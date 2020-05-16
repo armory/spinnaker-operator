@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/ghodss/yaml"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -160,7 +161,7 @@ spec:
 	return spinsvc, nil
 }
 
-func Test_validateRepository(t *testing.T) {
+func Test_dockerRepoValidate_repository(t *testing.T) {
 	type args struct {
 		registry dockerRegistryAccount
 		ctx      context.Context
@@ -169,20 +170,34 @@ func Test_validateRepository(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
+		want []error
 	}{
 		{
 			name: "",
 			args: args{
 				registry: dockerRegistryAccount{
-					Repositories: []string{"one", "two", "three"},
+					Repositories: []string{"repo1", "repo2", "repo3", "repo4", "repo5", "repo6", "repo7", "repo8", "repo9", "repo10", "repo11", "repo12", "repo13", "repo14",
+					},
 				},
-				ctx:     nil,
-				service: dockerRegistryService{},
 			},
+			want: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mdv := NewMockdockerRepoValidator(ctrl)
+
+			mdv.EXPECT().imageTags(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(repository string, service *dockerRegistryService) error {
+				return fmt.Errorf(repository)
+			})
+
+			dv := dockerRepoValidate{
+				v: mdv,
+			}
+
+			errs := dv.repository(tt.args.registry, tt.args.service)
+			fmt.Printf("%+v", errs)
 		})
 	}
 }

@@ -10,6 +10,7 @@ require (
 	github.com/go-openapi/jsonreference v0.19.0 // indirect
 	github.com/go-openapi/spec v0.19.0
 	github.com/gogo/protobuf v1.3.0 // indirect
+	github.com/golang/mock v1.3.1
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/onsi/ginkgo v1.10.1 // indirect

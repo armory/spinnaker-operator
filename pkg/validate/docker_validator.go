@@ -19,6 +19,8 @@ import (
 	"unicode"
 )
 
+//go:generate mockgen -destination=docker_validator_mocks_test.go -package validate -source docker_validator.go
+
 const (
 	dockerRegistryAccountsKey = "providers.dockerRegistry.accounts"
 	namePattern               = "^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$"
@@ -156,33 +158,48 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 	}
 
 	if len(registry.Repositories) != 0 {
-		validator := repoValidator{}
-		validateRepository(registry, ctx, service)
+		v := newDockerRepoValidator(ctx)
+		errs := v.repository(registry, service)
+		fmt.Println(errs)
 	}
 
 	return true, nil
 }
 
-type repoValidator struct {
+type dockerRepoValidate struct {
+	ctx context.Context
+	v   dockerRepoValidator
+}
+type dockerRepoValidator interface {
+	repository(registry dockerRegistryAccount, service dockerRegistryService) []error
+	imageTags(repository string, service *dockerRegistryService) error
 }
 
-func validateRepository(registry dockerRegistryAccount, ctx context.Context, service dockerRegistryService) {
+func newDockerRepoValidator(ctx context.Context) dockerRepoValidator {
+	v := dockerRepoValidate{ctx: ctx}
+	return &v
+}
+
+func (v *dockerRepoValidate) repository(registry dockerRegistryAccount, service dockerRegistryService) []error {
 	wg := sync.WaitGroup{}
 	var errs []error
-	for _, repository := range registry.Repositories {
+	for _, r := range registry.Repositories {
 		wg.Add(1)
-		go func() {
-			err := validateImagesTags(ctx, repository, &service)
+
+		go func(r string) {
+			err := v.v.imageTags(r, &service)
 			errs = append(errs, err)
 			wg.Done()
-		}()
+		}(r)
 	}
 
 	wg.Wait()
+
+	return errs
 }
 
-func validateImagesTags(ctx context.Context, repository string, service *dockerRegistryService) error {
-	tagCount, err := service.GetTagsCount(ctx, repository)
+func (d *dockerRepoValidate) imageTags(repository string, service *dockerRegistryService) error {
+	tagCount, err := service.GetTagsCount(d.ctx, repository)
 
 	if err != nil {
 		return err
@@ -191,6 +208,8 @@ func validateImagesTags(ctx context.Context, repository string, service *dockerR
 	if tagCount == 0 {
 		return fmt.Errorf("Repository %s contain any tags. Spinnaker will not be able to deploy any docker images, Push some images to your registry.", repository)
 	}
+
+	return nil
 }
 
 func (d *dockerRegistryValidator) loadPasswordFromFile(passwordFile string, ctx context.Context, spinCfg *interfaces.SpinnakerConfig) (string, error) {

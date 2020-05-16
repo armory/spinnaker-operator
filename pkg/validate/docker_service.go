@@ -81,7 +81,7 @@ func (s *dockerRegistryService) client(ctx context.Context, path string, params 
 			return nil, err
 		}
 		req.Header.Add("Authorization", fmt.Sprintf("%s %s", authenticateDetails["auth"], token))
-		resp, err := s.httpService.Execute(req)
+		resp, err := s.httpService.Execute(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 		requestParams["scope"] = authenticateDetails["scope"]
 	}
 
-	req, err := s.httpService.Request(util.GET, authenticateDetails["realm"], requestParams, headers, nil)
+	req, err := s.httpService.Request(context.TODO(), util.GET, authenticateDetails["realm"], requestParams, headers, nil)
 
 	if err != nil {
 		return "", err
@@ -121,7 +121,7 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 	}
 
 	req.SetBasicAuth(s.username, s.password)
-	resp, err := s.httpService.Execute(req)
+	resp, err := s.httpService.Execute(context.TODO(),req)
 
 	if err != nil {
 		return "", err
