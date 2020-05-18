@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"net/http"
 	"strings"
@@ -15,27 +16,30 @@ type dockerRegistryService struct {
 	username string
 	password string
 
+	ctx         context.Context
 	httpService util.HttpService
 }
 
-func (s *dockerRegistryService) GetBase(ctx context.Context) (bool, error) {
-	if _, err := s.client(ctx, "/v2/", nil); err != nil {
+func (s *dockerRegistryService) GetBase() (bool, error) {
+	if _, err := s.client("/v2/", nil); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (s *dockerRegistryService) GetTagsCount(ctx context.Context, image string) (int, error) {
+func (s *dockerRegistryService) GetTagsCount(image string) (int, error) {
 	// Pagination is not working currently, It'll work once https://github.com/docker/distribution/pull/3143 be merged
 	params := make(map[string]string)
 	params["n"] = "1"
-	resp, err := s.client(ctx, fmt.Sprintf("/v2/%s/tags/list", image), params)
-
+	resp, err := s.client(fmt.Sprintf("/v2/%s/tags/list", image), params)
 	if err != nil {
 		return 0, err
 	}
-	body, err := s.httpService.ParseResponseBody(resp.Body)
-
+	b, err := s.httpService.ParseResponseBody(resp.Body)
+	if err != nil {
+		return 0, err
+	}
+	body, err := inspect.ConvertJSON(b)
 	if err != nil {
 		return 0, err
 	}
@@ -44,7 +48,7 @@ func (s *dockerRegistryService) GetTagsCount(ctx context.Context, image string) 
 	return len(tags), nil
 }
 
-func (s *dockerRegistryService) client(ctx context.Context, path string, params map[string]string) (*http.Response, error) {
+func (s *dockerRegistryService) client(path string, params map[string]string) (*http.Response, error) {
 	url := fmt.Sprintf("%s%s", s.address, path)
 
 	headers := make(map[string]string)
@@ -53,14 +57,14 @@ func (s *dockerRegistryService) client(ctx context.Context, path string, params 
 
 	var req *http.Request
 	var err error
-	req, err = s.httpService.Request(ctx, util.GET, url, params, headers, nil)
+	req, err = s.httpService.Request(s.ctx, util.GET, url, params, headers, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
 	var resp *http.Response
-	resp, err = s.httpService.Execute(ctx, req)
+	resp, err = s.httpService.Execute(s.ctx, req)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error making request to %s:\n %w", url, err)
@@ -81,7 +85,7 @@ func (s *dockerRegistryService) client(ctx context.Context, path string, params 
 			return nil, err
 		}
 		req.Header.Add("Authorization", fmt.Sprintf("%s %s", authenticateDetails["auth"], token))
-		resp, err := s.httpService.Execute(ctx, req)
+		resp, err := s.httpService.Execute(s.ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +113,7 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 		requestParams["scope"] = authenticateDetails["scope"]
 	}
 
-	req, err := s.httpService.Request(context.TODO(), util.GET, authenticateDetails["realm"], requestParams, headers, nil)
+	req, err := s.httpService.Request(s.ctx, util.GET, authenticateDetails["realm"], requestParams, headers, nil)
 
 	if err != nil {
 		return "", err
@@ -121,17 +125,21 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 	}
 
 	req.SetBasicAuth(s.username, s.password)
-	resp, err := s.httpService.Execute(context.TODO(),req)
+	resp, err := s.httpService.Execute(s.ctx, req)
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error making request to %w", err)
 	}
 
 	if resp.StatusCode == 200 {
-		body, err := s.httpService.ParseResponseBody(resp.Body)
-
+		b, err := s.httpService.ParseResponseBody(resp.Body)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("Error making request to %s: %w", authenticateDetails["realm"], err)
+		}
+
+		body, err := inspect.ConvertJSON(b)
+		if err != nil {
+			return "", fmt.Errorf("Error parsing response: %s", err)
 		}
 
 		return fmt.Sprintf("%v", body["token"]), nil

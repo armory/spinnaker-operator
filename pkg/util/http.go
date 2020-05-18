@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -51,19 +50,13 @@ func (s *HttpService) Execute(ctx context.Context, req *http.Request) (*http.Res
 	return client.Do(req)
 }
 
-func (s *HttpService) ParseResponseBody(body io.ReadCloser) (map[string]interface{}, error) {
+func (s *HttpService) ParseResponseBody(body io.ReadCloser) ([]byte, error) {
 	defer body.Close()
 	f, err := ioutil.ReadAll(body)
+
 	if err != nil {
 		return nil, err
 	}
 
-	response := make(map[string]interface{})
-	if len(f) != 0 {
-		if err := json.Unmarshal(f, &response); err != nil {
-			return nil, err
-		}
-	}
-
-	return response, nil
+	return f, nil
 }

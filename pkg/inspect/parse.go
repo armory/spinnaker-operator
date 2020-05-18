@@ -16,6 +16,16 @@ func Convert(i1 interface{}, i2 interface{}) error {
 	return json.Unmarshal(b, i2)
 }
 
+func ConvertJSON(b []byte) (map[string]interface{}, error) {
+	response := make(map[string]interface{})
+	if len(b) != 0 {
+		if err := json.Unmarshal(b, &response); err != nil {
+			return nil, err
+		}
+	}
+	return response, nil
+}
+
 // Source will copy values from settings to the given interface for
 // all fields that are setup with json serialization in i.
 // It's a shallow copy and i needs to be a struct or a pointer to a struct.

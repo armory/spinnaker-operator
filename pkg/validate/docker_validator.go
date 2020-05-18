@@ -74,21 +74,24 @@ func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, 
 		}
 
 		if ok, err := d.validateRegistry(registry, options.Ctx, spinSvc); !ok {
-			return NewResultFromError(fmt.Errorf("%s: %s", registry.Name, err), true)
+			return NewResultFromErrors(err, true)
 		}
 	}
 
 	return ValidationResult{}
 }
 
-func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
+func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, []error) {
 
+	var errs []error
 	if len(registry.Name) == 0 {
-		return false, errors.New("dockerRegistry account missing name")
+		err := errors.New("dockerRegistry account missing name")
+		return false, append(errs, err)
 	}
 
 	if len(regexp.MustCompile(namePattern).FindStringSubmatch(registry.Name)) == 0 {
-		return false, fmt.Errorf("Account name must match pattern %s\nIt must start and end with a lower-case character or number, and only contain lower-case characters, numbers, or dashes", namePattern)
+		err := fmt.Errorf("Account name must match pattern %s\nIt must start and end with a lower-case character or number, and only contain lower-case characters, numbers, or dashes", namePattern)
+		return false, append(errs, err)
 	}
 
 	resolvedPassword := ""
@@ -97,18 +100,19 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 	passwordFileProvided := len(registry.PasswordFile) != 0
 
 	if passwordProvided && passwordFileProvided || passwordCommandProvided && passwordProvided || passwordCommandProvided && passwordFileProvided {
-		return false, errors.New("You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.")
+		err := errors.New("You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.")
+		return false, append(errs, err)
 	}
 
 	if passwordProvided {
-		password, err := inspect.GetObjectPropString(ctx, registry, "password")
+		password, err := inspect.GetObjectPropString(ctx, registry, "Password")
 		if err == nil {
 			resolvedPassword = password
 		}
 	} else if passwordFileProvided {
 		pf, err := inspect.GetObjectPropString(ctx, registry, "PasswordFile")
 		if err != nil {
-			return false, err
+			return false, append(errs, err)
 		}
 		password, err := d.loadPasswordFromFile(pf, ctx, spinSvc.GetSpinnakerConfig())
 
@@ -116,78 +120,91 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 			resolvedPassword = password
 		}
 		if len(resolvedPassword) == 0 || err != nil {
-			return false, errors.New("The supplied password file is empty.")
+			err := errors.New("The supplied password file is empty.")
+			return false, append(errs, err)
 		}
 	} else if passwordCommandProvided {
 		out, err := exec.Command("bash", "-c", registry.PasswordCommand).Output()
 
 		if err != nil {
-			return false, fmt.Errorf("password command returned non 0 return code, stderr/stdout was: %s", err)
+			err := fmt.Errorf("password command returned non 0 return code, stderr/stdout was: %s", err)
+			return false, append(errs, err)
 		}
 
 		resolvedPassword = strings.Trim(string(out), "\n")
 		if len(resolvedPassword) == 0 {
-			return false, fmt.Errorf("Resolved password was empty, missing dependencies for running password command?")
+			err := fmt.Errorf("Resolved password was empty, missing dependencies for running password command?")
+			return false, append(errs, err)
 		}
 
 	}
 
 	if len(resolvedPassword) != 0 && len(registry.Username) == 0 {
-		return false, errors.New("You have supplied a password but no username.")
+		err := errors.New("You have supplied a password but no username.")
+		return false, append(errs, err)
 	} else if len(resolvedPassword) == 0 && len(registry.Username) != 0 {
-		return false, errors.New("You have a supplied a username but no password.")
+		err := errors.New("You have a supplied a username but no password.")
+		return false, append(errs, err)
 	}
 
-	service := dockerRegistryService{address: registry.GetAddress(), username: registry.Username, password: resolvedPassword, httpService: util.HttpService{}}
+	service := dockerRegistryService{address: registry.GetAddress(), username: registry.Username, password: resolvedPassword, httpService: util.HttpService{}, ctx: ctx}
 
-	ok, err := service.GetBase(ctx)
+	ok, err := service.GetBase()
 
 	if err != nil {
-		return false, err
+		return false, append(errs, err)
 	}
 
 	if !ok {
 		if len(resolvedPassword) != 0 {
 			c := resolvedPassword[len(resolvedPassword)-1]
 			if unicode.IsSpace(rune(c)) {
-				return false, errors.New("Your password file has a trailing newline; many text editors append a newline to files they open." + " If you think this is causing authentication issues, you can strip the newline with the command:\n\n" + " tr -d '\\n' < PASSWORD_FILE | tee PASSWORD_FILE")
+				err := errors.New("Your password file has a trailing newline; many text editors append a newline to files they open." + " If you think this is causing authentication issues, you can strip the newline with the command:\n\n" + " tr -d '\\n' < PASSWORD_FILE | tee PASSWORD_FILE")
+				return false, append(errs, err)
 			}
 		}
 
-		return false, errors.New(fmt.Sprintf("Unable to establish a connection with docker registry %s with provided credentials", registry.GetAddress()))
+		err := errors.New(fmt.Sprintf("Unable to establish a connection with docker registry %s with provided credentials", registry.GetAddress()))
+		return false, append(errs, err)
 	}
 
 	if len(registry.Repositories) != 0 {
 		v := newDockerRepoValidator(ctx)
-		errs := v.repository(registry, service)
-		fmt.Println(errs)
+		repositoryErrors := v.repository(registry, &service)
+		for _, err := range repositoryErrors {
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		return false, errs
 	}
 
 	return true, nil
 }
 
-type dockerRepoValidate struct {
-	ctx context.Context
-	v   dockerRepoValidator
+type dockerRepositoryValidate struct {
+	ctx                 context.Context
+	repositoryValidator dockerRepositoryValidator
 }
-type dockerRepoValidator interface {
-	repository(registry dockerRegistryAccount, service dockerRegistryService) []error
+
+type dockerRepositoryValidator interface {
+	repository(registry dockerRegistryAccount, service *dockerRegistryService) []error
 	imageTags(repository string, service *dockerRegistryService) error
 }
 
-func newDockerRepoValidator(ctx context.Context) dockerRepoValidator {
-	v := dockerRepoValidate{ctx: ctx}
+func newDockerRepoValidator(ctx context.Context) *dockerRepositoryValidate {
+	v := dockerRepositoryValidate{ctx: ctx, repositoryValidator: &dockerRepositoryValidate{}}
 	return &v
 }
 
-func (v *dockerRepoValidate) repository(registry dockerRegistryAccount, service dockerRegistryService) []error {
+func (v *dockerRepositoryValidate) repository(registry dockerRegistryAccount, service *dockerRegistryService) []error {
 	wg := sync.WaitGroup{}
 	var errs []error
 	for _, r := range registry.Repositories {
 		wg.Add(1)
 
 		go func(r string) {
-			err := v.v.imageTags(r, &service)
+			err := v.repositoryValidator.imageTags(r, service)
 			errs = append(errs, err)
 			wg.Done()
 		}(r)
@@ -198,8 +215,8 @@ func (v *dockerRepoValidate) repository(registry dockerRegistryAccount, service 
 	return errs
 }
 
-func (d *dockerRepoValidate) imageTags(repository string, service *dockerRegistryService) error {
-	tagCount, err := service.GetTagsCount(d.ctx, repository)
+func (d *dockerRepositoryValidate) imageTags(repository string, service *dockerRegistryService) error {
+	tagCount, err := service.GetTagsCount(repository)
 
 	if err != nil {
 		return err

@@ -57,11 +57,11 @@ func Test_dockerRegistryValidator_Validate_Registry_Name(t *testing.T) {
 	registry := dockerRegistryAccount{}
 
 	// when
-	ok, err := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
+	ok, errs := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
 
 	// then
 	assert.Equal(t, false, ok)
-	assert.Contains(t, fmt.Sprintf("%v", err), "dockerRegistry account missing name")
+	assert.Contains(t, fmt.Sprintf("%v", errs), "dockerRegistry account missing name")
 
 }
 
@@ -76,11 +76,11 @@ func Test_dockerRegistryValidator_Validate_Registry_Name_Pattern(t *testing.T) {
 	registry := dockerRegistryAccount{Name: "ecrRegistry"}
 
 	// when
-	ok, err := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
+	ok, errs := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
 
 	// then
 	assert.Equal(t, false, ok)
-	assert.Contains(t, fmt.Sprintf("%v", err), "Account name must match pattern ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$")
+	assert.Contains(t, fmt.Sprintf("%v", errs), "Account name must match pattern ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$")
 
 }
 
@@ -95,11 +95,11 @@ func Test_dockerRegistryValidator_Validate_Registry_Double_Password(t *testing.T
 	registry := dockerRegistryAccount{Name: "ecrregistry", Address: "1234567890.dkr.ecr.us-west-2.amazonaws.com", Password: "12345", PasswordCommand: "aws command"}
 
 	// when
-	ok, err := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
+	ok, errs := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
 
 	// then
 	assert.Equal(t, false, ok)
-	assert.Contains(t, fmt.Sprintf("%v", err), "You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.")
+	assert.Contains(t, fmt.Sprintf("%v", errs), "You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.")
 
 }
 
@@ -114,11 +114,11 @@ func Test_dockerRegistryValidator_Validate_Registry_Username_But_No_Password(t *
 	registry := dockerRegistryAccount{Name: "ecrregistry", Address: "1234567890.dkr.ecr.us-west-2.amazonaws.com", Username: "username"}
 
 	// when
-	ok, err := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
+	ok, errs := dockerValidator.validateRegistry(registry, context.TODO(), spinsvc)
 
 	// then
 	assert.Equal(t, false, ok)
-	assert.Contains(t, fmt.Sprintf("%v", err), "You have a supplied a username but no password.")
+	assert.Contains(t, fmt.Sprintf("%v", errs), "You have a supplied a username but no password.")
 
 }
 
@@ -161,7 +161,7 @@ spec:
 	return spinsvc, nil
 }
 
-func Test_dockerRepoValidate_repository(t *testing.T) {
+func Test_dockerRepositoryValidate(t *testing.T) {
 	type args struct {
 		registry dockerRegistryAccount
 		ctx      context.Context
@@ -176,9 +176,8 @@ func Test_dockerRepoValidate_repository(t *testing.T) {
 			name: "",
 			args: args{
 				registry: dockerRegistryAccount{
-					Repositories: []string{"repo1", "repo2", "repo3", "repo4", "repo5", "repo6", "repo7", "repo8", "repo9", "repo10", "repo11", "repo12", "repo13", "repo14",
-					},
-				},
+					Repositories: []string{"repo1", "repo2", "repo3", "repo4", "repo5", "repo6", "repo7", "repo8", "repo9", "repo10", "repo11", "repo12", "repo13", "repo14"},
+				}, service: dockerRegistryService{ctx: context.TODO()},
 			},
 			want: nil,
 		},
@@ -186,18 +185,19 @@ func Test_dockerRepoValidate_repository(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			mdv := NewMockdockerRepoValidator(ctrl)
+			mdv := NewMockdockerRepositoryValidator(ctrl)
 
 			mdv.EXPECT().imageTags(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(repository string, service *dockerRegistryService) error {
 				return fmt.Errorf(repository)
 			})
 
-			dv := dockerRepoValidate{
-				v: mdv,
+			dv := dockerRepositoryValidate{
+				ctx:                 context.TODO(),
+				repositoryValidator: mdv,
 			}
 
-			errs := dv.repository(tt.args.registry, tt.args.service)
-			fmt.Printf("%+v", errs)
+			errs := dv.repository(tt.args.registry, &tt.args.service)
+			assert.NotEmpty(t, errs)
 		})
 	}
 }
