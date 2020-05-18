@@ -117,6 +117,7 @@ jobs:
               -d "{\"secret\": \"${{ secrets.SPINNAKER_TOKEN }}\", \"parameters\": { \"OPERATOR_IMAGE\": \"${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}\", \"HALYARD_IMAGE\": \"armory/halyard:$halyard\", \"TESTS_BRANCH\": \"$branch\", \"COMMIT_SHA\": \"$sha\" } }" \
               -X POST https://spinnaker-api.armory.io/webhooks/webhook/operator-int-tests
 
+
       - name: Create Release
         if: steps.build_type.outputs.build_type == 'release'
         id: create_release
@@ -139,3 +140,4 @@ jobs:
           asset_path: ./build/manifests.tgz
           asset_name: manifests.tgz
           asset_content_type: application/zip
+
