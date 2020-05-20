@@ -22,8 +22,10 @@ import (
 //go:generate mockgen -destination=docker_validator_mocks_test.go -package validate -source docker_validator.go
 
 const (
-	dockerRegistryAccountsKey = "providers.dockerRegistry.accounts"
-	namePattern               = "^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$"
+	dockerRegistryAccountType        = "docker"
+	dockerRegistryAccountsEnabledKey = "providers.dockerRegistry.enabled"
+	dockerRegistryAccountsKey        = "providers.dockerRegistry.accounts"
+	namePattern                      = "^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$"
 )
 
 type dockerRegistryAccount struct {
@@ -59,8 +61,17 @@ func (d *dockerRegistryAccount) GetAddress() string {
 type dockerRegistryValidator struct{}
 
 func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
-	config := spinSvc.GetSpinnakerConfig()
-	dockerRegistries, err := config.GetHalConfigObjectArray(options.Ctx, dockerRegistryAccountsKey)
+
+	accountEnabled, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropBool(dockerRegistryAccountsEnabledKey, false)
+	if err != nil {
+		return ValidationResult{}
+	}
+
+	if !validationEnabled(spinSvc.GetSpinnakerValidation()) || !accountEnabled {
+		return ValidationResult{}
+	}
+
+	dockerRegistries, err := spinSvc.GetSpinnakerConfig().GetHalConfigObjectArray(options.Ctx, dockerRegistryAccountsKey)
 	if err != nil {
 		// Ignore, key or format don't match expectations
 		return ValidationResult{}
@@ -79,6 +90,15 @@ func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, 
 	}
 
 	return ValidationResult{}
+}
+
+func validationEnabled(v *interfaces.SpinnakerValidation) bool {
+	for n, s := range v.Providers {
+		if strings.ToLower(n) == strings.ToLower(dockerRegistryAccountType) {
+			return s.Enabled
+		}
+	}
+	return v.GetValidationSettings().Enabled
 }
 
 func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, []error) {
@@ -149,23 +169,25 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 
 	service := dockerRegistryService{address: registry.GetAddress(), username: registry.Username, password: resolvedPassword, httpService: util.HttpService{}, ctx: ctx}
 
-	ok, err := service.GetBase()
+	if registry.Username != "" && registry.Password != "" {
+		ok, err := service.GetBase()
 
-	if err != nil {
-		return false, append(errs, err)
-	}
-
-	if !ok {
-		if len(resolvedPassword) != 0 {
-			c := resolvedPassword[len(resolvedPassword)-1]
-			if unicode.IsSpace(rune(c)) {
-				err := errors.New("Your password file has a trailing newline; many text editors append a newline to files they open." + " If you think this is causing authentication issues, you can strip the newline with the command:\n\n" + " tr -d '\\n' < PASSWORD_FILE | tee PASSWORD_FILE")
-				return false, append(errs, err)
-			}
+		if err != nil {
+			return false, append(errs, err)
 		}
 
-		err := errors.New(fmt.Sprintf("Unable to establish a connection with docker registry %s with provided credentials", registry.GetAddress()))
-		return false, append(errs, err)
+		if !ok {
+			if len(resolvedPassword) != 0 {
+				c := resolvedPassword[len(resolvedPassword)-1]
+				if unicode.IsSpace(rune(c)) {
+					err := errors.New("Your password file has a trailing newline; many text editors append a newline to files they open." + " If you think this is causing authentication issues, you can strip the newline with the command:\n\n" + " tr -d '\\n' < PASSWORD_FILE | tee PASSWORD_FILE")
+					return false, append(errs, err)
+				}
+			}
+
+			err := errors.New(fmt.Sprintf("Unable to establish a connection with docker registry %s with provided credentials", registry.GetAddress()))
+			return false, append(errs, err)
+		}
 	}
 
 	if len(registry.Repositories) != 0 {
@@ -176,7 +198,9 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 				errs = append(errs, err)
 			}
 		}
-		return false, errs
+		if len(errs) > 0 {
+			return false, errs
+		}
 	}
 
 	return true, nil

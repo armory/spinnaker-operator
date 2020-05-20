@@ -124,7 +124,11 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 		return basicAuth(s.username, s.password), nil
 	}
 
-	req.SetBasicAuth(s.username, s.password)
+	// for dockerhub anonymous repositories we can get token without credentials.
+	if s.username != "" && s.password != "" {
+		req.SetBasicAuth(s.username, s.password)
+	}
+
 	resp, err := s.httpService.Execute(s.ctx, req)
 
 	if err != nil {
