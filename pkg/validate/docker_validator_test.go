@@ -201,3 +201,40 @@ func Test_dockerRepositoryValidate(t *testing.T) {
 		})
 	}
 }
+
+func Test_validationEnabled(t *testing.T) {
+
+	// given
+	spinsvc, err := getSpinnakerService()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	dockerValidator := dockerRegistryValidator{}
+
+	// when
+	validate := dockerValidator.validationEnabled(spinsvc.GetSpinnakerValidation())
+
+	// then
+	assert.Equal(t, true, validate)
+}
+
+func Test_validationEnabled_Provider_Not_Enabled(t *testing.T) {
+
+	// given
+	spinsvc, err := getSpinnakerService()
+	if !assert.Nil(t, err) {
+		return
+	}
+	providers := map[string]interfaces.ValidationSetting{
+		"docker": {Enabled: false},
+	}
+	spinsvc.GetSpinnakerValidation().Providers = providers
+	dockerValidator := dockerRegistryValidator{}
+
+	// when
+	validate := dockerValidator.validationEnabled(spinsvc.GetSpinnakerValidation())
+
+	// then
+	assert.Equal(t, false, validate)
+}
