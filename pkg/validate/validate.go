@@ -14,6 +14,7 @@ import (
 // Validators registered here should be stateless
 var ParallelValidators = []SpinnakerValidator{
 	&versionValidator{},
+	&dockerRegistryValidator{},
 }
 
 type SpinnakerValidator interface {
@@ -94,4 +95,8 @@ func (r *ValidationResult) GetErrorMessage() string {
 
 func NewResultFromError(e error, fatal bool) ValidationResult {
 	return ValidationResult{Errors: []error{e}, Fatal: fatal}
+}
+
+func NewResultFromErrors(e []error, fatal bool) ValidationResult {
+	return ValidationResult{Errors: e, Fatal: fatal}
 }
