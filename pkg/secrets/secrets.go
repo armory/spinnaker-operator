@@ -58,9 +58,12 @@ func DecodeAsFile(ctx context.Context, val string) (string, error) {
 	// We ignore the isFile return value to support old style "encrypted:" file references
 	s, _, err := Decode(ctx, val)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error decoding string \"%s\":\n  %w", val, err)
 	}
 	_, err = os.Stat(s)
+	if err != nil {
+		return s, fmt.Errorf("Error decoding string \"%s\" into a file:\n  %w\nDid you use \"encrypted\" instead of \"encryptedFile\"?", val, err)
+	}
 	return s, err
 }
 

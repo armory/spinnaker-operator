@@ -116,7 +116,7 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 	req, err := s.httpService.Request(s.ctx, util.GET, authenticateDetails["realm"], requestParams, headers, nil)
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error building request to \"%s\":\n  %w", authenticateDetails["realm"], err)
 	}
 
 	// for ECR's registries we need to use Basic auth
@@ -132,18 +132,18 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 	resp, err := s.httpService.Execute(s.ctx, req)
 
 	if err != nil {
-		return "", fmt.Errorf("Error making request to %w", err)
+		return "", fmt.Errorf("Error making request to \"%s\":\n  %w", authenticateDetails["realm"], err)
 	}
 
 	if resp.StatusCode == 200 {
 		b, err := s.httpService.ParseResponseBody(resp.Body)
 		if err != nil {
-			return "", fmt.Errorf("Error making request to %s: %w", authenticateDetails["realm"], err)
+			return "", fmt.Errorf("Error parsing response from %s:\n  %w", authenticateDetails["realm"], err)
 		}
 
 		body, err := inspect.ConvertJSON(b)
 		if err != nil {
-			return "", fmt.Errorf("Error parsing response: %s", err)
+			return "", fmt.Errorf("Error parsing response from %s:\n  %w", authenticateDetails["realm"], err)
 		}
 
 		return fmt.Sprintf("%v", body["token"]), nil
