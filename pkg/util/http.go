@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -22,7 +23,7 @@ const (
 func (s *HttpService) Request(ctx context.Context, method HttpMethod, url string, requestParams map[string]string, headers map[string]string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(string(method), url, body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error building request to \"%s\":\n  %w", url, err)
 	}
 
 	req = req.WithContext(ctx)
@@ -47,7 +48,11 @@ func (s *HttpService) Request(ctx context.Context, method HttpMethod, url string
 func (s *HttpService) Execute(ctx context.Context, req *http.Request) (*http.Response, error) {
 	req = req.WithContext(ctx)
 	client := &http.Client{}
-	return client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return resp, fmt.Errorf("Error sending %s request to \"%s\":\n  %w", req.Method, req.URL, err)
+	}
+	return resp, err
 }
 
 func (s *HttpService) ParseResponseBody(body io.ReadCloser) ([]byte, error) {
@@ -55,7 +60,7 @@ func (s *HttpService) ParseResponseBody(body io.ReadCloser) ([]byte, error) {
 	f, err := ioutil.ReadAll(body)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error reading HTTP response:\n  %w", err)
 	}
 
 	return f, nil
