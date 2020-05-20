@@ -61,7 +61,7 @@ func Test_dockerRegistryValidator_Validate_Registry_Name(t *testing.T) {
 
 	// then
 	assert.Equal(t, false, ok)
-	assert.Contains(t, fmt.Sprintf("%v", errs), "dockerRegistry account missing name")
+	assert.Contains(t, fmt.Sprintf("%v", errs), "missing account name")
 
 }
 

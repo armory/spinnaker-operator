@@ -119,7 +119,7 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 	passwordFileProvided := len(registry.PasswordFile) != 0
 
 	if passwordProvided && passwordFileProvided || passwordCommandProvided && passwordProvided || passwordCommandProvided && passwordFileProvided {
-		err := fmt.Errorf("Error validating docker account \"%s\": You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.")
+		err := fmt.Errorf("Error validating docker account \"%s\": You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.", registry.Name)
 		return false, append(errs, err)
 	}
 
