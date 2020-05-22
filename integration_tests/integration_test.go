@@ -76,8 +76,6 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 		Account{Name: "dockerhub", Type: "dockerRegistry"},
 		Account{Name: "kube-sa", Type: "kubernetes"},
 		Account{Name: "kube-file-reference", Type: "kubernetes"})
-	e.VerifyAccountsExist("/artifacts/credentials", t,
-		Account{Name: "dockerhub", Types: []string{"s3/object"}})
 	if t.Failed() {
 		return
 	}
