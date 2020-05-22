@@ -28,6 +28,7 @@ const (
 	awsArtifactsAccessKey   = "awsAccessKeyId"
 	awsArtifactsSecretKey   = "awsSecretAccessKey"
 	awsCanary               = "canary"
+	monitoringContainerName = "monitoring-daemon"
 )
 
 // secretsTransformer maps Kubernetes secrets onto the deployment of the service that requires it
@@ -409,14 +410,31 @@ func (k *kubernetesSecretCollector) setInDeployment(deployment *appsv1.Deploymen
 		return nil
 	}
 
-	container := util.GetContainerInDeployment(deployment, k.svc)
-	if container == nil {
+	svcContainer := util.GetContainerInDeployment(deployment, k.svc)
+	if svcContainer == nil {
 		return fmt.Errorf("unable to find container %s in deployment, cannot mount secrets", k.svc)
 	}
 
+	err := k.setInContainer(deployment, svcContainer)
+	if err != nil {
+		return fmt.Errorf("error mounting secrets in container \"%s\" for service \"%s\": %w", svcContainer.Name, k.svc, err)
+	}
+
+	monitoringContainer := util.GetContainerInDeployment(deployment, monitoringContainerName)
+	if monitoringContainer != nil {
+		return k.setInContainer(deployment, monitoringContainer)
+	}
+	return nil
+}
+
+func (k *kubernetesSecretCollector) setInContainer(deployment *appsv1.Deployment, container *v1.Container) error {
 	// Add volumes
 	if len(k.volumes) > 0 {
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, k.volumes...)
+		for _, v := range k.volumes {
+			if !k.isVolumeInArray(v, deployment.Spec.Template.Spec.Volumes) {
+				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, v)
+			}
+		}
 		// Add volume mounts
 		container.VolumeMounts = append(container.VolumeMounts, k.volumeMounts...)
 	}
@@ -424,6 +442,15 @@ func (k *kubernetesSecretCollector) setInDeployment(deployment *appsv1.Deploymen
 	// Add environment variables
 	container.Env = append(container.Env, k.envVars...)
 	return nil
+}
+
+func (k *kubernetesSecretCollector) isVolumeInArray(v v1.Volume, a []v1.Volume) bool {
+	for _, vol := range a {
+		if vol.Name == v.Name {
+			return true
+		}
+	}
+	return false
 }
 
 func getEnvVarName(svc, secretName, key string) string {

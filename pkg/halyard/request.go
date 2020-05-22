@@ -14,12 +14,17 @@ type responseHolder struct {
 	Body       []byte
 }
 
-type halyardErrorResponse struct {
+type halyardValidateErrorResponse struct {
 	ProblemSet struct {
 		Problems []struct {
 			Message string `json:"message"`
 		} `json:"problems"`
 	} `json:"problemSet"`
+}
+
+type halyardGenericErrorResponse struct {
+	StatusLine string `json:"error,omitempty"`
+	Message    string `json:"message,omitempty"`
 }
 
 func (s *Service) executeRequest(req *http.Request, ctx context.Context) responseHolder {
@@ -52,10 +57,15 @@ func (hr *responseHolder) Error() error {
 		return nil
 	}
 	// try to get a friendly halyard error message from its response
-	resp := &halyardErrorResponse{}
-	err := json.Unmarshal(hr.Body, &resp)
-	if err != nil || len(resp.ProblemSet.Problems) == 0 {
-		return fmt.Errorf("got halyard response status %d, response: %s", hr.StatusCode, string(hr.Body))
+	validateResp := &halyardValidateErrorResponse{}
+	err := json.Unmarshal(hr.Body, &validateResp)
+	if err != nil || len(validateResp.ProblemSet.Problems) == 0 {
+		genResp := &halyardGenericErrorResponse{}
+		err := json.Unmarshal(hr.Body, &genResp)
+		if err != nil {
+			return fmt.Errorf("got halyard response status %d, response: %s", hr.StatusCode, string(hr.Body))
+		}
+		return fmt.Errorf("got halyard response status %d, response: %s", hr.StatusCode, genResp.Message)
 	}
-	return fmt.Errorf(resp.ProblemSet.Problems[0].Message)
+	return fmt.Errorf(validateResp.ProblemSet.Problems[0].Message)
 }

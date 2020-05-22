@@ -3,6 +3,7 @@ kind: SpinnakerService
 metadata:
   name: spinnaker
 spec:
+  expose: {}
   validation:
     providers:
       kubernetes:

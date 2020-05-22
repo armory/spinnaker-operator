@@ -111,11 +111,22 @@ spec:
         volumeMounts:
         - mountPath: /opt/spinnaker/config
           name: myconfig
+      - env:
+        - name: DUMMY
+          value: some value
+        name: monitoring-daemon
+        volumeMounts:
+        - mountPath: /opt/spinnaker-monitoring/config
+          name: myconfig-monitoring
       volumes:
       - name: myconfig
         secret:
           defaultMode: 420
           secretName: myothersecret
+      - name: myconfig-monitoring
+        secret:
+          defaultMode: 420
+          secretName: myothersecret-monitoring
 `
 	dep := &appsv1.Deployment{}
 	assert.Nil(t, yaml.Unmarshal([]byte(s), dep))
@@ -148,7 +159,13 @@ spec:
 		return
 	}
 	assert.Equal(t, 2, len(c.VolumeMounts))
-	assert.Equal(t, 2, len(dep.Spec.Template.Spec.Volumes))
+	assert.Equal(t, 3, len(dep.Spec.Template.Spec.Volumes))
+	assert.Equal(t, 2, len(c.Env))
+	c = util.GetContainerInDeployment(dep, "monitoring-daemon")
+	if !assert.NotNil(t, c) {
+		return
+	}
+	assert.Equal(t, 2, len(c.VolumeMounts))
 	assert.Equal(t, 2, len(c.Env))
 
 	// Check we get an error when no container of the name exist

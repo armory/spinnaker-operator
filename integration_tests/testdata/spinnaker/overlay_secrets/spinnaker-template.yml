@@ -38,6 +38,13 @@ spec:
               omitKinds: []
               onlySpinnakerManaged: false
           primaryAccount: kube-s3-secret
+      metricStores:
+        datadog:
+          enabled: true
+          api_key: encrypted:k8s!n:testsecrets!k:datadog-apikey
+          app_key: encrypted:s3!b:{{.S3Bucket}}!f:secrets/secrets.yml!r:{{.S3BucketRegion}}!k:datadog.appkey
+          tags: #  Your datadog custom tags. Please delimit the KVP with colons i.e. app:test env:dev
+            - env:dev
 
       artifacts:
         github:

@@ -10,6 +10,7 @@ secretGenerator:
       - kubecfg
     literals:
       - github-token=supersecrettoken
+      - datadog-apikey=YYY
 
 generatorOptions:
   disableNameSuffixHash: true

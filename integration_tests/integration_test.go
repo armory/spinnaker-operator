@@ -44,6 +44,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 - Install spinnaker with Kubernetes accounts:
   * Auth with service account
   * Auth with kubeconfigFile referencing a file inside inside spinConfig.files
+- Install spinnaker with anonymous dockerhub account
 - Upgrade spinnaker to a newer version
 - Uninstall with kubectl delete spinsvc <name>`)
 
@@ -72,6 +73,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 
 	// verify accounts
 	e.VerifyAccountsExist("/credentials", t,
+		Account{Name: "dockerhub", Type: "dockerRegistry"},
 		Account{Name: "kube-sa", Type: "kubernetes"},
 		Account{Name: "kube-file-reference", Type: "kubernetes"})
 	if t.Failed() {
