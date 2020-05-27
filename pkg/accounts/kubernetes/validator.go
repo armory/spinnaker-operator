@@ -10,6 +10,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	v13 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -75,31 +76,36 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc int
 // makeClientFromFile loads the client config from a file path which can be a secret
 func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	var cfg *clientcmdapi.Config
+	var kubeconfigBytes []byte
 	var err error
 	if tools.IsEncryptedSecret(file) {
-		file, err := secrets.DecodeAsFile(ctx, file)
+		f, err := secrets.DecodeAsFile(ctx, file)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error decoding kubeconfigFile from secret reference \"%s\":\n  %w", file, err)
 		}
-		cfg, err = clientcmd.LoadFromFile(file)
+		kubeconfigBytes, err = ioutil.ReadFile(f)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error loading kubeconfigFile \"%s\":\n  %w", f, err)
 		}
 	} else if filepath.IsAbs(file) {
 		// if file path is absolute, it may already be a path decoded by secret engines
-		cfg, err = clientcmd.LoadFromFile(file)
+		kubeconfigBytes, err = ioutil.ReadFile(file)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error loading kubeconfigFile \"%s\":\n  %w", file, err)
 		}
 	} else {
 		// we're taking relative file paths as files defined inside spec.spinnakerConfig.files
-		b := spinCfg.GetFileContent(file)
-		cfg, err = clientcmd.Load(b)
-		if err != nil {
-			return nil, err
-		}
+		kubeconfigBytes = spinCfg.GetFileContent(file)
 	}
-	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
+	cfg, err = clientcmd.Load(kubeconfigBytes)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
+	}
+	restCfg, err := clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
+	if err != nil {
+		return restCfg, fmt.Errorf("Error building rest config from kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
+	}
+	return restCfg, nil
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
@@ -267,7 +273,7 @@ type authSettings struct {
 func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 	clientset, err := kubernetes.NewForConfig(cc)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to build kubernetes clientset from rest config: %w", err)
 	}
 	// We want to keep the validation short (ideally just one request), so any improvement should remain short (e.g. not a request per namespace)
 	ns, err := inspect.GetStringArray(k.account.Settings, "namespaces")
@@ -276,13 +282,13 @@ func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 		// The test is analogous to what is done in Halyard
 		_, err = clientset.CoreV1().Namespaces().List(v13.ListOptions{})
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("unable to verify access to account %s", k.account.Name))
+			return fmt.Errorf("Error listing namespaces in account \"%s\":\n  %w", k.account.Name, err)
 		}
 	} else {
 		// Otherwise read resources just for the first namespace configured
 		_, err = clientset.CoreV1().Pods(ns[0]).List(v13.ListOptions{})
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("unable to verify access to account %s", k.account.Name))
+			return fmt.Errorf("Error listing pods in account \"%s\", namespace \"%s\":\n  %w", k.account.Name, ns[0], err)
 		}
 	}
 	return nil

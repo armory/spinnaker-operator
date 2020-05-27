@@ -23,10 +23,13 @@ func GetObjectPropBool(obj interface{}, prop string, defaultVal bool) (bool, err
 func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (string, error) {
 	s, err := GetRawObjectPropString(obj, prop)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to read property \"%s\":\n  %w", prop, err)
 	}
 	decoded, _, err := secrets.Decode(ctx, s)
-	return decoded, err
+	if err != nil {
+		return decoded, fmt.Errorf("Error decoding property \"%s\":\n  %w", prop, err)
+	}
+	return decoded, nil
 }
 
 func GetRawObjectPropString(obj interface{}, prop string) (string, error) {
