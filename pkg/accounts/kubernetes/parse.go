@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	yamlsecrets "github.com/armory/go-yaml-tools/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
@@ -42,7 +43,7 @@ func (k *AccountType) FromSpinnakerConfig(ctx context.Context, settings map[stri
 	}
 	auth, err := k.authFromSpinnakerConfig(ctx, a.Name, settings)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error reading kubernetes auth information for account \"%s\":\n  %w", a.Name, err)
 	}
 	a.Auth = auth
 	a.Settings = settings
@@ -51,8 +52,20 @@ func (k *AccountType) FromSpinnakerConfig(ctx context.Context, settings map[stri
 
 func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, settings map[string]interface{}) (*interfaces.KubernetesAuth, error) {
 	res := &interfaces.KubernetesAuth{}
-	kubeconfigFile, err := inspect.GetObjectPropString(ctx, settings, "kubeconfigFile")
-	if err == nil {
+	rawKubeconfigFile, ok := settings["kubeconfigFile"]
+	if ok {
+		k, kok := rawKubeconfigFile.(string)
+		if !kok {
+			return nil, fmt.Errorf("kubeconfigFile is not a string: %s", rawKubeconfigFile)
+		}
+		if !yamlsecrets.IsEncryptedSecret(k) {
+			res.KubeconfigFile = k
+			return res, nil
+		}
+		kubeconfigFile, err := secrets.DecodeAsFile(ctx, k)
+		if err != nil {
+			return nil, fmt.Errorf("Error decoding kubeconfigFile from secret reference \"%s\":\n  %w", k, err)
+		}
 		res.KubeconfigFile = kubeconfigFile
 		return res, nil
 	}
@@ -80,7 +93,7 @@ func (k *AccountType) authFromSpinnakerConfig(ctx context.Context, name string, 
 		res.Kubeconfig = c
 		return res, nil
 	}
-	return nil, fmt.Errorf("unable to parse account %s: no valid kubeconfig file, kubeconfig content or service account information found", name)
+	return nil, fmt.Errorf("Unable to parse account %s: expected one of \"kubeconfigFile\", \"serviceAccount\" or \"kubeconfigContents\", but none was found", name)
 }
 
 // ToSpinnakerSettings outputs an account (either parsed from CRD or from settings) to Spinnaker settings
