@@ -214,6 +214,10 @@ echo "hello world!"
 			name: "text",
 			file: "hello world!",
 		},
+		{
+			name: "empty",
+			file: "",
+		},
 	}
 	for _, c := range cases {
 		s := &v1.Secret{
