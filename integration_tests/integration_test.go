@@ -164,7 +164,9 @@ func TestProfilesOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
-- Settings in profile configs should work `)
+- Settings in profile configs should work 
+- service-settings are merged and applied
+`)
 
 	spinOverlay := "testdata/spinnaker/overlay_profiles"
 	ns := RandomString("spin-profiles-test")
@@ -198,6 +200,18 @@ func TestProfilesOverlay(t *testing.T) {
 	assert.Equal(t,
 		`#!/bin/bash -e
 echo "hello world!"`, sh)
+	// all services have the global var
+	for _, svc := range []string{"clouddriver", "echo", "front50", "gate", "orca", "rosco"} {
+		pod := GetPodName(ns, svc, e, t)
+		c := fmt.Sprintf("%s -n %s get pod %s -o=jsonpath='{.spec.containers[0].env[?(@.name==\"GLOBAL_VAR\")]}'", e.KubectlPrefix(), ns, pod)
+		o := RunCommandSilentAndAssert(c, t)
+		assert.NotEqual(t, "", strings.TrimSpace(o))
+	}
+	// only clouddriver has the extra var
+	pod := GetPodName(ns, "clouddriver", e, t)
+	c := fmt.Sprintf("%s -n %s get pod %s -o=jsonpath='{.spec.containers[0].env[?(@.name==\"SVC_NAME\")]}'", e.KubectlPrefix(), ns, pod)
+	o = RunCommandSilentAndAssert(c, t)
+	assert.NotEqual(t, "", strings.TrimSpace(o))
 }
 
 func TestValidations(t *testing.T) {

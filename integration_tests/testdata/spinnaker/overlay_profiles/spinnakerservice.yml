@@ -40,7 +40,13 @@ spec:
       profiles__rosco__packer__my_custom_script.sh: |
         #!/bin/bash -e
         echo "hello world!"
+
     service-settings:
       clouddriver:
+        env:
+          SVC_NAME: clouddriver
         kubernetes:
           serviceAccountName: spin-sa
+      spinnaker:
+        env:
+          GLOBAL_VAR: global

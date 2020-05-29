@@ -71,6 +71,53 @@ func Source(i interface{}, settings map[string]interface{}) error {
 	return nil
 }
 
+// Merge combines two maps. Keys in the second map override the ones in the first. Arrays are merged.
+func Merge(a, b map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, av := range a {
+		ar := reflect.ValueOf(av)
+		if avm, ok := av.(map[string]interface{}); ok {
+			if bv, ok := b[k]; ok {
+				if bvm, ok := bv.(map[string]interface{}); ok {
+					result[k] = Merge(avm, bvm)
+				} else {
+					result[k] = bv
+				}
+			} else {
+				result[k] = av
+			}
+		} else if ar.Kind() == reflect.Slice {
+			if bv, ok := b[k]; ok {
+				br := reflect.ValueOf(bv)
+				if br.Kind() == reflect.Slice {
+					combined := reflect.MakeSlice(ar.Type(), 0, ar.Len())
+					for i := 0; i < ar.Len(); i++ {
+						combined = reflect.Append(combined, ar.Index(i))
+					}
+					for i := 0; i < br.Len(); i++ {
+						combined = reflect.Append(combined, br.Index(i))
+					}
+					result[k] = combined.Interface()
+				} else {
+					result[k] = bv
+				}
+			}
+		} else {
+			if bv, ok := b[k]; ok {
+				result[k] = bv
+			} else {
+				result[k] = av
+			}
+		}
+	}
+	for k, bv := range b {
+		if _, ok := a[k]; !ok {
+			result[k] = bv
+		}
+	}
+	return result
+}
+
 // toSpecificArray converts an array of one type to an array of a desired type if it's assignable.
 func toSpecificArray(array reflect.Value, target reflect.Type) (reflect.Value, error) {
 	result := reflect.MakeSlice(reflect.SliceOf(target.Elem()), 0, array.Cap())
