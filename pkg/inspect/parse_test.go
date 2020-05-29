@@ -120,3 +120,88 @@ func TestSanitizeSecrets(t *testing.T) {
 		assert.Equal(t, "inspected-sval2", ttr.SArray[1])
 	}
 }
+
+func TestMerge(t *testing.T) {
+	tests := []struct {
+		name   string
+		a      map[string]interface{}
+		b      map[string]interface{}
+		result map[string]interface{}
+	}{
+		{
+			name: "two different maps",
+			a: map[string]interface{}{
+				"env": map[string]interface{}{
+					"JAVA_OPTS": "-Dxxx",
+				},
+			},
+			b: map[string]interface{}{
+				"artifactId": "yyy",
+			},
+			result: map[string]interface{}{
+				"env": map[string]interface{}{
+					"JAVA_OPTS": "-Dxxx",
+				},
+				"artifactId": "yyy",
+			},
+		},
+		{
+			name: "same root key in maps",
+			a: map[string]interface{}{
+				"env": map[string]interface{}{
+					"JAVA_OPTS": "-Dxxx",
+				},
+			},
+			b: map[string]interface{}{
+				"env": map[string]interface{}{
+					"AWS_ACCESS_KEY": "abcd",
+				},
+			},
+			result: map[string]interface{}{
+				"env": map[string]interface{}{
+					"JAVA_OPTS":      "-Dxxx",
+					"AWS_ACCESS_KEY": "abcd",
+				},
+			},
+		},
+		{
+			name: "arrays",
+			a: map[string]interface{}{
+				"kubernetes": map[string]interface{}{
+					"volumes": []struct {
+						id    string
+						vType string
+					}{
+						{id: "1", vType: "1t"},
+					},
+				},
+			},
+			b: map[string]interface{}{
+				"kubernetes": map[string]interface{}{
+					"volumes": []struct {
+						id    string
+						vType string
+					}{
+						{id: "2", vType: "2t"},
+					},
+				},
+			},
+			result: map[string]interface{}{
+				"kubernetes": map[string]interface{}{
+					"volumes": []struct {
+						id    string
+						vType string
+					}{
+						{id: "1", vType: "1t"},
+						{id: "2", vType: "2t"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		r := Merge(tt.a, tt.b)
+		assert.Equal(t, tt.result, r)
+	}
+}
