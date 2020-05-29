@@ -14,7 +14,7 @@ var defaults Defaults
 
 func init() {
 	defaults = Defaults{
-		OperatorImageDefault:  "docker.io/germanarmory/spinnaker-operator:1.0.0-snapshot.uncommitted.feat.global.service.settings.7de7938-2",
+		OperatorImageDefault:  "armory/spinnaker-operator:dev",
 		HalyardImageDefault:   "armory/halyard:operator-dev",
 		BucketDefault:         "operator-int-tests",
 		BucketRegionDefault:   "us-west-2",
