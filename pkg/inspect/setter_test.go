@@ -79,7 +79,7 @@ func TestUpsertInSlice(t *testing.T) {
 			val:     val,
 			withErr: false,
 			expected: func(obj map[string]interface{}) bool {
-				v, err := getObjectProp(obj, "provider.kubernetes.0.name")
+				v, err := GetObjectProp(obj, "provider.kubernetes.0.name")
 				if err != nil {
 					return false
 				}
@@ -101,7 +101,7 @@ func TestUpsertInSlice(t *testing.T) {
 			val:     val,
 			withErr: false,
 			expected: func(obj map[string]interface{}) bool {
-				v, err := getObjectProp(obj, "provider.kubernetes.0.name")
+				v, err := GetObjectProp(obj, "provider.kubernetes.0.name")
 				if err != nil {
 					return false
 				}
@@ -128,7 +128,7 @@ func TestUpsertInSlice(t *testing.T) {
 			val:     val,
 			withErr: false,
 			expected: func(obj map[string]interface{}) bool {
-				v, err := getObjectProp(obj, "provider.kubernetes.1.name")
+				v, err := GetObjectProp(obj, "provider.kubernetes.1.name")
 				if err != nil {
 					return false
 				}
@@ -159,7 +159,7 @@ func TestUpsertInSlice(t *testing.T) {
 			val:     val,
 			withErr: false,
 			expected: func(obj map[string]interface{}) bool {
-				a, err := getObjectProp(obj, "provider.kubernetes")
+				a, err := GetObjectProp(obj, "provider.kubernetes")
 				if err != nil {
 					return false
 				}
@@ -169,7 +169,7 @@ func TestUpsertInSlice(t *testing.T) {
 				if a.Len() != 2 {
 					return false
 				}
-				v, err := getObjectProp(obj, "provider.kubernetes.1.token")
+				v, err := GetObjectProp(obj, "provider.kubernetes.1.token")
 				if err != nil {
 					return false
 				}
