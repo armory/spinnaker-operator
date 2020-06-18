@@ -6,6 +6,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/bom"
 	"github.com/armory/spinnaker-operator/pkg/generated"
+	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/go-logr/logr"
@@ -53,28 +54,15 @@ func (a *defaultsTransformer) setArchaiusDefaults(ctx context.Context) error {
 }
 
 func (a *defaultsTransformer) setArchaiusDefaultsForProfile(profile interfaces.FreeForm, profileName string) error {
-	var ok bool
-	archaius_, ok := profile["archaius"]
-	if !ok {
-		archaius := map[string]interface{}{}
-		archaius["enabled"] = false
-		profile["archaius"] = archaius
-		a.log.V(10).Info("Archaius defaults: applied", "profileName", profileName)
-		return nil // Created new map and saved into profile
-	}
-	archaius, ok := archaius_.(map[string]interface{})
-	if !ok {
-		// Archaius is defined but not an object (idk why)
-		return fmt.Errorf("archaius expected to be an object, but found %s instead", archaius)
-	}
-	_, ok = archaius["enabled"]
-	if ok {
-		// Only handle profiles missing archaius.enabled
+	_, err := inspect.GetObjectProp(profile, "archaius.fixedDelayPollingScheduler")
+	if err == nil {
+		// Ignore
 		return nil
 	}
-	archaius["enabled"] = false
-	a.log.V(10).Info("Archaius defaults: applied", "profileName", profileName)
-	return nil
+	if err := inspect.SetObjectProp(profile, "archaius.fixedDelayPollingScheduler.delayMills", 2147483647); err != nil {
+		return err
+	}
+	return inspect.SetObjectProp(profile, "archaius.fixedDelayPollingScheduler.initialDelayMills", 2147483647)
 }
 
 func (a *defaultsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {

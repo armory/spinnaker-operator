@@ -10,7 +10,7 @@ import (
 )
 
 func GetObjectPropBool(obj interface{}, prop string, defaultVal bool) (bool, error) {
-	c, err := getObjectProp(obj, prop)
+	c, err := GetObjectProp(obj, prop)
 	if err != nil {
 		return defaultVal, err
 	}
@@ -33,7 +33,7 @@ func GetObjectPropString(ctx context.Context, obj interface{}, prop string) (str
 }
 
 func GetRawObjectPropString(obj interface{}, prop string) (string, error) {
-	c, err := getObjectProp(obj, prop)
+	c, err := GetObjectProp(obj, prop)
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +56,7 @@ func GetRawObjectPropString(obj interface{}, prop string) (string, error) {
 }
 
 func GetObjectArray(obj interface{}, prop string) ([]map[string]interface{}, error) {
-	v, err := getObjectProp(obj, prop)
+	v, err := GetObjectProp(obj, prop)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func GetObjectArray(obj interface{}, prop string) ([]map[string]interface{}, err
 }
 
 func GetStringArray(obj interface{}, prop string) ([]string, error) {
-	v, err := getObjectProp(obj, prop)
+	v, err := GetObjectProp(obj, prop)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func GetStringArray(obj interface{}, prop string) ([]string, error) {
 	return result, nil
 }
 
-func getObjectProp(obj interface{}, prop string) (reflect.Value, error) {
+func GetObjectProp(obj interface{}, prop string) (reflect.Value, error) {
 	if prop == "" {
 		return reflect.ValueOf(obj), nil
 	}
