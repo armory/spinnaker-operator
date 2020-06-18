@@ -24,17 +24,26 @@ spec:
 		config := spinsvc.GetSpinnakerConfig()
 		serviceProfile := config.Profiles[serviceName]
 		assert.NotNil(t, serviceProfile, "service: %s", serviceName)
-
-		archaius_ := serviceProfile["archaius"]
-		assert.IsType(t, map[string]interface{}{}, archaius_, "service: %s", serviceName)
-
-		archaius := archaius_.(map[string]interface{})
-		assert.Equal(t, false, archaius["enabled"], "service: %s", serviceName)
+		assert.True(t, isDelayPollingMills(serviceProfile, "delayMills"))
+		assert.True(t, isDelayPollingMills(serviceProfile, "initialDelayMills"))
 		assert.NotEqual(t, before[serviceName], serviceProfile, "service: %s", serviceName)
 	}
 }
 
-func TestConfig_SetArchaiusDefaults_alreadyTrue(t *testing.T) {
+func isDelayPollingMills(serviceProfile interfaces.FreeForm, prop string) bool {
+	archaius, ok := serviceProfile["archaius"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	scheduler, ok := archaius["fixedDelayPollingScheduler"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	v, ok := scheduler[prop]
+	return v == 2147483647
+}
+
+func TestConfig_SetArchaius_alreadySet(t *testing.T) {
 	s := `
 apiVersion: spinnaker.io/v1alpha2
 kind: SpinnakerService
@@ -45,7 +54,8 @@ spec:
     profiles:
       gate:
         archaius:
-          enabled: true
+          fixedDelayPollingScheduler:
+            nonExistingProp: true
 `
 	tr, spinsvc := th.setupTransformerFromSpinText(&defaultsTransformerGenerator{}, s, t)
 	before_ := spinsvc.GetSpinnakerConfig().Profiles["gate"]
@@ -56,12 +66,7 @@ spec:
 	config := spinsvc.GetSpinnakerConfig()
 	gate := config.Profiles["gate"]
 	assert.NotNil(t, gate)
-
-	archaius_ := gate["archaius"]
-	assert.IsType(t, map[string]interface{}{}, archaius_)
-
-	archaius := archaius_.(map[string]interface{})
-	assert.Equal(t, true, archaius["enabled"])
+	assert.False(t, isDelayPollingMills(gate, "delayMills"))
 	assert.Equal(t, before, gate)
 }
 
