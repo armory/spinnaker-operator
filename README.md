@@ -32,7 +32,7 @@ This is a high-level view of the commands you need to run for those who want to 
 ```bash
 # Pick a release from https://github.com/armory/spinnaker-operator/releases (or clone the repo and use the master branch for the latest development work)
 $ mkdir -p spinnaker-operator && cd spinnaker-operator
-$ RELEASE=v0.3.0 bash -c 'curl -L https://github.com/armory/spinnaker-operator/releases/download/${RELEASE}/manifests.tgz | tar -xz'
+$ bash -c 'curl -L https://github.com/armory/spinnaker-operator/releases/latest/download/manifests.tgz | tar -xz'
  
 # Install or update CRDs cluster wide
 $ kubectl apply -f deploy/crds/
