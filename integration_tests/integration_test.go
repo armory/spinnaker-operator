@@ -83,7 +83,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	// upgrade
 	LogMainStep(t, "Upgrading spinnaker")
 	v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-	if t.Failed() || !assert.Equal(t, "1.19.5", strings.TrimSpace(v)) {
+	if t.Failed() || !assert.Equal(t, "1.20.5", strings.TrimSpace(v)) {
 		return
 	}
 	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_upgrade", t) {
