@@ -2,20 +2,8 @@ resources:
 - SpinnakerService.yml
 
 # Apply the patches top down order
-patches:
-- path: config-patch.yml
-  target:
-    version: v1alpha2
-    kind: SpinnakerService
-- path: profiles-patch.yml
-  target:
-    version: v1alpha2
-    kind: SpinnakerService
-- path: files-patch.yml
-  target:
-    version: v1alpha2
-    kind: SpinnakerService
-- path: service-settings-patch.yml
-  target:
-    version: v1alpha2
-    kind: SpinnakerService
+patchesStrategicMerge:
+- config-patch.yml
+- profiles-patch.yml
+- files-patch.yml
+- service-settings-patch.yml
