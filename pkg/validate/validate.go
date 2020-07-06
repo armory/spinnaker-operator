@@ -7,6 +7,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"gomodules.xyz/jsonpatch/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -23,8 +24,9 @@ type SpinnakerValidator interface {
 }
 
 type ValidationResult struct {
-	Errors []error
-	Fatal  bool
+	Errors        []error
+	Fatal         bool
+	StatusPatches []jsonpatch.JsonPatchOperation
 }
 
 type Options struct {
@@ -72,6 +74,7 @@ func (r *ValidationResult) Merge(other ValidationResult) {
 		r.Errors = append(r.Errors, e)
 	}
 	r.Fatal = r.Fatal || other.Fatal
+	r.StatusPatches = append(r.StatusPatches, other.StatusPatches...)
 }
 
 func (r *ValidationResult) HasFatalErrors() bool {

@@ -7,6 +7,8 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
+	"gomodules.xyz/jsonpatch/v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 )
 
@@ -31,10 +33,19 @@ func GetAccountValidationsFor(spinSvc interfaces.SpinnakerService, options Optio
 			if err != nil {
 				return nil, err
 			}
-			hc := status.UpdateHashIfNotExist(getValidationHashKey(a), h, now, false)
+
+			k := getValidationHashKey(a)
+			hc := status.GetHash(k)
 			// If accounts were never validated or if the validation is too old less than x ago
-			if hc.Hash != h || v.NeedsValidation(hc.LastUpdatedAt) {
-				validators = append(validators, &accountValidator{v: a.NewValidator(), fatal: v.IsFatal(), name: a.GetName()})
+			if hc == nil || hc.Hash != h || v.NeedsValidation(hc.LastUpdatedAt) {
+				validators = append(validators, &accountValidator{
+					v:     a.NewValidator(),
+					fatal: v.IsFatal(),
+					name:  a.GetName(),
+					key:   k,
+					hash:  h,
+					t:     now,
+				})
 			}
 		}
 	}
@@ -59,6 +70,9 @@ func getAllAccounts(spinSvc interfaces.SpinnakerService, accountType account.Spi
 
 type accountValidator struct {
 	v     account.AccountValidator
+	key   string
+	hash  string
+	t     time.Time
 	name  string
 	fatal bool
 }
@@ -93,7 +107,18 @@ func (a *accountValidator) Validate(spinSvc interfaces.SpinnakerService, options
 	if err != nil {
 		return NewResultFromError(fmt.Errorf("Validator for account '%s' detected an error:\n  %w", a.name, err), a.fatal)
 	}
-	return ValidationResult{}
+	p := getHashPatch(a.key, a.hash, a.t)
+	return ValidationResult{
+		StatusPatches: []jsonpatch.JsonPatchOperation{*p},
+	}
+}
+
+func getHashPatch(key, hash string, t time.Time) *jsonpatch.JsonPatchOperation {
+	p := jsonpatch.NewPatch("replace", fmt.Sprintf("/status/lastDeployed/%s", key), interfaces.HashStatus{
+		Hash:          hash,
+		LastUpdatedAt: metav1.NewTime(t),
+	})
+	return &p
 }
 
 func getValidationHashKey(a account.Account) string {

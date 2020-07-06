@@ -55,29 +55,12 @@ func TestNeedsValidation(t *testing.T) {
 
 func TestSetAndGetHash(t *testing.T) {
 	s := SpinnakerServiceStatus{}
-	n := time.Now()
-	p := s.UpdateHashIfNotExist("test", "abcdef", n, false)
+	// Now test while updating time
+	n3 := time.Now()
+	p := s.UpdateHashIfNotExist("test", "mnop", n3)
 	assert.Equal(t, "", p.Hash)
 	assert.True(t, p.LastUpdatedAt.Time.IsZero())
 	h := s.LastDeployed["test"]
-	assert.Equal(t, "abcdef", h.Hash)
-	assert.True(t, n.Equal(h.LastUpdatedAt.Time))
-
-	// Now test with an existing hash
-	n2 := time.Now()
-	p = s.UpdateHashIfNotExist("test", "xyz", n2, false)
-	assert.Equal(t, "abcdef", p.Hash)
-	assert.True(t, n.Equal(p.LastUpdatedAt.Time))
-	h = s.LastDeployed["test"]
-	assert.Equal(t, "xyz", h.Hash)
-	assert.False(t, n2.Equal(h.LastUpdatedAt.Time))
-
-	// Now test while updating time
-	n3 := time.Now()
-	p = s.UpdateHashIfNotExist("test", "mnop", n3, true)
-	assert.Equal(t, "xyz", p.Hash)
-	assert.True(t, n.Equal(p.LastUpdatedAt.Time))
-	h = s.LastDeployed["test"]
 	assert.Equal(t, "mnop", h.Hash)
 	assert.True(t, n3.Equal(h.LastUpdatedAt.Time))
 }
