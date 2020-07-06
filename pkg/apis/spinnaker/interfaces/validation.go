@@ -29,9 +29,9 @@ func (v *ValidationSetting) IsFatal() bool {
 	return *v.FailOnError
 }
 
-// GetUpdateHash updates the hash at key `key` and returns the prior copy if one existed
+// UpdateHashIfNotExist updates the hash at key `key` and returns the prior copy if one existed
 // LastDeployed should then contain the hash and the time if updateTime is true or if there was no hash
-func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.Time, updateTime bool) *HashStatus {
+func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.Time) *HashStatus {
 	if s.LastDeployed == nil {
 		s.LastDeployed = make(map[string]HashStatus)
 	}
@@ -40,9 +40,7 @@ func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.T
 	if ok {
 		ld.DeepCopyInto(res)
 		ld.Hash = hash
-		if updateTime {
-			ld.LastUpdatedAt = metav1.NewTime(t)
-		}
+		ld.LastUpdatedAt = metav1.NewTime(t)
 	} else {
 		ld = HashStatus{
 			Hash:          hash,
@@ -51,6 +49,17 @@ func (s *SpinnakerServiceStatus) UpdateHashIfNotExist(key, hash string, t time.T
 	}
 	s.LastDeployed[key] = ld
 	return res
+}
+
+func (s *SpinnakerServiceStatus) GetHash(key string) *HashStatus {
+	if s.LastDeployed == nil {
+		return nil
+	}
+	hs, ok := s.LastDeployed[key]
+	if ok {
+		return &hs
+	}
+	return nil
 }
 
 func (s *SpinnakerValidation) GetValidationSettings() *ValidationSetting {
