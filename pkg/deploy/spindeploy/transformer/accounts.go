@@ -23,14 +23,14 @@ type accountsTransformer struct {
 	client client.Client
 }
 
-type accountsTransformerGenerator struct{}
+type AccountsTransformerGenerator struct{}
 
-func (a *accountsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
-	client client.Client, log logr.Logger) (Transformer, error) {
+func (a *AccountsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+	client client.Client, log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 	return &accountsTransformer{svc: svc, log: log, client: client}, nil
 }
 
-func (g *accountsTransformerGenerator) GetName() string {
+func (g *AccountsTransformerGenerator) GetName() string {
 	return "AccountsCRD"
 }
 
@@ -39,7 +39,7 @@ func (a *accountsTransformer) TransformConfig(ctx context.Context) error {
 	return nil
 }
 
-func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (a *accountsTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
 	if !a.svc.GetAccountConfig().Enabled {
 		a.log.Info("accounts disabled, skipping")
 		return nil

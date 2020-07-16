@@ -1,9 +1,10 @@
-package changedetector
+package x509
 
 import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
@@ -12,21 +13,21 @@ import (
 	"strconv"
 )
 
-type x509ChangeDetector struct {
+type changeDetector struct {
 	client      client.Client
 	log         logr.Logger
 	evtRecorder record.EventRecorder
 }
 
-type x509ChangeDetectorGenerator struct {
+type ChangeDetectorGenerator struct {
 }
 
-func (g *x509ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
-	return &x509ChangeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
+func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (changedetector.ChangeDetector, error) {
+	return &changeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
 }
 
 // IsSpinnakerUpToDate returns true if there is a x509 configuration with a matching service
-func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
+func (ch *changeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	exp := spinSvc.GetExposeConfig()
 	if exp.Type == "" {
@@ -72,11 +73,11 @@ func (ch *x509ChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc i
 	return true, nil
 }
 
-func (ch *x509ChangeDetector) AlwaysRun() bool {
+func (ch *changeDetector) AlwaysRun() bool {
 	return false
 }
 
-func (ch *x509ChangeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
+func (ch *changeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
 	for _, p := range svc.Spec.Ports {
 		if p.Name == util.GateX509PortName {
 			return p.Port, p.TargetPort.IntVal
@@ -85,7 +86,7 @@ func (ch *x509ChangeDetector) getX509Ports(svc *v1.Service) (int32, int32) {
 	return 0, 0
 }
 
-func (ch *x509ChangeDetector) getPortOverride(exp interfaces.ExposeConfig) int32 {
+func (ch *changeDetector) getPortOverride(exp interfaces.ExposeConfig) int32 {
 	if c, ok := exp.Service.Overrides["gate-x509"]; ok {
 		return c.PublicPort
 	}

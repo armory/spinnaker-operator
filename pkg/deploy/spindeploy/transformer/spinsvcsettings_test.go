@@ -84,7 +84,7 @@ spec:
 %s
 `
 			s = fmt.Sprintf(s, tt.ss)
-			tr, spinSvc := th.setupTransformerFromSpinText(&spinSvcSettingsTransformerGenerator{}, s, t)
+			tr, spinSvc := th.SetupTransformerFromSpinText(&SpinSvcSettingsTransformerGenerator{}, s, t)
 			err := tr.TransformConfig(context.TODO())
 			assert.Nil(t, err)
 			for _, svc := range []string{"gate", "orca", "clouddriver", "rosco", "front50", "echo", "igor"} {

@@ -16,7 +16,7 @@ metadata:
 spec:
   spinnakerConfig:
 `
-	tr, spinsvc := th.setupTransformerFromSpinText(&defaultsTransformerGenerator{}, s, t)
+	tr, spinsvc := th.SetupTransformerFromSpinText(&DefaultsTransformerGenerator{}, s, t)
 	before := before(spinsvc)
 	err := tr.TransformConfig(context.TODO())
 	assert.Nil(t, err)
@@ -57,7 +57,7 @@ spec:
           fixedDelayPollingScheduler:
             nonExistingProp: true
 `
-	tr, spinsvc := th.setupTransformerFromSpinText(&defaultsTransformerGenerator{}, s, t)
+	tr, spinsvc := th.SetupTransformerFromSpinText(&DefaultsTransformerGenerator{}, s, t)
 	before_ := spinsvc.GetSpinnakerConfig().Profiles["gate"]
 	before := *before_.DeepCopy()
 	err := tr.TransformConfig(context.TODO())
@@ -82,7 +82,7 @@ spec:
       gate:
         archaius: 'unexpected'
 `
-	tr, spinsvc := th.setupTransformerFromSpinText(&defaultsTransformerGenerator{}, s, t)
+	tr, spinsvc := th.SetupTransformerFromSpinText(&DefaultsTransformerGenerator{}, s, t)
 	before_ := spinsvc.GetSpinnakerConfig().Profiles["gate"]
 	before := *before_.DeepCopy()
 	err := tr.TransformConfig(context.TODO())

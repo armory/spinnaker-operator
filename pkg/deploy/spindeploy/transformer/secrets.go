@@ -40,7 +40,7 @@ type secretsTransformer struct {
 	k8sSecrets *k8sSecretHolder
 }
 
-type secretsTransformerGenerator struct{}
+type SecretsTransformerGenerator struct{}
 
 // k8sSecretHolder keeps track of kubernetes secret references that appear in selected fields of the config.
 type k8sSecretHolder struct {
@@ -53,13 +53,13 @@ type awsCredentials struct {
 	svcSecretKeys []v1.EnvVar // SERVICE_SECRETNAME_SECRETKEY
 }
 
-func (s *secretsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
-	client client.Client, log logr.Logger) (Transformer, error) {
+func (s *SecretsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+	client client.Client, log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 	tr := secretsTransformer{svc: svc, log: log, client: client, k8sSecrets: &k8sSecretHolder{awsCredsByService: map[string]*awsCredentials{}}}
 	return &tr, nil
 }
 
-func (s *secretsTransformerGenerator) GetName() string {
+func (s *SecretsTransformerGenerator) GetName() string {
 	return "Secrets"
 }
 
@@ -208,7 +208,7 @@ func (s *secretsTransformer) sanitizeK8sSecret(object interface{}, ctx context.C
 	return inspect.InspectStrings(object, h)
 }
 
-func (s *secretsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (s *secretsTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
 	for svc, cfg := range gen.Config {
 		kCollector := &kubernetesSecretCollector{svc: svc, namespace: s.svc.GetNamespace()}
 		for k := range cfg.Resources {

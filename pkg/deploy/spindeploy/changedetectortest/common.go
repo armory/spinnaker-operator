@@ -1,7 +1,7 @@
-package changedetector
+package changedetectortest
 
 import (
-	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -10,15 +10,7 @@ import (
 	"testing"
 )
 
-type testHelpers struct {
-	TypesFactory interfaces.TypesFactory
-}
-
-var th = testHelpers{
-	TypesFactory: test.TypesFactory,
-}
-
-func (th *testHelpers) setupChangeDetector(generator Generator, t *testing.T, objs ...runtime.Object) ChangeDetector {
+func SetupChangeDetector(generator changedetector.DetectorGenerator, t *testing.T, objs ...runtime.Object) changedetector.ChangeDetector {
 	fakeClient := test.FakeClient(t, objs...)
 	ch, err := generator.NewChangeDetector(fakeClient, log.Log.WithName("spinnakerservice"), &record.FakeRecorder{})
 	assert.Nil(t, err)

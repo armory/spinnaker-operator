@@ -6,7 +6,6 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 )
 
@@ -151,10 +150,10 @@ spec:
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			p, _ := th.setupTransformerFromSpinText(&patchTransformerGenerator{}, c.spinsvc, t)
+			p, _ := th.SetupTransformerFromSpinText(&PatchTransformerGenerator{}, c.spinsvc, t)
 			gen := &generated.SpinnakerGeneratedConfig{}
 			test.AddDeploymentToGenConfig(gen, "gate", "testdata/input_deployment.yml", t)
-			err := p.TransformManifests(context.TODO(), runtime.NewScheme(), gen)
+			err := p.TransformManifests(context.TODO(), gen)
 			if assert.Nil(t, err) {
 				c.expected(t, gen.Config["gate"].Deployment)
 			}

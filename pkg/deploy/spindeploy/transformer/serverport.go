@@ -6,6 +6,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
 	"k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"strings"
@@ -18,17 +19,17 @@ type serverPortTransformer struct {
 	log logr.Logger
 }
 
-type serverPortTransformerGenerator struct{}
+type ServerPortTransformerGenerator struct{}
 
-func (g *serverPortTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
-	client client.Client, log logr.Logger) (Transformer, error) {
+func (g *ServerPortTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+	client client.Client, log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 	base := &DefaultTransformer{}
 	tr := serverPortTransformer{svc: svc, log: log, DefaultTransformer: base}
 	base.ChildTransformer = &tr
 	return &tr, nil
 }
 
-func (g *serverPortTransformerGenerator) GetName() string {
+func (g *ServerPortTransformerGenerator) GetName() string {
 	return "ServerPort"
 }
 

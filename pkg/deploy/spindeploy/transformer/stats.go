@@ -25,15 +25,15 @@ type statsTransformer struct {
 	log logr.Logger
 }
 
-type statsTransformerGenerator struct{}
+type StatsTransformerGenerator struct{}
 
-func (t *statsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
-	client client.Client, log logr.Logger) (Transformer, error) {
+func (t *StatsTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+	client client.Client, log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 	tr := statsTransformer{log: log}
 	return &tr, nil
 }
 
-func (t *statsTransformerGenerator) GetName() string {
+func (t *StatsTransformerGenerator) GetName() string {
 	return "Stats"
 }
 
@@ -41,7 +41,7 @@ func (t *statsTransformer) TransformConfig(ctx context.Context) error {
 	return nil
 }
 
-func (t *statsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (t *statsTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
 	n := "echo"
 	config, ok := gen.Config[n]
 	if !ok {

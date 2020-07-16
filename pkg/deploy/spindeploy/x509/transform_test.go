@@ -1,8 +1,9 @@
-package transformer
+package x509
 
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformertest"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -13,12 +14,12 @@ import (
 )
 
 func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
-	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
+	tr, spinSvc := transformertest.SetupTransformerFromSpinFile(&X509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
 	spinSvc.GetExposeConfig().Service.PublicPort = 0
 
-	err := tr.TransformManifests(context.TODO(), nil, gen)
+	err := tr.TransformManifests(context.TODO(), gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -34,12 +35,12 @@ func TestTransformManifests_NewX509ServiceExposed(t *testing.T) {
 }
 
 func TestTransformManifests_ExposedWithCustomPort(t *testing.T) {
-	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
+	tr, spinSvc := transformertest.SetupTransformerFromSpinFile(&X509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
 	spinSvc.GetExposeConfig().Service.PublicPort = 3333
 
-	err := tr.TransformManifests(context.TODO(), nil, gen)
+	err := tr.TransformManifests(context.TODO(), gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -78,11 +79,11 @@ spec:
         gate-x509:
           publicPort: 5555
 `
-	tr, _ := th.setupTransformerFromSpinText(&x509TransformerGenerator{}, s, t)
+	tr, _ := transformertest.SetupTransformerFromSpinText(&X509TransformerGenerator{}, s, t)
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
 
-	err := tr.TransformManifests(context.TODO(), nil, gen)
+	err := tr.TransformManifests(context.TODO(), gen)
 	assert.Nil(t, err)
 
 	expected := &corev1.Service{}
@@ -101,12 +102,12 @@ func TestTransformManifests_RemoveX509Service(t *testing.T) {
 	x509Svc := &corev1.Service{}
 	test.ReadYamlFile("testdata/output_service_lb.yml", x509Svc, t)
 	x509Svc.Name = util.GateX509ServiceName
-	tr, spinSvc := th.setupTransformerFromSpinFile(&x509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t, x509Svc)
+	tr, spinSvc := transformertest.SetupTransformerFromSpinFile(&X509TransformerGenerator{}, "testdata/spinsvc_expose.yml", t, x509Svc)
 	spinSvc.GetSpinnakerConfig().Profiles = map[string]interfaces.FreeForm{}
 	gen := &generated.SpinnakerGeneratedConfig{}
 	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
 
-	err := tr.TransformManifests(context.TODO(), nil, gen)
+	err := tr.TransformManifests(context.TODO(), gen)
 	assert.Nil(t, err)
 	x509Config, ok := gen.Config["gate-x509"]
 	assert.True(t, ok)

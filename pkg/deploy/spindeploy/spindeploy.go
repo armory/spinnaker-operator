@@ -6,7 +6,10 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/config"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/expose"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/x509"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -15,12 +18,33 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+var DetectorGenerators = []changedetector.DetectorGenerator{
+	&config.ChangeDetectorGenerator{},
+	&expose.ChangeDetectorGenerator{},
+	&x509.ChangeDetectorGenerator{},
+}
+
+var TransformerGenerators = []transformer.Generator{
+	&transformer.OwnerTransformerGenerator{},
+	&transformer.NamedPortsTransformerGenerator{},
+	&transformer.TargetTransformerGenerator{},
+	&expose.TransformerGenerator{},
+	&transformer.ServerPortTransformerGenerator{},
+	&x509.X509TransformerGenerator{},
+	&transformer.AccountsTransformerGenerator{},
+	&transformer.SecretsTransformerGenerator{},
+	&transformer.StatsTransformerGenerator{},
+	&transformer.PatchTransformerGenerator{},
+	&transformer.DefaultsTransformerGenerator{},
+	&transformer.SpinSvcSettingsTransformerGenerator{},
+}
+
 // Deployer is in charge of orchestrating the deployment of Spinnaker configuration
 type Deployer struct {
 	m                       deploy.ManifestGenerator
 	client                  client.Client
 	transformerGenerators   []transformer.Generator
-	changeDetectorGenerator changedetector.Generator
+	changeDetectorGenerator changedetector.DetectorGenerator
 	log                     logr.Logger
 	rawClient               *kubernetes.Clientset
 	evtRecorder             record.EventRecorder
@@ -31,8 +55,8 @@ func NewDeployer(m deploy.ManifestGenerator, mgr manager.Manager, c *kubernetes.
 	return &Deployer{
 		m:                       m,
 		client:                  mgr.GetClient(),
-		transformerGenerators:   transformer.Generators,
-		changeDetectorGenerator: &changedetector.CompositeChangeDetectorGenerator{},
+		transformerGenerators:   TransformerGenerators,
+		changeDetectorGenerator: &changedetector.CompositeChangeDetectorGenerator{Generators: DetectorGenerators},
 		rawClient:               c,
 		evtRecorder:             evtRecorder,
 		log:                     log,
@@ -71,7 +95,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	rLogger.Info("Applying options to Spinnaker config")
 	nSvc := svc.DeepCopyInterface()
 	for _, t := range d.transformerGenerators {
-		tr, err := t.NewTransformer(nSvc, d.client, d.log)
+		tr, err := t.NewTransformer(nSvc, d.client, d.log, scheme)
 		if err != nil {
 			return true, err
 		}
@@ -90,7 +114,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	rLogger.Info("Applying options to generated manifests")
 	// Traverse transformers in reverse order
 	for i := range transformers {
-		if err = transformers[len(transformers)-i-1].TransformManifests(ctx, scheme, l); err != nil {
+		if err = transformers[len(transformers)-i-1].TransformManifests(ctx, l); err != nil {
 			return true, err
 		}
 	}

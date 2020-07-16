@@ -1,9 +1,10 @@
-package changedetector
+package expose
 
 import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -13,23 +14,22 @@ import (
 	"strings"
 )
 
-type exposeLbChangeDetector struct {
+type changeDetector struct {
 	client      client.Client
 	log         logr.Logger
 	evtRecorder record.EventRecorder
 }
 
-type exposeLbChangeDetectorGenerator struct {
-}
+type ChangeDetectorGenerator struct{}
 
-func (g *exposeLbChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
-	return &exposeLbChangeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
+func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (changedetector.ChangeDetector, error) {
+	return &changeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
 }
 
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services
-func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
-	exp := svc.GetExposeConfig()
-	switch strings.ToLower(exp.Type) {
+func (ch *changeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
+	expType := svc.GetExposeConfig().Type
+	switch strings.ToLower(expType) {
 	case "":
 		return true, nil
 	case "service":
@@ -50,16 +50,19 @@ func (ch *exposeLbChangeDetector) IsSpinnakerUpToDate(ctx context.Context, svc i
 			return false, err
 		}
 		return true, nil
+	case "ingress":
+		``
+		return false, nil // TODO
 	default:
-		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", exp.Type)
+		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", expType)
 	}
 }
 
-func (ch *exposeLbChangeDetector) AlwaysRun() bool {
+func (ch *changeDetector) AlwaysRun() bool {
 	return false
 }
 
-func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService, serviceName string, hcSSLEnabled bool) (bool, error) {
+func (ch *changeDetector) isExposeServiceUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService, serviceName string, hcSSLEnabled bool) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	ns := spinSvc.GetNamespace()
 	svc, err := util.GetService(serviceName, ns, ch.client)
@@ -111,7 +114,7 @@ func (ch *exposeLbChangeDetector) isExposeServiceUpToDate(ctx context.Context, s
 	return true, nil
 }
 
-func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, spinSvc interfaces.SpinnakerService, svc *corev1.Service) (bool, error) {
+func (ch *changeDetector) exposeServiceTypeUpToDate(serviceName string, spinSvc interfaces.SpinnakerService, svc *corev1.Service) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	formattedServiceName := serviceName[len("spin-"):]
 	exp := spinSvc.GetExposeConfig()
@@ -131,7 +134,7 @@ func (ch *exposeLbChangeDetector) exposeServiceTypeUpToDate(serviceName string, 
 	return true, nil
 }
 
-func (ch *exposeLbChangeDetector) exposePortUpToDate(ctx context.Context, serviceName string, spinSvc interfaces.SpinnakerService, svc *corev1.Service) (bool, error) {
+func (ch *changeDetector) exposePortUpToDate(ctx context.Context, serviceName string, spinSvc interfaces.SpinnakerService, svc *corev1.Service) (bool, error) {
 	rLogger := ch.log.WithValues("Service", spinSvc.GetName())
 	if len(svc.Spec.Ports) < 1 {
 		rLogger.Info(fmt.Sprintf("No exposed port for %s found", serviceName))
@@ -149,7 +152,7 @@ func (ch *exposeLbChangeDetector) exposePortUpToDate(ctx context.Context, servic
 	return true, nil
 }
 
-func (ch *exposeLbChangeDetector) getSvcPorts(portName string, svc *corev1.Service) (int32, int32) {
+func (ch *changeDetector) getSvcPorts(portName string, svc *corev1.Service) (int32, int32) {
 	for _, p := range svc.Spec.Ports {
 		if p.Name == portName {
 			return p.Port, p.TargetPort.IntVal
@@ -158,7 +161,7 @@ func (ch *exposeLbChangeDetector) getSvcPorts(portName string, svc *corev1.Servi
 	return 0, 0
 }
 
-func (ch *exposeLbChangeDetector) areAnnotationsEqual(first map[string]string, other map[string]string) bool {
+func (ch *changeDetector) areAnnotationsEqual(first map[string]string, other map[string]string) bool {
 	if len(first) != len(other) {
 		return false
 	}
