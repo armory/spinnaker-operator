@@ -1,4 +1,4 @@
-package expose
+package ingress
 
 import (
 	"context"
@@ -56,15 +56,14 @@ func (i *ingressExplorer) loadIngresses(ctx context.Context, ns string) error {
 	return errNet
 }
 
-func (i *ingressExplorer) getIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) string {
-	if url := i.getExtensionIngressUrl(ctx, svc, serviceName); url != "" {
+func (i *ingressExplorer) getIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string, servicePort int32) *url.URL {
+	if url := i.getExtensionIngressUrl(ctx, svc, serviceName, servicePort); url != nil {
 		return url
 	}
-	return i.getNetworkingIngressUrl(ctx, svc, serviceName)
+	return i.getNetworkingIngressUrl(ctx, svc, serviceName, servicePort)
 }
 
-func (i *ingressExplorer) getExtensionIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) string {
-	port := i.guessServicePort(ctx, svc, serviceName)
+func (i *ingressExplorer) getExtensionIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string, servicePort int32) *url.URL {
 	// Find the service name
 	for _, ing := range i.extensionIngresses {
 		for _, rule := range ing.Spec.Rules {
@@ -72,24 +71,23 @@ func (i *ingressExplorer) getExtensionIngressUrl(ctx context.Context, svc interf
 				for _, path := range rule.HTTP.Paths {
 					if path.Backend.ServiceName == serviceName {
 						// Are we referencing the service name?
-						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == port {
+						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == servicePort {
 							host := i.getActualExtensionHost(rule.Host, ing)
 							if host == "" {
-								return ""
+								return nil
 							}
-							u := url.URL{
+							return &url.URL{
 								Scheme: i.getSchemeFromExtensionIngress(ing, host),
 								Host:   host,
 								Path:   path.Path,
 							}
-							return u.String()
 						}
 					}
 				}
 			}
 		}
 	}
-	return ""
+	return nil
 }
 
 func (i *ingressExplorer) getActualExtensionHost(host string, ingress v1beta1.Ingress) string {
@@ -103,8 +101,7 @@ func (i *ingressExplorer) getActualExtensionHost(host string, ingress v1beta1.In
 	return ingress.Status.LoadBalancer.Ingress[0].Hostname
 }
 
-func (i *ingressExplorer) getNetworkingIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) string {
-	port := i.guessServicePort(ctx, svc, serviceName)
+func (i *ingressExplorer) getNetworkingIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string, servicePort int32) *url.URL {
 	// Find the service name
 	for _, ing := range i.networkingIngresses {
 		for _, rule := range ing.Spec.Rules {
@@ -112,24 +109,23 @@ func (i *ingressExplorer) getNetworkingIngressUrl(ctx context.Context, svc inter
 				for _, path := range rule.HTTP.Paths {
 					if path.Backend.ServiceName == serviceName {
 						// Are we referencing the service name?
-						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == port {
+						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == servicePort {
 							host := i.getActualNetworkingHost(rule.Host, ing)
 							if host == "" {
-								return ""
+								return nil
 							}
-							u := url.URL{
+							return &url.URL{
 								Scheme: i.getSchemeFromNetworkingIngress(ing, host),
 								Host:   host,
 								Path:   path.Path,
 							}
-							return u.String()
 						}
 					}
 				}
 			}
 		}
 	}
-	return ""
+	return nil
 }
 
 func (i *ingressExplorer) getActualNetworkingHost(host string, ingress v1beta12.Ingress) string {
@@ -142,19 +138,13 @@ func (i *ingressExplorer) getActualNetworkingHost(host string, ingress v1beta12.
 	return ingress.Status.LoadBalancer.Ingress[0].Hostname
 }
 
-func (i *ingressExplorer) guessServicePort(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) int32 {
-	if serviceName == util.GateServiceName {
-		if targetPort, _ := svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
-			if intTargetPort, err := strconv.ParseInt(targetPort, 10, 32); err != nil {
-				return int32(intTargetPort)
-			}
+func guessGatePort(ctx context.Context, svc interfaces.SpinnakerService) int32 {
+	if targetPort, _ := svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
+		if intTargetPort, err := strconv.ParseInt(targetPort, 10, 32); err != nil {
+			return int32(intTargetPort)
 		}
-		return util.GateDefaultPort
 	}
-	if serviceName == util.DeckServiceName {
-		return util.DeckDefaultPort
-	}
-	return 0
+	return util.GateDefaultPort
 }
 
 func (i *ingressExplorer) getSchemeFromExtensionIngress(ingress v1beta1.Ingress, host string) string {

@@ -12,7 +12,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 type changeDetector struct {
@@ -28,53 +27,32 @@ func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log lo
 	return &changeDetector{client: client, log: log, evtRecorder: evtRecorder, scheme: scheme}, nil
 }
 
+func applies(svc interfaces.SpinnakerService) bool {
+	return svc.GetExposeConfig() != nil && svc.GetExposeConfig().Type == "service"
+}
+
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services
 func (ch *changeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interfaces.SpinnakerService) (bool, error) {
-	expType := svc.GetExposeConfig().Type
-	switch strings.ToLower(expType) {
-	case "":
+	if !applies(svc) {
 		return true, nil
-	case "service":
-		isDeckSSLEnabled, err := svc.GetSpinnakerConfig().GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
-		if err != nil {
-			isDeckSSLEnabled = false
-		}
-		upToDateDeck, err := ch.isExposeServiceUpToDate(ctx, svc, util.DeckServiceName, isDeckSSLEnabled)
-		if !upToDateDeck || err != nil {
-			return false, err
-		}
-		isGateSSLEnabled, err := svc.GetSpinnakerConfig().GetHalConfigPropBool(util.GateSSLEnabledProp, false)
-		if err != nil {
-			isGateSSLEnabled = false
-		}
-		upToDateGate, err := ch.isExposeServiceUpToDate(ctx, svc, util.GateServiceName, isGateSSLEnabled)
-		if !upToDateGate || err != nil {
-			return false, err
-		}
-		return true, nil
-	case "ingress":
-		deckUrl := svc.GetStatus().UIUrl
-		gateUrl := svc.GetStatus().APIUrl
-
-		ing := ingressExplorer{client: ch.client, log: ch.log, scheme: ch.scheme}
-		if err := ing.loadIngresses(ctx, svc.GetNamespace()); err != nil {
-			return false, err
-		}
-
-		computed := ing.getIngressUrl(ctx, svc, util.DeckServiceName)
-		if deckUrl != computed {
-			ch.log.Info(fmt.Sprintf("Deck URL in config is different %s than what it should be %s", deckUrl, computed))
-			return false, nil
-		}
-		computed = ing.getIngressUrl(ctx, svc, util.GateServiceName)
-		if gateUrl != computed {
-			ch.log.Info(fmt.Sprintf("Gate URL in config is different %s than what it should be %s", gateUrl, computed))
-			return false, nil
-		}
-		return true, nil
-	default:
-		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", expType)
 	}
+	isDeckSSLEnabled, err := svc.GetSpinnakerConfig().GetHalConfigPropBool(util.DeckSSLEnabledProp, false)
+	if err != nil {
+		isDeckSSLEnabled = false
+	}
+	upToDateDeck, err := ch.isExposeServiceUpToDate(ctx, svc, util.DeckServiceName, isDeckSSLEnabled)
+	if !upToDateDeck || err != nil {
+		return false, err
+	}
+	isGateSSLEnabled, err := svc.GetSpinnakerConfig().GetHalConfigPropBool(util.GateSSLEnabledProp, false)
+	if err != nil {
+		isGateSSLEnabled = false
+	}
+	upToDateGate, err := ch.isExposeServiceUpToDate(ctx, svc, util.GateServiceName, isGateSSLEnabled)
+	if !upToDateGate || err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (ch *changeDetector) AlwaysRun() bool {

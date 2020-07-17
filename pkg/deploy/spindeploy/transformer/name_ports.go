@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const defaultPortName = "http"
+const DefaultPortName = "http"
 
 type namedPortsTransformer struct {
 	*DefaultTransformer
@@ -36,7 +36,7 @@ func (n *namedPortsTransformer) TransformManifests(ctx context.Context, gen *gen
 	for k := range gen.Config {
 		s := gen.Config[k]
 		if s.Service != nil && len(s.Service.Spec.Ports) == 1 && s.Service.Spec.Ports[0].Name == "" {
-			s.Service.Spec.Ports[0].Name = defaultPortName
+			s.Service.Spec.Ports[0].Name = DefaultPortName
 		}
 	}
 	return nil

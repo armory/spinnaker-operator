@@ -43,21 +43,11 @@ func (t *exposeTransformer) generateOverrideUrl(ctx context.Context, serviceName
 	return util.BuildUrl(parsedLbUrl.Scheme, parsedLbUrl.Hostname(), desiredPort), nil
 }
 
-func (t *exposeTransformer) transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error {
-	exp := t.svc.GetExposeConfig()
-	if strings.ToLower(exp.Type) != "service" {
+func (t *exposeTransformer) transformServiceManifest(ctx context.Context, svcName, overrideUrlKeyName string, svc *corev1.Service) error {
+	if svc == nil {
 		return nil
 	}
-	if svcName != "gate" && svcName != "deck" {
-		return nil
-	}
-	overrideUrlKeyName := ""
 	defaultPort := util.GetDesiredExposePort(ctx, svcName, int32(80), t.svc)
-	if svcName == "gate" {
-		overrideUrlKeyName = util.GateOverrideBaseUrlProp
-	} else if svcName == "deck" {
-		overrideUrlKeyName = util.DeckOverrideBaseUrlProp
-	}
 	if err := t.applyPortChanges(ctx, fmt.Sprintf("%s-tcp", svcName), defaultPort, overrideUrlKeyName, svc); err != nil {
 		return err
 	}

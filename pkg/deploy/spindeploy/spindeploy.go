@@ -8,6 +8,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/config"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/expose"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/ingress"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/x509"
 	"github.com/go-logr/logr"
@@ -29,6 +30,7 @@ var TransformerGenerators = []transformer.Generator{
 	&transformer.NamedPortsTransformerGenerator{},
 	&transformer.TargetTransformerGenerator{},
 	&expose.TransformerGenerator{},
+	&ingress.TransformerGenerator{},
 	&transformer.ServerPortTransformerGenerator{},
 	&x509.X509TransformerGenerator{},
 	&transformer.AccountsTransformerGenerator{},

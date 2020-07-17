@@ -10,7 +10,6 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 type TransformerGenerator struct{}
@@ -22,7 +21,7 @@ func (tg *TransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
 }
 
 func (tg *TransformerGenerator) GetName() string {
-	return "Expose"
+	return "ExposeAsService"
 }
 
 type exposeTransformer struct {
@@ -30,21 +29,23 @@ type exposeTransformer struct {
 	log    logr.Logger
 	client client.Client
 	scheme *runtime.Scheme
-	ing    *ingressExplorer
 }
 
 func (t *exposeTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
-	for serviceName, serviceConfig := range gen.Config {
-		if serviceConfig.Service != nil {
-			if err := t.transformServiceManifest(ctx, serviceName, serviceConfig.Service); err != nil {
-				return err
-			}
-		}
+	if !applies(t.svc) {
+		return nil
 	}
-	return nil
+	if err := t.transformServiceManifest(ctx, "deck", util.DeckOverrideBaseUrlProp, gen.Config["deck"].Service); err != nil {
+		return err
+	}
+	return t.transformServiceManifest(ctx, "gate", util.GateOverrideBaseUrlProp, gen.Config["gate"].Service)
 }
 
 func (t *exposeTransformer) TransformConfig(ctx context.Context) error {
+	if !applies(t.svc) {
+		return nil
+	}
+
 	if err := t.setStatusAndOverrideBaseUrl(ctx, util.GateServiceName, util.GateOverrideBaseUrlProp); err != nil {
 		t.log.Info(fmt.Sprintf("Error setting gate overrideBaseUrl: %s, ignoring", err))
 		return err
@@ -83,34 +84,6 @@ func (t *exposeTransformer) findStatusUrl(ctx context.Context, serviceName strin
 	if statusUrl != "" {
 		return statusUrl, true, nil
 	}
-	expType := t.svc.GetExposeConfig().Type
-	switch strings.ToLower(expType) {
-	case "":
-		return "", false, nil
-	case "service":
-		url, err := t.findUrlInService(ctx, serviceName)
-		return url, false, err
-	case "ingress":
-		url, err := t.findUrlInIngress(ctx, serviceName)
-		return url, false, err
-	default:
-		return "", false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", expType)
-	}
-}
-
-func (t *exposeTransformer) findUrlInIngress(ctx context.Context, serviceName string) (string, error) {
-	if t.ing == nil {
-		ing := &ingressExplorer{
-			log:    t.log,
-			client: t.client,
-			scheme: t.scheme,
-		}
-		// Load ingresses in target namespace
-		if err := ing.loadIngresses(ctx, t.svc.GetNamespace()); err != nil {
-			return "", err
-		}
-		t.ing = ing
-	}
-	// Try to determine URL from ingress
-	return t.ing.getIngressUrl(ctx, t.svc, serviceName), nil
+	url, err := t.findUrlInService(ctx, serviceName)
+	return url, false, err
 }

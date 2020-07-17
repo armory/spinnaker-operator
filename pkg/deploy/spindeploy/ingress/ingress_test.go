@@ -1,4 +1,4 @@
-package expose
+package ingress
 
 import (
 	"context"
@@ -148,7 +148,7 @@ items:
 			netIngress := &v1beta1.IngressList{}
 			test.ReadYamlString([]byte(c.ingressList), netIngress, t2)
 			tr, spinsvc := transformertest.SetupTransformerFromSpinFile(&TransformerGenerator{}, "testdata/spinsvc_expose_ingress.yml", t, netIngress)
-			exp, ok := tr.(*exposeTransformer)
+			exp, ok := tr.(*ingressTransformer)
 			if !assert.True(t, ok) {
 				return
 			}
@@ -156,14 +156,20 @@ items:
 			err := tr.TransformConfig(context.TODO())
 			assert.Nil(t, err)
 			url, err := spinsvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), "security.apiSecurity.overrideBaseUrl")
-			assert.Nil(t, err)
-			assert.Equal(t, c.expectedApi, url)
+			if c.expectedApi == "" {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, c.expectedApi, url)
+			}
 
 			url, err = spinsvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), "security.uiSecurity.overrideBaseUrl")
-			assert.Nil(t, err)
-			assert.Equal(t, c.expectedUi, url)
-
+			if c.expectedUi == "" {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, c.expectedUi, url)
+			}
 		})
 	}
-
 }
