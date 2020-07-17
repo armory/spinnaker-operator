@@ -56,14 +56,14 @@ func (i *ingressExplorer) loadIngresses(ctx context.Context, ns string) error {
 	return errNet
 }
 
-func (i *ingressExplorer) getIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string, servicePort int32) *url.URL {
-	if url := i.getExtensionIngressUrl(ctx, svc, serviceName, servicePort); url != nil {
+func (i *ingressExplorer) getIngressUrl(serviceName string, servicePort int32) *url.URL {
+	if url := i.getExtensionIngressUrl(serviceName, servicePort); url != nil {
 		return url
 	}
-	return i.getNetworkingIngressUrl(ctx, svc, serviceName, servicePort)
+	return i.getNetworkingIngressUrl(serviceName, servicePort)
 }
 
-func (i *ingressExplorer) getExtensionIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string, servicePort int32) *url.URL {
+func (i *ingressExplorer) getExtensionIngressUrl(serviceName string, servicePort int32) *url.URL {
 	// Find the service name
 	for _, ing := range i.extensionIngresses {
 		for _, rule := range ing.Spec.Rules {
@@ -101,7 +101,7 @@ func (i *ingressExplorer) getActualExtensionHost(host string, ingress v1beta1.In
 	return ingress.Status.LoadBalancer.Ingress[0].Hostname
 }
 
-func (i *ingressExplorer) getNetworkingIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string, servicePort int32) *url.URL {
+func (i *ingressExplorer) getNetworkingIngressUrl(serviceName string, servicePort int32) *url.URL {
 	// Find the service name
 	for _, ing := range i.networkingIngresses {
 		for _, rule := range ing.Spec.Rules {

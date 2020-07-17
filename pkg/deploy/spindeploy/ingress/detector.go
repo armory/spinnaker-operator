@@ -42,12 +42,12 @@ func (ch *changeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interface
 		return false, err
 	}
 
-	computed := ing.getIngressUrl(ctx, svc, util.DeckServiceName, util.DeckDefaultPort)
+	computed := ing.getIngressUrl(util.DeckServiceName, util.DeckDefaultPort)
 	if computed != nil && deckUrl != computed.String() {
 		ch.log.Info(fmt.Sprintf("Deck URL in config is different %s than what it should be %s", deckUrl, computed))
 		return false, nil
 	}
-	computed = ing.getIngressUrl(ctx, svc, util.GateServiceName, guessGatePort(ctx, svc))
+	computed = ing.getIngressUrl(util.GateServiceName, guessGatePort(ctx, svc))
 	if computed != nil && gateUrl != computed.String() {
 		ch.log.Info(fmt.Sprintf("Gate URL in config is different %s than what it should be %s", gateUrl, computed))
 		return false, nil

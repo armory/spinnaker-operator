@@ -46,7 +46,10 @@ func (t *ingressTransformer) TransformManifests(ctx context.Context, gen *genera
 	}
 	// If we need to override gate's path
 	if t.gatePathOverride != "" {
-		if err := t.setGateServerPathInDeployment(t.gatePathOverride, gen.Config["gate"].Deployment); err != nil {
+		if err := t.setGateServerPathInDeployment(
+			t.gatePathOverride,
+			int(guessGatePort(ctx, t.svc)),
+			gen.Config["gate"].Deployment); err != nil {
 			return err
 		}
 	}
@@ -69,13 +72,15 @@ func (t *ingressTransformer) TransformConfig(ctx context.Context) error {
 			return err
 		}
 		if gateUrl != nil {
-			t.log.Info(fmt.Sprintf("Setting gate overrideBaseUrl to: %s", gateUrl.String()))
+			t.log.Info(fmt.Sprintf("setting gate overrideBaseUrl to %s", gateUrl.String()))
 			if err = t.svc.GetSpinnakerConfig().SetHalConfigProp(util.GateOverrideBaseUrlProp, gateUrl.String()); err != nil {
 				return err
 			}
 			if gateUrl.Path != "" && gateUrl.Path != "/" {
 				t.gatePathOverride = gateUrl.Path
-				t.setGatePathInConfig(gateUrl.Path)
+				if err := t.setGatePathInConfig(gateUrl.Path); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -92,7 +97,7 @@ func (t *ingressTransformer) TransformConfig(ctx context.Context) error {
 			return err
 		}
 		if deckUrl != nil {
-			t.log.Info(fmt.Sprintf("Setting deck overrideBaseUrl to: %s", deckUrl.String()))
+			t.log.Info(fmt.Sprintf("setting deck overrideBaseUrl to %s", deckUrl.String()))
 			return t.svc.GetSpinnakerConfig().SetHalConfigProp(util.DeckOverrideBaseUrlProp, deckUrl.String())
 		}
 	}
@@ -123,12 +128,12 @@ func (t *ingressTransformer) findUrlInIngress(ctx context.Context, serviceName s
 		t.ing = ing
 	}
 	// Try to determine URL from ingress
-	return t.ing.getIngressUrl(ctx, t.svc, serviceName, servicePort), nil
+	return t.ing.getIngressUrl(serviceName, servicePort), nil
 }
 
 // setGateServerPathInDeployment overrides the readiness probe if set to exec.
 // Otherwise it will assume the readiness probe was overridden by the user and not change it.
-func (t *ingressTransformer) setGateServerPathInDeployment(newPath string, deploy *v1.Deployment) error {
+func (t *ingressTransformer) setGateServerPathInDeployment(newPath string, port int, deploy *v1.Deployment) error {
 	if deploy == nil {
 		return nil
 	}
@@ -136,17 +141,19 @@ func (t *ingressTransformer) setGateServerPathInDeployment(newPath string, deplo
 	if c == nil {
 		return errors.New("unknown gate deployment in generated manifest")
 	}
+	t.log.Info(fmt.Sprintf("overriding readiness probe with http get to %s on port %d", newPath, port))
 	if c.ReadinessProbe.Exec != nil {
 		c.ReadinessProbe.Exec = nil
 		c.ReadinessProbe.HTTPGet = &corev1.HTTPGetAction{
 			Path: newPath,
-			Port: intstr.FromString(transformer.DefaultPortName),
+			Port: intstr.FromInt(port),
 		}
 	}
 	return nil
 }
 
 func (t *ingressTransformer) setGatePathInConfig(newPath string) error {
+	t.log.Info("setting gate path", "path", newPath)
 	profile := t.svc.GetSpinnakerConfig().Profiles["gate"]
 	if profile == nil {
 		profile = interfaces.FreeForm{}
@@ -164,5 +171,9 @@ func (t *ingressTransformer) setGatePathInConfig(newPath string) error {
 			return err
 		}
 	}
+	if t.svc.GetSpinnakerConfig().Profiles == nil {
+		t.svc.GetSpinnakerConfig().Profiles = make(map[string]interfaces.FreeForm)
+	}
+	t.svc.GetSpinnakerConfig().Profiles["gate"] = profile
 	return nil
 }

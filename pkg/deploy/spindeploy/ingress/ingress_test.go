@@ -2,7 +2,9 @@ package ingress
 
 import (
 	"context"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformertest"
+	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/extensions/v1beta1"
@@ -15,6 +17,7 @@ func TestExposeFromIngress(t *testing.T) {
 		ingressList string
 		expectedApi string
 		expectedUi  string
+		check       func(*testing.T, interfaces.SpinnakerService)
 	}{
 		{
 			"both ingress as http",
@@ -43,6 +46,7 @@ items:
 `,
 			"http://acme.com/api",
 			"http://acme.com/",
+			func(*testing.T, interfaces.SpinnakerService) {},
 		},
 		{
 			"both ingress as https",
@@ -73,6 +77,7 @@ items:
 `,
 			"https://acme.com/api",
 			"https://acme.com/",
+			func(*testing.T, interfaces.SpinnakerService) {},
 		},
 		{
 			"only API ingress as https",
@@ -99,6 +104,7 @@ items:
 `,
 			"https://acme.com/api",
 			"",
+			func(*testing.T, interfaces.SpinnakerService) {},
 		},
 		{
 			"no ingress found",
@@ -109,6 +115,7 @@ items: []
 `,
 			"",
 			"",
+			func(*testing.T, interfaces.SpinnakerService) {},
 		},
 		{
 			"ingress no host default to load balancer",
@@ -140,13 +147,20 @@ items:
 `,
 			"http://acme.com/api",
 			"http://acme.com/",
+			func(t *testing.T, svc interfaces.SpinnakerService) {
+				p := svc.GetSpinnakerConfig().Profiles["gate"]
+				assert.NotNil(t, p)
+				str, err := inspect.GetObjectPropString(context.TODO(), p, "server.servlet.contextPath")
+				assert.Nil(t, err)
+				assert.Equal(t, "/api", str)
+			},
 		},
 	}
 
 	for _, c := range cases {
-		t.Run(c.name, func(t2 *testing.T) {
+		t.Run(c.name, func(t *testing.T) {
 			netIngress := &v1beta1.IngressList{}
-			test.ReadYamlString([]byte(c.ingressList), netIngress, t2)
+			test.ReadYamlString([]byte(c.ingressList), netIngress, t)
 			tr, spinsvc := transformertest.SetupTransformerFromSpinFile(&TransformerGenerator{}, "testdata/spinsvc_expose_ingress.yml", t, netIngress)
 			exp, ok := tr.(*ingressTransformer)
 			if !assert.True(t, ok) {
@@ -170,6 +184,8 @@ items:
 				assert.Nil(t, err)
 				assert.Equal(t, c.expectedUi, url)
 			}
+
+			c.check(t, spinsvc)
 		})
 	}
 }
