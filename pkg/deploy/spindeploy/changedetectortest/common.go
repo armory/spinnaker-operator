@@ -12,7 +12,7 @@ import (
 
 func SetupChangeDetector(generator changedetector.DetectorGenerator, t *testing.T, objs ...runtime.Object) changedetector.ChangeDetector {
 	fakeClient := test.FakeClient(t, objs...)
-	ch, err := generator.NewChangeDetector(fakeClient, log.Log.WithName("spinnakerservice"), &record.FakeRecorder{})
+	ch, err := generator.NewChangeDetector(fakeClient, log.Log.WithName("spinnakerservice"), &record.FakeRecorder{}, runtime.NewScheme())
 	assert.Nil(t, err)
 	return ch
 }

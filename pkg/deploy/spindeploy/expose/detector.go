@@ -8,6 +8,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,12 +19,13 @@ type changeDetector struct {
 	client      client.Client
 	log         logr.Logger
 	evtRecorder record.EventRecorder
+	scheme      *runtime.Scheme
 }
 
 type ChangeDetectorGenerator struct{}
 
-func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (changedetector.ChangeDetector, error) {
-	return &changeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
+func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder, scheme *runtime.Scheme) (changedetector.ChangeDetector, error) {
+	return &changeDetector{client: client, log: log, evtRecorder: evtRecorder, scheme: scheme}, nil
 }
 
 // IsSpinnakerUpToDate returns true if expose spinnaker configuration matches actual exposed services
@@ -51,8 +53,25 @@ func (ch *changeDetector) IsSpinnakerUpToDate(ctx context.Context, svc interface
 		}
 		return true, nil
 	case "ingress":
-		``
-		return false, nil // TODO
+		deckUrl := svc.GetStatus().UIUrl
+		gateUrl := svc.GetStatus().APIUrl
+
+		ing := ingressExplorer{client: ch.client, log: ch.log, scheme: ch.scheme}
+		if err := ing.loadIngresses(ctx, svc.GetNamespace()); err != nil {
+			return false, err
+		}
+
+		computed := ing.getIngressUrl(ctx, svc, util.DeckServiceName)
+		if deckUrl != computed {
+			ch.log.Info(fmt.Sprintf("Deck URL in config is different %s than what it should be %s", deckUrl, computed))
+			return false, nil
+		}
+		computed = ing.getIngressUrl(ctx, svc, util.GateServiceName)
+		if gateUrl != computed {
+			ch.log.Info(fmt.Sprintf("Gate URL in config is different %s than what it should be %s", gateUrl, computed))
+			return false, nil
+		}
+		return true, nil
 	default:
 		return false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", expType)
 	}

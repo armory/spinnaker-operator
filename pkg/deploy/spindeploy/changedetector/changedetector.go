@@ -6,6 +6,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -16,7 +17,7 @@ type ChangeDetector interface {
 }
 
 type DetectorGenerator interface {
-	NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error)
+	NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder, scheme *runtime.Scheme) (ChangeDetector, error)
 }
 
 type compositeChangeDetector struct {
@@ -29,10 +30,10 @@ type CompositeChangeDetectorGenerator struct {
 	Generators []DetectorGenerator
 }
 
-func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
+func (g *CompositeChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder, scheme *runtime.Scheme) (ChangeDetector, error) {
 	changeDetectors := make([]ChangeDetector, 0)
 	for _, generator := range g.Generators {
-		ch, err := generator.NewChangeDetector(client, log, evtRecorder)
+		ch, err := generator.NewChangeDetector(client, log, evtRecorder, scheme)
 		if err != nil {
 			return nil, err
 		}

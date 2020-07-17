@@ -8,8 +8,6 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
-	"k8s.io/api/extensions/v1beta1"
-	v1beta12 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
@@ -32,9 +30,7 @@ type exposeTransformer struct {
 	log    logr.Logger
 	client client.Client
 	scheme *runtime.Scheme
-
-	networkingIngresses []v1beta12.Ingress
-	extensionIngresses  []v1beta1.Ingress
+	ing    *ingressExplorer
 }
 
 func (t *exposeTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
@@ -100,4 +96,21 @@ func (t *exposeTransformer) findStatusUrl(ctx context.Context, serviceName strin
 	default:
 		return "", false, fmt.Errorf("expose type %s not supported. Valid types: \"service\"", expType)
 	}
+}
+
+func (t *exposeTransformer) findUrlInIngress(ctx context.Context, serviceName string) (string, error) {
+	if t.ing == nil {
+		ing := &ingressExplorer{
+			log:    t.log,
+			client: t.client,
+			scheme: t.scheme,
+		}
+		// Load ingresses in target namespace
+		if err := ing.loadIngresses(ctx, t.svc.GetNamespace()); err != nil {
+			return "", err
+		}
+		t.ing = ing
+	}
+	// Try to determine URL from ingress
+	return t.ing.getIngressUrl(ctx, t.svc, serviceName), nil
 }

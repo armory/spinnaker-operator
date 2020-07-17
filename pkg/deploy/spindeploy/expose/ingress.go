@@ -2,46 +2,52 @@ package expose
 
 import (
 	"context"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/util"
+	"github.com/go-logr/logr"
 	"k8s.io/api/extensions/v1beta1"
 	v1beta12 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 )
 
-func (t *exposeTransformer) findUrlInIngress(ctx context.Context, serviceName string) (string, error) {
-	// Load ingresses in target namespace
-	if err := t.loadIngresses(ctx); err != nil {
-		return "", err
-	}
-	// Try to determine URL from ingress
-	return t.getIngressUrl(ctx, serviceName), nil
+type ingressExplorer struct {
+	log                 logr.Logger
+	client              client.Client
+	scheme              *runtime.Scheme
+	networkingIngresses []v1beta12.Ingress
+	extensionIngresses  []v1beta1.Ingress
 }
 
-func (t *exposeTransformer) loadIngresses(ctx context.Context) error {
+func (i *ingressExplorer) loadIngresses(ctx context.Context, ns string) error {
+	// Already loaded
+	if i.networkingIngresses != nil || i.extensionIngresses != nil {
+		return nil
+	}
 	var errNet, errExt error
 	g := wait.Group{}
 	networkingIngresses := &v1beta12.IngressList{}
 	extensionIngresses := &v1beta1.IngressList{}
 
-	if t.scheme.Recognizes(v1beta1.SchemeGroupVersion.WithKind("Ingress")) {
+	if i.scheme.Recognizes(v1beta1.SchemeGroupVersion.WithKind("Ingress")) {
 		g.StartWithContext(ctx, func(ctx context.Context) {
-			errNet = t.client.List(ctx, networkingIngresses, client.InNamespace(t.svc.GetNamespace()))
+			errNet = i.client.List(ctx, networkingIngresses, client.InNamespace(ns))
 		})
 	}
 
-	if t.scheme.Recognizes(v1beta1.SchemeGroupVersion.WithKind("Ingress")) {
+	if i.scheme.Recognizes(v1beta1.SchemeGroupVersion.WithKind("Ingress")) {
 		g.StartWithContext(ctx, func(ctx context.Context) {
-			errExt = t.client.List(ctx, extensionIngresses, client.InNamespace(t.svc.GetNamespace()))
+			errExt = i.client.List(ctx, extensionIngresses, client.InNamespace(ns))
 		})
 	}
 
 	g.Wait()
 
-	t.networkingIngresses = networkingIngresses.Items
-	t.extensionIngresses = extensionIngresses.Items
+	i.networkingIngresses = networkingIngresses.Items
+	i.extensionIngresses = extensionIngresses.Items
 
 	// Return either error
 	if errExt != nil {
@@ -50,26 +56,30 @@ func (t *exposeTransformer) loadIngresses(ctx context.Context) error {
 	return errNet
 }
 
-func (t *exposeTransformer) getIngressUrl(ctx context.Context, serviceName string) string {
-	if url := t.getExtensionIngressUrl(ctx, serviceName); url != "" {
+func (i *ingressExplorer) getIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) string {
+	if url := i.getExtensionIngressUrl(ctx, svc, serviceName); url != "" {
 		return url
 	}
-	return t.getNetworkingIngressUrl(ctx, serviceName)
+	return i.getNetworkingIngressUrl(ctx, svc, serviceName)
 }
 
-func (t *exposeTransformer) getExtensionIngressUrl(ctx context.Context, serviceName string) string {
-	port := t.guessServicePort(ctx, serviceName)
+func (i *ingressExplorer) getExtensionIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) string {
+	port := i.guessServicePort(ctx, svc, serviceName)
 	// Find the service name
-	for _, ing := range t.extensionIngresses {
+	for _, ing := range i.extensionIngresses {
 		for _, rule := range ing.Spec.Rules {
 			if rule.HTTP != nil {
 				for _, path := range rule.HTTP.Paths {
 					if path.Backend.ServiceName == serviceName {
 						// Are we referencing the service name?
 						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == port {
+							host := i.getActualExtensionHost(rule.Host, ing)
+							if host == "" {
+								return ""
+							}
 							u := url.URL{
-								Scheme: t.getSchemeFromExtensionIngress(ing, rule.Host),
-								Host:   rule.Host,
+								Scheme: i.getSchemeFromExtensionIngress(ing, host),
+								Host:   host,
 								Path:   path.Path,
 							}
 							return u.String()
@@ -82,19 +92,34 @@ func (t *exposeTransformer) getExtensionIngressUrl(ctx context.Context, serviceN
 	return ""
 }
 
-func (t *exposeTransformer) getNetworkingIngressUrl(ctx context.Context, serviceName string) string {
-	port := t.guessServicePort(ctx, serviceName)
+func (i *ingressExplorer) getActualExtensionHost(host string, ingress v1beta1.Ingress) string {
+	if host != "" {
+		return host
+	}
+	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
+		return ""
+	}
+	// Take first host defined for the ingress
+	return ingress.Status.LoadBalancer.Ingress[0].Hostname
+}
+
+func (i *ingressExplorer) getNetworkingIngressUrl(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) string {
+	port := i.guessServicePort(ctx, svc, serviceName)
 	// Find the service name
-	for _, ing := range t.networkingIngresses {
+	for _, ing := range i.networkingIngresses {
 		for _, rule := range ing.Spec.Rules {
 			if rule.HTTP != nil {
 				for _, path := range rule.HTTP.Paths {
 					if path.Backend.ServiceName == serviceName {
 						// Are we referencing the service name?
 						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == port {
+							host := i.getActualNetworkingHost(rule.Host, ing)
+							if host == "" {
+								return ""
+							}
 							u := url.URL{
-								Scheme: t.getSchemeFromNetworkingIngress(ing, rule.Host),
-								Host:   rule.Host,
+								Scheme: i.getSchemeFromNetworkingIngress(ing, host),
+								Host:   host,
 								Path:   path.Path,
 							}
 							return u.String()
@@ -107,9 +132,19 @@ func (t *exposeTransformer) getNetworkingIngressUrl(ctx context.Context, service
 	return ""
 }
 
-func (t *exposeTransformer) guessServicePort(ctx context.Context, serviceName string) int32 {
+func (i *ingressExplorer) getActualNetworkingHost(host string, ingress v1beta12.Ingress) string {
+	if host != "" {
+		return host
+	}
+	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
+		return ""
+	}
+	return ingress.Status.LoadBalancer.Ingress[0].Hostname
+}
+
+func (i *ingressExplorer) guessServicePort(ctx context.Context, svc interfaces.SpinnakerService, serviceName string) int32 {
 	if serviceName == util.GateServiceName {
-		if targetPort, _ := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
+		if targetPort, _ := svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
 			if intTargetPort, err := strconv.ParseInt(targetPort, 10, 32); err != nil {
 				return int32(intTargetPort)
 			}
@@ -122,7 +157,7 @@ func (t *exposeTransformer) guessServicePort(ctx context.Context, serviceName st
 	return 0
 }
 
-func (t *exposeTransformer) getSchemeFromExtensionIngress(ingress v1beta1.Ingress, host string) string {
+func (i *ingressExplorer) getSchemeFromExtensionIngress(ingress v1beta1.Ingress, host string) string {
 	for _, tls := range ingress.Spec.TLS {
 		for _, h := range tls.Hosts {
 			if h == host {
@@ -133,7 +168,7 @@ func (t *exposeTransformer) getSchemeFromExtensionIngress(ingress v1beta1.Ingres
 	return "http"
 }
 
-func (t *exposeTransformer) getSchemeFromNetworkingIngress(ingress v1beta12.Ingress, host string) string {
+func (i *ingressExplorer) getSchemeFromNetworkingIngress(ingress v1beta12.Ingress, host string) string {
 	for _, tls := range ingress.Spec.TLS {
 		for _, h := range tls.Hosts {
 			if h == host {

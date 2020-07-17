@@ -110,6 +110,37 @@ items: []
 			"",
 			"",
 		},
+		{
+			"ingress no host default to load balancer",
+			`
+kind: IngressList
+apiVersion: extensions/v1beta1
+items:
+  - kind: Ingress
+    apiVersion: extensions/v1beta1
+    metadata:
+      name: my-ingress
+      namespace: ns1
+    spec:
+      rules:
+        - http:
+            paths:
+              - path: /api
+                backend:
+                  serviceName: spin-gate
+                  servicePort: http
+              - path: /
+                backend:
+                  serviceName: spin-deck
+                  servicePort: 9000
+    status:
+      loadBalancer:
+        ingress:
+          - hostname: acme.com
+`,
+			"http://acme.com/api",
+			"http://acme.com/",
+		},
 	}
 
 	for _, c := range cases {

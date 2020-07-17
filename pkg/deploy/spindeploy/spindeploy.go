@@ -74,7 +74,7 @@ func (d *Deployer) GetName() string {
 func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, scheme *runtime.Scheme) (bool, error) {
 	rLogger := d.log.WithValues("Service", svc.GetName())
 
-	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log, d.evtRecorder)
+	ch, err := d.changeDetectorGenerator.NewChangeDetector(d.client, d.log, d.evtRecorder, scheme)
 	if err != nil {
 		return false, err
 	}

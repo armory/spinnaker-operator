@@ -8,6 +8,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
@@ -22,7 +23,7 @@ type changeDetector struct {
 type ChangeDetectorGenerator struct {
 }
 
-func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (changedetector.ChangeDetector, error) {
+func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder, scheme *runtime.Scheme) (changedetector.ChangeDetector, error) {
 	return &changeDetector{client: client, log: log, evtRecorder: evtRecorder}, nil
 }
 
