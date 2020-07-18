@@ -86,7 +86,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 		return !up, err
 	}
 
-	rLogger.Info("Retrieving complete Spinnaker configuration")
+	rLogger.Info("retrieving complete Spinnaker configuration")
 	v, err := svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, "version")
 	if err != nil {
 		rLogger.Info("Unable to retrieve version from config, ignoring error")
@@ -94,7 +94,7 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 
 	var transformers []transformer.Transformer
 
-	rLogger.Info("Applying options to Spinnaker config")
+	rLogger.Info(fmt.Sprintf("applying options to Spinnaker config with %d generators", len(d.transformerGenerators)))
 	nSvc := svc.DeepCopyInterface()
 	for _, t := range d.transformerGenerators {
 		tr, err := t.NewTransformer(nSvc, d.client, d.log, scheme)
@@ -107,13 +107,13 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 		}
 	}
 
-	rLogger.Info("Generating manifests with Halyard")
+	rLogger.Info("generating manifests with Halyard")
 	l, err := d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
 	if err != nil {
 		return true, err
 	}
 
-	rLogger.Info("Applying options to generated manifests")
+	rLogger.Info("applying options to generated manifests")
 	// Traverse transformers in reverse order
 	for i := range transformers {
 		if err = transformers[len(transformers)-i-1].TransformManifests(ctx, l); err != nil {
@@ -121,18 +121,18 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 		}
 	}
 
-	rLogger.Info("Saving manifests")
 	if err = d.deployConfig(ctx, scheme, l, rLogger); err != nil {
 		return true, err
 	}
 
-	st := nSvc.GetStatus()
-	st.Version = v
-	rLogger.Info(fmt.Sprintf("Deployed version %s, setting status", v))
-	err = d.commitConfigToStatus(ctx, nSvc)
-	return true, err
-}
+	// Update status with the cloned service status
+	// otherwise we'll have updated the instance
+	newStatus := nSvc.GetStatus()
+	newStatus.Version = v
+	newStatus.DeepCopyInto(svc.GetStatus())
 
-func (d *Deployer) commitConfigToStatus(ctx context.Context, svc interfaces.SpinnakerService) error {
-	return d.client.Status().Update(ctx, svc)
+	rLogger.Info(fmt.Sprintf("deployed version %s, setting status", v))
+	// We're updating with svc not nSvc
+	err = d.client.Status().Update(ctx, svc)
+	return true, err
 }

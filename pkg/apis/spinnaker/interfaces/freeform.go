@@ -9,7 +9,12 @@ func (f *FreeForm) DeepCopy() *FreeForm {
 }
 
 func (f *FreeForm) DeepCopyInto(out *FreeForm) {
-	copyInto(*out, *f)
+	// FreeForm is nested and therefore out is already
+	// a copy (`*in = *out`). We don't want to copy on top,
+	// we want to replace
+	m := make(map[string]interface{})
+	*out = m
+	copyInto(*f, *out)
 }
 
 func copyInto(m, cp map[string]interface{}) map[string]interface{} {

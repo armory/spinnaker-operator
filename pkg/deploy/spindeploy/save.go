@@ -20,24 +20,39 @@ import (
 // TransformManifests adjusts settings to the configuration
 func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig, logger logr.Logger) error {
 	// Set SpinnakerService instance as the owner and controller
+	count := 0
+	for _, v := range gen.Config {
+		count += len(v.Resources)
+		if v.Deployment != nil {
+			count += 1
+		}
+		if v.Service != nil {
+			count += 1
+		}
+	}
+
+	// Give users a few pointers if we end up running into an error halfway
+	// In theory, we're idempotent and if we need to run again, it should be reflected in
+	// the status. But things happen.
+	d.log.Info(fmt.Sprintf("saving %d manifests across %d services", count, len(gen.Config)))
 	for k := range gen.Config {
 		s := gen.Config[k]
 		if s.Deployment != nil {
-			logger.Info(fmt.Sprintf("Saving deployment manifest for %s", k))
-			if err := d.saveObject(ctx, s.Deployment, false, logger); err != nil {
+			logger.Info(fmt.Sprintf("saving deployment manifest for %s", k))
+			if err := d.saveObject(ctx, s.Deployment, logger); err != nil {
 				return err
 			}
 		}
 		if s.Service != nil {
-			logger.Info(fmt.Sprintf("Saving service manifest for %s", k))
-			if err := d.saveObject(ctx, s.Service, false, logger); err != nil {
+			logger.Info(fmt.Sprintf("saving service manifest for %s", k))
+			if err := d.saveObject(ctx, s.Service, logger); err != nil {
 				return err
 			}
 		}
 		for i := range s.Resources {
-			logger.Info(fmt.Sprintf("Saving resource manifest for %s", k))
 			o, ok := s.Resources[i].(metav1.Object)
 			if ok {
+				logger.Info(fmt.Sprintf("saving resource manifest %s for %s", o.GetName(), k))
 				// Set SpinnakerService instance as the owner and controller
 				if s.Deployment != nil {
 					if err := controllerutil.SetControllerReference(s.Deployment, o, scheme); err != nil {
@@ -45,12 +60,12 @@ func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen
 					}
 				}
 			}
-			if err := d.saveObject(ctx, s.Resources[i], false, logger); err != nil {
+			if err := d.saveObject(ctx, s.Resources[i], logger); err != nil {
 				return err
 			}
 		}
 		for _, o := range s.ToDelete {
-			logger.Info(fmt.Sprintf("Deleting resource manifest for %s", k))
+			logger.Info(fmt.Sprintf("deleting resource manifest for %s", k))
 			if err := d.deleteObject(ctx, o); err != nil {
 				return err
 			}
@@ -59,17 +74,13 @@ func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen
 	return nil
 }
 
-func (d *Deployer) saveObject(ctx context.Context, obj runtime.Object, skipCheckExists bool, logger logr.Logger) error {
+func (d *Deployer) saveObject(ctx context.Context, obj runtime.Object, logger logr.Logger) error {
 	// Check if it exists
-	if !skipCheckExists {
-		if err := d.patch(ctx, obj); err != nil {
-			logger.Error(err, fmt.Sprintf("Unable to save object: %v", obj))
-			return err
-		}
-		return nil
+	if err := d.patch(ctx, obj); err != nil {
+		logger.Error(err, fmt.Sprintf("Unable to save object: %v", obj))
+		return err
 	}
-	logger.Info(fmt.Sprintf("Creating %v", obj))
-	return d.client.Create(ctx, obj)
+	return nil
 }
 
 func (d *Deployer) deleteObject(ctx context.Context, obj runtime.Object) error {

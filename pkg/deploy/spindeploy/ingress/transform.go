@@ -57,6 +57,7 @@ func (t *ingressTransformer) TransformManifests(ctx context.Context, gen *genera
 }
 
 func (t *ingressTransformer) TransformConfig(ctx context.Context) error {
+	t.log.V(5).Info(fmt.Sprintf("applying ingress transform: %s", t.svc.GetExposeConfig().Type))
 	if !applies(t.svc) {
 		return nil
 	}
@@ -127,6 +128,7 @@ func (t *ingressTransformer) findUrlInIngress(ctx context.Context, serviceName s
 		}
 		t.ing = ing
 	}
+	t.log.V(5).Info(fmt.Sprintf("looking for service %s ingress in %d / %dingresses retrieved", serviceName, len(t.ing.extensionIngresses), len(t.ing.networkingIngresses)))
 	// Try to determine URL from ingress
 	return t.ing.getIngressUrl(serviceName, servicePort), nil
 }

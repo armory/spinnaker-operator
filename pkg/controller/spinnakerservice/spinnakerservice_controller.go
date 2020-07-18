@@ -105,7 +105,7 @@ type ReconcileSpinnakerService struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling SpinnakerService")
+	reqLogger.Info("reconciling SpinnakerService")
 
 	// Fetch the SpinnakerService instance
 	instance := TypesFactory.NewService()
