@@ -20,16 +20,16 @@ type defaultsTransformer struct {
 	client client.Client
 }
 
-type defaultsTransformerGenerator struct{}
+type DefaultsTransformerGenerator struct{}
 
-func (g *defaultsTransformerGenerator) GetName() string {
+func (g *DefaultsTransformerGenerator) GetName() string {
 	return "Defaults"
 }
 
-func (a *defaultsTransformerGenerator) NewTransformer(
+func (a *DefaultsTransformerGenerator) NewTransformer(
 	svc interfaces.SpinnakerService,
 	client client.Client,
-	log logr.Logger) (Transformer, error) {
+	log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 	return &defaultsTransformer{svc: svc, log: log, client: client}, nil
 }
 
@@ -65,7 +65,7 @@ func (a *defaultsTransformer) setArchaiusDefaultsForProfile(profile interfaces.F
 	return inspect.SetObjectProp(profile, "archaius.fixedDelayPollingScheduler.initialDelayMills", 2147483647)
 }
 
-func (a *defaultsTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (a *defaultsTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
 	return nil // noop
 }
 

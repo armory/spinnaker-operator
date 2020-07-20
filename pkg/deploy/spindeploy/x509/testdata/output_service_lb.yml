@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+  labels:
+    app: spin
+    cluster: spin-gate
+  name: spin-gate
+  namespace: ns1
+spec:
+  ports:
+  - name: gate-tcp
+    port: 80
+    protocol: TCP
+    targetPort: 8084
+  selector:
+    app: spin
+    cluster: spin-gate
+  type: LoadBalancer

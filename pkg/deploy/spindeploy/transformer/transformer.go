@@ -11,34 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Generators tracks the list of transformers
-var Generators []Generator
-
-func init() {
-	Generators = append(Generators, &ownerTransformerGenerator{}, &targetTransformerGenerator{},
-		&exposeLbTransformerGenerator{}, &serverPortTransformerGenerator{}, &x509TransformerGenerator{},
-		&accountsTransformerGenerator{}, &secretsTransformerGenerator{}, &statsTransformerGenerator{},
-		&patchTransformerGenerator{}, &defaultsTransformerGenerator{}, &spinSvcSettingsTransformerGenerator{})
-}
-
-// Transformer affects how Spinnaker is deployed.
-// It can change the Spinnaker configuration itself with TransformConfig.
-// It can also change the manifests before they are updated.
-type Transformer interface {
-	TransformConfig(ctx context.Context) error
-	TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error
-}
-
 // baseTransformer extends Transformer adding convenience methods.
 type baseTransformer interface {
 	transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error
 	transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1.Deployment) error
-}
-
-// Generator generates transformers for the given SpinnakerService
-type Generator interface {
-	NewTransformer(svc interfaces.SpinnakerService, client client.Client, log logr.Logger) (Transformer, error)
-	GetName() string
 }
 
 // default implementation for all transformers
@@ -50,7 +26,7 @@ func (t *DefaultTransformer) TransformConfig(ctx context.Context) error {
 	return nil
 }
 
-func (t *DefaultTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (t *DefaultTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
 	for serviceName, serviceConfig := range gen.Config {
 		if serviceConfig.Service != nil {
 			if err := t.ChildTransformer.transformServiceManifest(ctx, serviceName, serviceConfig.Service); err != nil {
@@ -72,4 +48,18 @@ func (t *DefaultTransformer) transformServiceManifest(ctx context.Context, svcNa
 
 func (t *DefaultTransformer) transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1.Deployment) error {
 	return nil
+}
+
+// Transformer affects how Spinnaker is deployed.
+// It can change the Spinnaker configuration itself with TransformConfig.
+// It can also change the manifests before they are updated.
+type Transformer interface {
+	TransformConfig(ctx context.Context) error
+	TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error
+}
+
+// DetectorGenerator generates transformers for the given SpinnakerService
+type Generator interface {
+	NewTransformer(svc interfaces.SpinnakerService, client client.Client, log logr.Logger, scheme *runtime.Scheme) (Transformer, error)
+	GetName() string
 }

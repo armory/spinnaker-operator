@@ -1,8 +1,10 @@
-package transformer
+package x509
 
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/expose_service"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -14,35 +16,29 @@ import (
 )
 
 type x509Transformer struct {
-	*DefaultTransformer
-	exposeLbTr *exposeLbTransformer
-	svc        interfaces.SpinnakerService
-	client     client.Client
-	log        logr.Logger
+	*transformer.DefaultTransformer
+	svc    interfaces.SpinnakerService
+	client client.Client
+	log    logr.Logger
+	scheme *runtime.Scheme
 }
 
-type x509TransformerGenerator struct{}
+type X509TransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *x509TransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
-	client client.Client, log logr.Logger) (Transformer, error) {
-	base := &DefaultTransformer{}
-	exGen := exposeLbTransformerGenerator{}
-	exTr, err := exGen.NewTransformer(svc, client, log)
-	if err != nil {
-		return nil, err
-	}
-	exLbTr := exTr.(*exposeLbTransformer)
-	tr := x509Transformer{svc: svc, log: log, DefaultTransformer: base, exposeLbTr: exLbTr, client: client}
+func (g *X509TransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+	client client.Client, log logr.Logger, scheme *runtime.Scheme) (transformer.Transformer, error) {
+	base := &transformer.DefaultTransformer{}
+	tr := x509Transformer{svc: svc, log: log, DefaultTransformer: base, client: client, scheme: scheme}
 	base.ChildTransformer = &tr
 	return &tr, nil
 }
 
-func (g *x509TransformerGenerator) GetName() string {
+func (g *X509TransformerGenerator) GetName() string {
 	return "X509"
 }
 
-func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (t *x509Transformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
 	exp := t.svc.GetExposeConfig()
 	if exp.Type == "" {
 		return nil
@@ -65,7 +61,7 @@ func (t *x509Transformer) TransformManifests(ctx context.Context, scheme *runtim
 	if err != nil {
 		return err
 	}
-	t.exposeLbTr.applyExposeServiceConfig(x509Svc, "gate-x509")
+	expose_service.ApplyExposeServiceConfig(t.svc.GetExposeConfig(), x509Svc, "gate-x509")
 	gen.Config["gate-x509"] = generated.ServiceConfig{
 		Service: x509Svc,
 	}

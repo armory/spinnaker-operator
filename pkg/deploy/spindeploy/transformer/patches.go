@@ -27,16 +27,16 @@ type patchTransformer struct {
 	log logr.Logger
 }
 
-type patchTransformerGenerator struct{}
+type PatchTransformerGenerator struct{}
 
-func (g *patchTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
-	client client.Client, log logr.Logger) (Transformer, error) {
+func (g *PatchTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+	client client.Client, log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 
 	tr := patchTransformer{svc: svc, log: log}
 	return &tr, nil
 }
 
-func (g *patchTransformerGenerator) GetName() string {
+func (g *PatchTransformerGenerator) GetName() string {
 	return "Patches"
 }
 
@@ -45,7 +45,7 @@ func (p *patchTransformer) TransformConfig(ctx context.Context) error {
 	return nil
 }
 
-func (p *patchTransformer) TransformManifests(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig) error {
+func (p *patchTransformer) TransformManifests(ctx context.Context, gen *generated.SpinnakerGeneratedConfig) error {
 	for k, kust := range p.svc.GetKustomization() {
 		s, ok := gen.Config[k]
 		if ok {

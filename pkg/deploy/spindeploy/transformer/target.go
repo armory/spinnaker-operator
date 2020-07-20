@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -13,18 +14,18 @@ type targetTransformer struct {
 	log logr.Logger
 }
 
-type targetTransformerGenerator struct{}
+type TargetTransformerGenerator struct{}
 
 // Transformer is in charge of excluding namespace manifests
-func (g *targetTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
-	client client.Client, log logr.Logger) (Transformer, error) {
+func (g *TargetTransformerGenerator) NewTransformer(svc interfaces.SpinnakerService,
+	client client.Client, log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 	base := &DefaultTransformer{}
 	tr := targetTransformer{svc: svc, log: log, DefaultTransformer: base}
 	base.ChildTransformer = &tr
 	return &tr, nil
 }
 
-func (g *targetTransformerGenerator) GetName() string {
+func (g *TargetTransformerGenerator) GetName() string {
 	return "Target"
 }
 

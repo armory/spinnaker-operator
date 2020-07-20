@@ -7,6 +7,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/bom"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -18,16 +19,16 @@ type spinSvcSettingsTransformer struct {
 	client client.Client
 }
 
-type spinSvcSettingsTransformerGenerator struct{}
+type SpinSvcSettingsTransformerGenerator struct{}
 
-func (g *spinSvcSettingsTransformerGenerator) GetName() string {
+func (g *SpinSvcSettingsTransformerGenerator) GetName() string {
 	return "Global spinnaker service-settings"
 }
 
-func (g *spinSvcSettingsTransformerGenerator) NewTransformer(
+func (g *SpinSvcSettingsTransformerGenerator) NewTransformer(
 	svc interfaces.SpinnakerService,
 	client client.Client,
-	log logr.Logger) (Transformer, error) {
+	log logr.Logger, scheme *runtime.Scheme) (Transformer, error) {
 	base := &DefaultTransformer{}
 	tr := spinSvcSettingsTransformer{svc: svc, log: log, client: client, DefaultTransformer: base}
 	base.ChildTransformer = &tr

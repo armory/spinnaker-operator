@@ -35,12 +35,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - monitoring.coreos.com
+    - monitoring.coreos.com
   resources:
-  - servicemonitors
+    - servicemonitors
   verbs:
-  - get
-  - create
+    - get
+    - create
 - apiGroups:
   - apps
   resourceNames:
@@ -56,3 +56,12 @@ rules:
   - spinnakerservices
   verbs:
   - '*'
+- apiGroups:
+    - networking.k8s.io
+    - extensions
+  resources:
+    - ingresses
+  verbs:
+    - get
+    - list
+    - watch

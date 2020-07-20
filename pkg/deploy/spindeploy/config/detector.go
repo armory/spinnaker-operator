@@ -1,4 +1,4 @@
-package changedetector
+package config
 
 import (
 	"context"
@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetector"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
@@ -15,19 +17,19 @@ import (
 const SpinnakerConfigHashKey = "config"
 const KustomizeHashKey = "kustomize"
 
-type configChangeDetector struct {
+type changeDetector struct {
 	log         logr.Logger
 	evtRecorder record.EventRecorder
 }
 
-type configChangeDetectorGenerator struct{}
+type ChangeDetectorGenerator struct{}
 
-func (g *configChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder) (ChangeDetector, error) {
-	return &configChangeDetector{log: log, evtRecorder: evtRecorder}, nil
+func (g *ChangeDetectorGenerator) NewChangeDetector(client client.Client, log logr.Logger, evtRecorder record.EventRecorder, scheme *runtime.Scheme) (changedetector.ChangeDetector, error) {
+	return &changeDetector{log: log, evtRecorder: evtRecorder}, nil
 }
 
 // IsSpinnakerUpToDate returns true if the Config has changed compared to the last recorded status hash
-func (ch *configChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
+func (ch *changeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, error) {
 	upd, err := ch.isUpToDate(spinSvc.GetSpinnakerConfig(), SpinnakerConfigHashKey, spinSvc)
 	if err != nil {
 		return false, err
@@ -37,7 +39,7 @@ func (ch *configChangeDetector) IsSpinnakerUpToDate(ctx context.Context, spinSvc
 	return upd && kUpd, err
 }
 
-func (ch *configChangeDetector) isUpToDate(config interface{}, hashKey string, spinSvc interfaces.SpinnakerService) (bool, error) {
+func (ch *changeDetector) isUpToDate(config interface{}, hashKey string, spinSvc interfaces.SpinnakerService) (bool, error) {
 	h, err := ch.getHash(config)
 	if err != nil {
 		return false, err
@@ -48,7 +50,7 @@ func (ch *configChangeDetector) isUpToDate(config interface{}, hashKey string, s
 	return h == prior.Hash, nil
 }
 
-func (ch *configChangeDetector) getHash(config interface{}) (string, error) {
+func (ch *changeDetector) getHash(config interface{}) (string, error) {
 	data, err := json.Marshal(config)
 	if err != nil {
 		return "", err
@@ -57,6 +59,6 @@ func (ch *configChangeDetector) getHash(config interface{}) (string, error) {
 	return hex.EncodeToString(m[:]), nil
 }
 
-func (ch *configChangeDetector) AlwaysRun() bool {
+func (ch *changeDetector) AlwaysRun() bool {
 	return true
 }
