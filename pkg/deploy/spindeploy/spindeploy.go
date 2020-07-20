@@ -22,6 +22,7 @@ import (
 var DetectorGenerators = []changedetector.DetectorGenerator{
 	&config.ChangeDetectorGenerator{},
 	&expose_service.ChangeDetectorGenerator{},
+	&expose_ingress.ChangeDetectorGenerator{},
 	&x509.ChangeDetectorGenerator{},
 }
 
