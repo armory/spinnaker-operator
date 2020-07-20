@@ -1,4 +1,4 @@
-package expose
+package expose_service
 
 import (
 	"context"

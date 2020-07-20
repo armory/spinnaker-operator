@@ -3,7 +3,7 @@ package x509
 import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
-	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/expose"
+	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/expose_service"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -61,7 +61,7 @@ func (t *x509Transformer) TransformManifests(ctx context.Context, gen *generated
 	if err != nil {
 		return err
 	}
-	expose.ApplyExposeServiceConfig(t.svc.GetExposeConfig(), x509Svc, "gate-x509")
+	expose_service.ApplyExposeServiceConfig(t.svc.GetExposeConfig(), x509Svc, "gate-x509")
 	gen.Config["gate-x509"] = generated.ServiceConfig{
 		Service: x509Svc,
 	}

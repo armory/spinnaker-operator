@@ -1,4 +1,4 @@
-package ingress
+package expose_ingress
 
 import (
 	"context"

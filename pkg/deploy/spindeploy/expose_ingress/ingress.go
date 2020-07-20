@@ -1,4 +1,4 @@
-package ingress
+package expose_ingress
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func (i *ingressExplorer) loadIngresses(ctx context.Context, ns string) error {
 	networkingIngresses := &v1beta12.IngressList{}
 	extensionIngresses := &v1beta1.IngressList{}
 
-	if i.scheme.Recognizes(v1beta1.SchemeGroupVersion.WithKind("Ingress")) {
+	if i.scheme.Recognizes(v1beta12.SchemeGroupVersion.WithKind("Ingress")) {
 		g.StartWithContext(ctx, func(ctx context.Context) {
 			errNet = i.client.List(ctx, networkingIngresses, client.InNamespace(ns))
 		})
