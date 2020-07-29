@@ -110,3 +110,43 @@ spec:
 	assert.Equal(t, "spin-echo-files-287979322", s.ObjectMeta.Name)
 	assert.Contains(t, s.Data, "echo.yml")
 }
+
+func TestServiceLike(t *testing.T) {
+	cases := []struct {
+		name string
+		svc1 string
+		svc2 string
+		like bool
+	}{
+		{
+			"different services",
+			"gate",
+			"clouddriver",
+			false,
+		},
+		{
+			"same services",
+			"gate",
+			"gate",
+			true,
+		},
+		{
+			"specialized service",
+			"echo-scheduler",
+			"echo",
+			true,
+		},
+		{
+			"almost specialized service",
+			"echos-cheduler", // Typo on purpose
+			"echo",
+			false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.like, IsServiceLike(c.svc1, c.svc2))
+		})
+	}
+}
