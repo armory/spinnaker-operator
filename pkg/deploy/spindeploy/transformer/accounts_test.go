@@ -49,6 +49,40 @@ func TestAddSpringProfile(t *testing.T) {
 	}
 }
 
+func TestAddSpringProfileHA(t *testing.T) {
+
+	d := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name: "clouddriver-ro",
+							Env: []v1.EnvVar{
+								{
+									Name:  "SOME_ENV",
+									Value: "test",
+								},
+								{
+									Name:  "SPRING_PROFILES_ACTIVE",
+									Value: "local,test",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	err := addSpringProfile(d, "clouddriver-ro", "accounts")
+	assert.Nil(t, err)
+	c := util.GetContainerInDeployment(d, "clouddriver-ro")
+	if assert.NotNil(t, c) {
+		assert.Equal(t, 2, len(c.Env))
+		assert.Equal(t, "local,test,accounts", c.Env[1].Value)
+	}
+}
+
 func TestAddSpringProfileExisting(t *testing.T) {
 	d := &appsv1.Deployment{
 		Spec: appsv1.DeploymentSpec{

@@ -44,7 +44,7 @@ func (ch *configChangeDetector) isUpToDate(config interface{}, hashKey string, s
 	}
 
 	st := spinSvc.GetStatus()
-	prior := st.UpdateHashIfNotExist(hashKey, h, time.Now(), true)
+	prior := st.UpdateHashIfNotExist(hashKey, h, time.Now())
 	return h == prior.Hash, nil
 }
 

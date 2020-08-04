@@ -107,6 +107,7 @@ func deployWebhookService(ns string, name string, port int, rawClient *kubernete
 			Selector: selectorLabels,
 			Ports: []v1.ServicePort{
 				{
+					Name:       "http",
 					Protocol:   "TCP",
 					Port:       443,
 					TargetPort: intstr.FromInt(port),
