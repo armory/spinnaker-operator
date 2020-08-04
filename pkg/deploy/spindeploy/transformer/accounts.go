@@ -46,9 +46,12 @@ func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *ru
 	}
 
 	// Enable "accounts" Spring profile for each potential service
-	for _, s := range accounts.GetAllServicesWithAccounts() {
-		if err := addSpringProfile(gen.Config[s].Deployment, s, accounts.SpringProfile); err != nil {
-			return err
+	svcs := accounts.GetAllServicesWithAccounts()
+	for k := range gen.Config {
+		if a.isServiceWithAccount(k, svcs) {
+			if err := addSpringProfile(gen.Config[k].Deployment, k, accounts.SpringProfile); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -64,6 +67,15 @@ func (a *accountsTransformer) TransformManifests(ctx context.Context, scheme *ru
 	}
 	a.log.Info(fmt.Sprintf("found %d accounts to deploy", len(crdAccs)))
 	return updateServiceSettings(ctx, crdAccs, gen)
+}
+
+func (a *accountsTransformer) isServiceWithAccount(serviceKey string, accountServices []string) bool {
+	for _, s := range accountServices {
+		if util.IsServiceLike(serviceKey, s) {
+			return true
+		}
+	}
+	return false
 }
 
 func updateServiceSettings(ctx context.Context, crdAccounts []account.Account, gen *generated.SpinnakerGeneratedConfig) error {

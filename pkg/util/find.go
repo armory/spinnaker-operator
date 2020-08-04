@@ -14,6 +14,7 @@ import (
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 var errSecretNotFound = errors.New("secret not found")
@@ -92,6 +93,10 @@ func GetContainerInDeployment(dep *v12.Deployment, containerName string) *v1.Con
 		}
 	}
 	return nil
+}
+
+func IsServiceLike(svc1, svc2 string) bool {
+	return svc1 == svc2 || strings.HasPrefix(svc1, svc2+"-")
 }
 
 func UpdateSecret(secret *v1.Secret, svc string, settings map[string]interface{}, profileName string) error {
