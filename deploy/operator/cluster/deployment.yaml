@@ -26,12 +26,18 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "spinnaker-operator"
+          # Comment out "ports" if disabling validation
+          ports:
+            - containerPort: 9876
+              protocol: TCP
+              name: http
         - name: halyard
           image: armory/halyard:operator-dev # Moving label, replaced at build time with a fixed version in "build" dir
           imagePullPolicy: Always
           ports:
             - containerPort: 8064
               protocol: TCP
+              name: http
           readinessProbe:
             httpGet:
               path: /health

@@ -2,6 +2,7 @@ package spinnakervalidating
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
@@ -9,6 +10,8 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"k8s.io/api/admission/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,7 +75,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 	defer secrets.Cleanup(opts.Ctx)
 
-	log.Info("Starting validation")
+	log.Info("Validating SpinnakerService", "metadata.name", svc.GetName())
 	validationResult := validate.ValidateAll(svc, opts)
 	if validationResult.HasErrors() {
 		errorMsg := validationResult.GetErrorMessage()
@@ -82,11 +85,14 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 	// Update the status with any admission status change, only if there's already an existing SpinnakerService
 	if req.AdmissionRequest.Operation == v1beta1.Update {
-		if err := v.client.Status().Update(ctx, svc); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
+		if len(validationResult.StatusPatches) > 0 {
+			log.Info(fmt.Sprintf("patching SpinnakerService status with %v", validationResult.StatusPatches), "metadata.name", svc.GetName())
+			if err := v.client.Status().Patch(ctx, svc, &precomputedPatch{validationResult}); err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
 		}
 	}
-	log.Info("SpinnakerService is valid", "metadata.name", svc)
+	log.Info("SpinnakerService is valid", "metadata.name", svc.GetName())
 	return admission.ValidationResponse(true, "")
 }
 
@@ -106,4 +112,16 @@ func (v *spinnakerValidatingController) InjectDecoder(d *admission.Decoder) erro
 func (v *spinnakerValidatingController) InjectConfig(c *rest.Config) error {
 	v.restConfig = c
 	return nil
+}
+
+type precomputedPatch struct {
+	validationResult validate.ValidationResult
+}
+
+func (p *precomputedPatch) Type() types.PatchType {
+	return types.JSONPatchType
+}
+
+func (p *precomputedPatch) Data(obj runtime.Object) ([]byte, error) {
+	return json.Marshal(p.validationResult.StatusPatches)
 }
