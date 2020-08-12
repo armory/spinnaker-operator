@@ -1,0 +1,45 @@
+pull_request_rules:
+  - name: Automatically merge into master after build and review
+    conditions:
+      - base=master
+      - status-success=main
+      - "#approved-reviews-by>=1"
+    actions:
+      merge:
+        method: squash
+        strict: smart
+      label:
+        add: ["auto merged"]
+  - name: Automatically merge into release- after build and approval
+    conditions:
+      - base~=^release-
+      - status-success=main
+      - "#approved-reviews-by>=1"
+    actions:
+      merge:
+        method: squash
+        strict: smart
+      label:
+        add: ["auto merged"]
+  - name: Automatically merge backport into release branches
+    conditions:
+      - head~=mergify/bp
+      - author~=mergify
+      - base~=^release-
+      - status-success=main
+    actions:
+      merge:
+        method: squash
+        strict: smart
+      label:
+        add: ["auto merged"]
+  - name: Automatically mergify-yaml changes to master
+    conditions:
+      - base=master
+      - title~=^fix(mergify)
+    actions:
+      merge:
+        method: squash
+        strict: smart
+      label:
+        add: ["auto merged"]
