@@ -170,19 +170,23 @@ items:
 			err := tr.TransformConfig(context.TODO())
 			assert.Nil(t, err)
 			url, err := spinsvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), "security.apiSecurity.overrideBaseUrl")
+			statusUrl := spinsvc.GetStatus().APIUrl
 			if c.expectedApi == "" {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
 				assert.Equal(t, c.expectedApi, url)
+				assert.Equal(t, c.expectedApi, statusUrl)
 			}
 
 			url, err = spinsvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), "security.uiSecurity.overrideBaseUrl")
+			statusUrl = spinsvc.GetStatus().UIUrl
 			if c.expectedUi == "" {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
 				assert.Equal(t, c.expectedUi, url)
+				assert.Equal(t, c.expectedUi, statusUrl)
 			}
 
 			c.check(t, spinsvc)
