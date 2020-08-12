@@ -1,4 +1,4 @@
-# Unreleased (1.1.x)
+# v1.1.0
 
 Breaking change:
 - `roles.yaml` has changed for `Ingress` support. You only need to update if you want to use `Ingress`. 
