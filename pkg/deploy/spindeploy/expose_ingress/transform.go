@@ -61,6 +61,7 @@ func (t *ingressTransformer) TransformConfig(ctx context.Context) error {
 	if !applies(t.svc) {
 		return nil
 	}
+	st := t.svc.GetStatus()
 	gateUrl, err := t.getUrlFromConfig(ctx, util.GateOverrideBaseUrlProp)
 	if err != nil {
 		return fmt.Errorf("error checking ingress URL Gate prop: %v", err)
@@ -83,6 +84,7 @@ func (t *ingressTransformer) TransformConfig(ctx context.Context) error {
 					return err
 				}
 			}
+			st.APIUrl = gateUrl.String()
 		}
 	}
 
@@ -99,7 +101,11 @@ func (t *ingressTransformer) TransformConfig(ctx context.Context) error {
 		}
 		if deckUrl != nil {
 			t.log.Info(fmt.Sprintf("setting deck overrideBaseUrl to %s", deckUrl.String()))
-			return t.svc.GetSpinnakerConfig().SetHalConfigProp(util.DeckOverrideBaseUrlProp, deckUrl.String())
+			if err = t.svc.GetSpinnakerConfig().SetHalConfigProp(util.DeckOverrideBaseUrlProp, deckUrl.String()); err != nil {
+				return err
+			}
+			st.UIUrl = deckUrl.String()
+			return nil
 		}
 	}
 	return nil
