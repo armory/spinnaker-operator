@@ -108,6 +108,11 @@ docker-push-dev: ## Pushes the docker image under "dev" tag
 	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
 
+.PHONY: docker-push-redhat-registry
+docker-push-dev: ## Pushes the docker image under "dev" tag
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi scan.connect.redhat.com/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
+	@docker push scan.connect.redhat.com/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
+
 .PHONY: reverse-proxy
 reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug locally
 	kubectl --kubeconfig=${KUBECONFIG} create cm ssh-key --from-file=authorized_keys=${HOME}/.ssh/id_rsa.pub --dry-run -o yaml | kubectl apply -f -
