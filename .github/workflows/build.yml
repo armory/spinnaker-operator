@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - release-*
+      - feat/ubi-image
   pull_request:
 
 jobs:

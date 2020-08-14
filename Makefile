@@ -92,7 +92,7 @@ docker-package: Makefile ## Builds the docker image to distribute
 docker-package-ubi: Makefile ## Builds the docker image to distribute
 	@echo "Packaging final docker image"
 	@docker build \
-	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator-ubi:$(VERSION) \
+	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi \
 	--build-arg BUILDER=docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
 	--build-arg CACHE_DATE=$(shell date +%s) \
 	-f build-tools/Dockerfile.ubi build-tools
@@ -101,6 +101,7 @@ docker-package-ubi: Makefile ## Builds the docker image to distribute
 .PHONY: docker-push
 docker-push: ## Pushes the docker image to the docker registry with the full "version" tag
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: docker-push-dev
 docker-push-dev: ## Pushes the docker image under "dev" tag
