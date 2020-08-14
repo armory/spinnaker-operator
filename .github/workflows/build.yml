@@ -80,6 +80,11 @@ jobs:
         run: |
           make docker-package ${{ steps.build_type.outputs.make_args }}
 
+      - name: Package UBI
+        run: |
+          docker login -u ${{ secrets.REDHATREGISTRY_USER }} -p "${{ secrets.REDHATREGISTRY_PASSWORD }}" registry.redhat.io
+          make docker-package-ubi ${{ steps.build_type.outputs.make_args }}
+
       - name: Login to docker registry
         run: |
           if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
