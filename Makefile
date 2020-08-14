@@ -18,6 +18,7 @@ VERSION_TYPE    ?= "snapshot" # Must be one of: "snapshot", "rc", or "release"
 BRANCH_OVERRIDE ?=
 VERSION 	 	?= $(shell build-tools/version.sh $(VERSION_TYPE) $(BRANCH_OVERRIDE))
 REGISTRY_ORG    ?= "armory"
+REDHAT_PID      ?= ""
 OS      	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 1)
 ARCH    	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 2)
 NAMESPACE 	 	?= "spinnaker-operator"
@@ -111,9 +112,9 @@ docker-push-dev: ## Pushes the docker image under "dev" tag
 
 .PHONY: docker-push-ubi
 docker-push-ubi: ## Pushes the ubi image
-	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REDHAT_REGISTRY)/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
-	@docker push $(REDHAT_REGISTRY)/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
+	@docker push $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: reverse-proxy
 reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug locally

@@ -54,7 +54,7 @@ jobs:
             registry=armory-docker-local.jfrog.io
           fi
 
-          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
+          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override REDHAT_PID=${{ secrets.REDHAT_PID }}"
           version=$(make version $make_args)
           echo "Version: $version"
 
