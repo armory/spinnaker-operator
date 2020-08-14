@@ -90,7 +90,7 @@ docker-package: Makefile ## Builds the docker image to distribute
 	@echo "Successfully built image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)"
 
 .PHONY: docker-package-ubi
-docker-package-ubi: Makefile ## Builds the docker image to distribute
+docker-package-ubi: Makefile ## Builds the ubi image to distribute
 	@echo "Packaging final docker image"
 	@docker build \
 	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi \
