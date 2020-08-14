@@ -3,6 +3,15 @@ FROM ${BUILDER} as builder
 
 FROM registry.redhat.io/ubi8/ubi
 
+MAINTAINER engineering@armory.io
+
+### Atomic/OpenShift Labels - https://github.com/projectatomic/ContainerApplicationGenericLabels
+LABEL name="spinnaker-operator" \
+      maintainer="engineering@armory.io" \
+      vendor="armory" \
+      summary="Spinnaker Operator" \
+      description="The Spinnaker Operator is a Kubernetes operator to deploy and manage Spinnaker using familiar tools." \
+
 ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_UID=1001 \
     USER_NAME=spinnaker-operator \
