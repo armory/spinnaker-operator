@@ -54,7 +54,7 @@ jobs:
             registry=armory-docker-local.jfrog.io
           fi
 
-          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
+          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override REDHAT_PID=${{ secrets.REDHAT_PID }}"
           version=$(make version $make_args)
           echo "Version: $version"
 
@@ -80,6 +80,11 @@ jobs:
         run: |
           make docker-package ${{ steps.build_type.outputs.make_args }}
 
+      - name: Package UBI
+        run: |
+          docker login -u ${{ secrets.REDHATREGISTRY_USER }} -p "${{ secrets.REDHATREGISTRY_PASSWORD }}" registry.redhat.io
+          make docker-package-ubi ${{ steps.build_type.outputs.make_args }}
+
       - name: Login to docker registry
         run: |
           if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
@@ -94,6 +99,8 @@ jobs:
       - name: Push
         run: |
           make docker-push ${{ steps.build_type.outputs.make_args }}
+          docker login -u unused -p "${{ secrets.REDHATREGISTRY_TOKEN }}" scan.connect.redhat.com
+          make docker-push-ubi ${{ steps.build_type.outputs.make_args }}
           if [[ ${{ github.ref }} = "refs/heads/master" ]]
           then
             make docker-push-dev ${{ steps.build_type.outputs.make_args }}
