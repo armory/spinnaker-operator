@@ -109,7 +109,7 @@ docker-push-dev: ## Pushes the docker image under "dev" tag
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
 
 .PHONY: docker-push-redhat-registry
-docker-push-dev: ## Pushes the docker image under "dev" tag
+docker-push-redhat-registry: ## Pushes the docker image under "dev" tag
 	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi scan.connect.redhat.com/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
 	@docker push scan.connect.redhat.com/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
 
