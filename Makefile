@@ -24,6 +24,7 @@ NAMESPACE 	 	?= "spinnaker-operator"
 PWD 		  	= $(shell pwd)
 
 REGISTRY        ?= docker.io
+REDHAT_REGISTRY ?= scan.connect.redhat.com
 SRC_DIRS        := cmd pkg integration-tests
 COMMAND         := cmd/manager/main
 BUILD_HOME      := ${PWD}/build
@@ -108,10 +109,11 @@ docker-push-dev: ## Pushes the docker image under "dev" tag
 	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
 
-.PHONY: docker-push-redhat-registry
-docker-push-redhat-registry: ## Pushes the docker image under "dev" tag
-	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi scan.connect.redhat.com/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
-	@docker push scan.connect.redhat.com/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
+.PHONY: docker-push-ubi
+docker-push-ubi: ## Pushes the ubi image
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REDHAT_REGISTRY)/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
+	@docker push $(REDHAT_REGISTRY)/ospid-c671a98d-4965-4a3e-a945-296e36395c20/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: reverse-proxy
 reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug locally

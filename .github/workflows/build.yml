@@ -101,7 +101,7 @@ jobs:
         run: |
           make docker-push ${{ steps.build_type.outputs.make_args }}
           docker login -u unused -p "${{ secrets.REDHATREGISTRY_TOKEN }}" scan.connect.redhat.com
-          make docker-push-redhat-registry ${{ steps.build_type.outputs.make_args }}
+          make docker-push-ubi ${{ steps.build_type.outputs.make_args }}
           if [[ ${{ github.ref }} = "refs/heads/master" ]]
           then
             make docker-push-dev ${{ steps.build_type.outputs.make_args }}
