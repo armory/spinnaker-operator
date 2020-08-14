@@ -13,7 +13,7 @@ LABEL name="spinnaker-operator" \
       description="The Spinnaker Operator is a Kubernetes operator to deploy and manage Spinnaker using familiar tools."
 
 ### add licenses
-COPY --from=builder /opt/spinnaker-operator/build/LICENSE.txt /licenses
+COPY --from=builder /opt/spinnaker-operator/build/LICENSE.txt /licenses/LICENSE.txt
 
 ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_UID=1001 \
