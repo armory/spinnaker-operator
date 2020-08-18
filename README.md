@@ -1,3 +1,5 @@
+[![Coverage Status](https://coveralls.io/repos/github/armory/spinnaker-operator/badge.svg)](https://coveralls.io/github/armory/spinnaker-operator)
+
 # Spinnaker Operator for Kubernetes
 
 The [Spinnaker Operator](https://blog.armory.io/spinnaker-operator/) is a Kubernetes operator to deploy and manage Spinnaker using familiar tools. We're sharing it to let the community evaluate it and provide feedback.
