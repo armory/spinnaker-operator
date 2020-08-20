@@ -139,10 +139,10 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{Requeue: true}, nil
 		}
 	}
-	sc := newStatusChecker(r.client, reqLogger, TypesFactory)
+	sc := newStatusChecker(r.client, reqLogger, TypesFactory, r.evtRecorder)
 	if err = sc.checks(instance); err != nil {
 		r.evtRecorder.Eventf(instance, corev1.EventTypeWarning, "StatusError", "Error updating SpinnakerService status: %s", err.Error())
-		return reconcile.Result{}, err
+		return reconcile.Result{Requeue: true}, err
 	}
 	r.evtRecorder.Eventf(instance, corev1.EventTypeNormal, "DeploySuccess", "Spinnaker updated")
 	return reconcile.Result{}, nil

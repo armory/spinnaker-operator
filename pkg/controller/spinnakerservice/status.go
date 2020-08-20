@@ -2,11 +2,12 @@ package spinnakerservice
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
@@ -15,6 +16,7 @@ type statusChecker struct {
 	client       client.Client
 	logger       logr.Logger
 	typesFactory interfaces.TypesFactory
+	evtRecorder  record.EventRecorder
 }
 
 const (
@@ -25,69 +27,78 @@ const (
 	Failure     = "Failure"
 )
 
-func newStatusChecker(client client.Client, logger logr.Logger, f interfaces.TypesFactory) statusChecker {
-	return statusChecker{client: client, logger: logger, typesFactory: f}
+func newStatusChecker(client client.Client, logger logr.Logger, f interfaces.TypesFactory, evtRecorder record.EventRecorder) statusChecker {
+	return statusChecker{
+		client:       client,
+		logger:       logger,
+		typesFactory: f,
+		evtRecorder:  evtRecorder,
+	}
 }
 
 func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
-	// Get current deployment owned by the service
-	list := &appsv1.DeploymentList{}
-	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/managed-by": "spinnaker-operator"})
+	svcs := make([]interfaces.SpinnakerDeploymentStatus, 0)
+	svc := instance.DeepCopyInterface()
+	status := svc.GetStatus()
+	deployments, err := s.getSpinnakerDeployments(instance)
 	if err != nil {
 		return err
 	}
 
-	svcs := make([]interfaces.SpinnakerDeploymentStatus, 0)
-	svc := instance.DeepCopyInterface()
-	status := svc.GetStatus()
-	if len(list.Items) == 0 {
-		log.Info("Status: NA, there are still no deployments owned by the operator")
-		status.Status = Na
-		status.Services = []interfaces.SpinnakerDeploymentStatus{}
-	} else {
-		status.Status = Ok
-		for i := range list.Items {
-			it := list.Items[i]
+	var pods []v1.Pod
 
-			st := interfaces.SpinnakerDeploymentStatus{
-				Name:          it.ObjectMeta.Name,
-				Replicas:      it.Status.Replicas,
-				ReadyReplicas: it.Status.ReadyReplicas,
-				Image:         s.getSpinnakerServiceImageFromDeployment(it.Spec.Template.Spec),
-			}
+	for i := range deployments {
+		deployment := deployments[i]
 
-			var ac appsv1.DeploymentCondition
-			var fc appsv1.DeploymentCondition
-			for _, c := range it.Status.Conditions {
-				if c.Type == appsv1.DeploymentAvailable {
-					ac = c
-				} else if c.Type == appsv1.DeploymentReplicaFailure {
-					fc = c
-				}
-			}
-			if string(ac.Type) == "" {
-				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
-					log.Info(fmt.Sprintf("Status: Failure, deployment %s has no available condition but has failure condition: %s", it.ObjectMeta.Name, fc.Message))
-					status.Status = Failure
-				} else {
-					log.Info(fmt.Sprintf("Status: Unavailable, deployment %s still has not reported available condition", it.ObjectMeta.Name))
-					status.Status = Unavailable
-				}
-			} else if ac.Status != v1.ConditionTrue {
-				log.Info(fmt.Sprintf("Deployment %s is available: %s. Message: %s", it.ObjectMeta.Name, ac.Status, ac.Message))
-				if string(fc.Type) != "" && fc.Status == v1.ConditionTrue {
-					status.Status = Failure
-				} else {
-					status.Status = Updating
-				}
-			}
-			svcs = append(svcs, st)
+		st := interfaces.SpinnakerDeploymentStatus{
+			Name:          deployment.ObjectMeta.Name,
+			Replicas:      deployment.Status.Replicas,
+			ReadyReplicas: deployment.Status.ReadyReplicas,
+			Image:         s.getSpinnakerServiceImageFromDeployment(deployment.Spec.Template.Spec),
 		}
-		status.Services = svcs
+
+		pd, err := s.getPodsByDeployment(instance, deployment)
+		if err != nil {
+			return err
+		}
+		pods = append(pods, pd...)
+		svcs = append(svcs, st)
 	}
-	status.ServiceCount = len(list.Items)
+
+	spinsvcStatus, err := s.getStatus(instance, pods)
+	if err != nil {
+		return err
+	}
+	status.Status = spinsvcStatus
+	status.Services = svcs
+	status.ServiceCount = len(status.Services)
+
 	// Go through the list
-	return s.client.Status().Update(context.Background(), svc)
+	err = s.client.Status().Update(context.Background(), svc)
+	if err != nil {
+		return err
+	}
+
+	if Updating == status.Status {
+		return errors.New("spinnaker still updating")
+	}
+
+	return nil
+}
+
+// getSpinnakerServices returns the name of the image
+func (s *statusChecker) getSpinnakerDeployments(instance interfaces.SpinnakerService) ([]appsv1.Deployment, error) {
+	// Get current deployment owned by the service
+	list := &appsv1.DeploymentList{}
+	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/managed-by": "spinnaker-operator"})
+	if err != nil {
+		return nil, err
+	}
+	if len(list.Items) == 0 {
+		return []appsv1.Deployment{}, nil
+	} else {
+		return list.Items, nil
+	}
 }
 
 // getSpinnakerServiceImageFromDeployment returns the name of the image
@@ -102,4 +113,75 @@ func (s *statusChecker) getSpinnakerServiceImageFromDeployment(p v1.PodSpec) str
 		return p.Containers[0].Image
 	}
 	return ""
+}
+
+// isContainerInFailureState validate if container is in a failure state
+func (s *statusChecker) getPodsByDeployment(instance interfaces.SpinnakerService, deployment appsv1.Deployment) ([]v1.Pod, error) {
+	list := &v1.PodList{}
+	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/name": deployment.Labels["app.kubernetes.io/name"]})
+	if err != nil {
+		return nil, err
+	}
+	if len(list.Items) == 0 {
+		return []v1.Pod{}, nil
+	} else {
+		return list.Items, nil
+	}
+}
+
+// getStatus check spinnaker status
+func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v1.Pod) (string, error) {
+	status := Ok
+	if len(pods) == 0 {
+		log.Info("Status: NA, there are still no deployments owned by the operator")
+		return Na, nil
+	}
+
+	for _, p := range pods {
+		switch p.Status.Phase {
+		case v1.PodRunning:
+			for _, cs := range p.Status.ContainerStatuses {
+				if cs.RestartCount > 1 {
+					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployFailed", "Pod %s has not been able to reach a healthy state is in Phase: %s. Message: %s", p.Name, p.Status.Phase, p.Status.Reason)
+					return Failure, nil
+				}
+				if cs.State.Terminated != nil {
+					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, cs.State.Terminated.Reason)
+					return Updating, nil
+				}
+				if cs.State.Waiting != nil {
+					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, cs.State.Waiting.Reason)
+					return Updating, nil
+				}
+				if !cs.Ready {
+					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, p.Status.Reason)
+					return Updating, nil
+				}
+			}
+			break
+		case v1.PodPending:
+			for _, cs := range p.Status.ContainerStatuses {
+				if cs.State.Waiting != nil {
+					if "ContainerCreating" == cs.State.Waiting.Reason {
+						s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, cs.State.Waiting.Reason)
+						return Updating, nil
+					}
+					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployFailed", "Pod %s has not been able to reach a healthy state is in Phase: %s. Message: %s", p.Name, p.Status.Phase, cs.State.Waiting.Reason)
+					return Failure, nil
+				}
+				if !cs.Ready {
+					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, p.Status.Reason)
+					return Updating, nil
+				}
+			}
+			break
+		case v1.PodFailed:
+		case v1.PodUnknown:
+			s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployFailed", "Pod %s is in State: %s. Message: %s", p.Name, p.Status.Phase, p.Status.Message)
+			return Failure, nil
+		default:
+			break
+		}
+	}
+	return status, nil
 }
