@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 type statusChecker struct {
@@ -18,23 +16,24 @@ type statusChecker struct {
 	logger       logr.Logger
 	typesFactory interfaces.TypesFactory
 	evtRecorder  record.EventRecorder
+	k8sLookup    util.Ik8sLookup
 }
 
 const (
-	Ok                                    = "OK"
-	Updating                              = "Updating"
-	Unavailable                           = "Unavailable"
-	Na                                    = "N/A"
-	Failure                               = "Failure"
-	MaxChecksWaitingForSpinnakerStability = 1
+	Ok          = "OK"
+	Updating    = "Updating"
+	Unavailable = "Unavailable"
+	Na          = "N/A"
+	Failure     = "Failure"
 )
 
-func newStatusChecker(client client.Client, logger logr.Logger, f interfaces.TypesFactory, evtRecorder record.EventRecorder) statusChecker {
+func newStatusChecker(client client.Client, logger logr.Logger, f interfaces.TypesFactory, evtRecorder record.EventRecorder, k8sLookup util.Ik8sLookup) statusChecker {
 	return statusChecker{
 		client:       client,
 		logger:       logger,
 		typesFactory: f,
 		evtRecorder:  evtRecorder,
+		k8sLookup:    k8sLookup,
 	}
 }
 
@@ -42,7 +41,7 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 	svcs := make([]interfaces.SpinnakerDeploymentStatus, 0)
 	svc := instance.DeepCopyInterface()
 	status := svc.GetStatus()
-	deployments, err := s.getSpinnakerDeployments(instance)
+	deployments, err := s.k8sLookup.GetSpinnakerDeployments(instance)
 	if err != nil {
 		return err
 	}
@@ -56,10 +55,10 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 			Name:          deployment.ObjectMeta.Name,
 			Replicas:      deployment.Status.Replicas,
 			ReadyReplicas: deployment.Status.ReadyReplicas,
-			Image:         s.getSpinnakerServiceImageFromDeployment(deployment.Spec.Template.Spec),
+			Image:         s.k8sLookup.GetSpinnakerServiceImageFromDeployment(deployment.Spec.Template.Spec),
 		}
 
-		pd, err := s.getPodsByDeployment(instance, deployment)
+		pd, err := s.k8sLookup.GetPodsByDeployment(instance, deployment)
 		if err != nil {
 			return err
 		}
@@ -88,86 +87,6 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 	return nil
 }
 
-// getSpinnakerServices returns the name of the image
-func (s *statusChecker) getSpinnakerDeployments(instance interfaces.SpinnakerService) ([]appsv1.Deployment, error) {
-	// Get current deployment owned by the service
-	list := &appsv1.DeploymentList{}
-	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/managed-by": "spinnaker-operator"})
-	if err != nil {
-		return nil, err
-	}
-	if len(list.Items) == 0 {
-		return []appsv1.Deployment{}, nil
-	} else {
-		return list.Items, nil
-	}
-}
-
-// getSpinnakerServiceImageFromDeployment returns the name of the image
-func (s *statusChecker) getSpinnakerServiceImageFromDeployment(p v1.PodSpec) string {
-	for _, c := range p.Containers {
-		if strings.HasPrefix(c.Name, "spin-") {
-			return c.Image
-		}
-	}
-	// Default to first container if it exists
-	if len(p.Containers) > 0 {
-		return p.Containers[0].Image
-	}
-	return ""
-}
-
-// isContainerInFailureState validate if container is in a failure state
-func (s *statusChecker) getPodsByDeployment(instance interfaces.SpinnakerService, deployment appsv1.Deployment) ([]v1.Pod, error) {
-	list := &v1.PodList{}
-	err := s.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/name": deployment.Labels["app.kubernetes.io/name"]})
-	if err != nil {
-		return nil, err
-	}
-	if len(list.Items) == 0 {
-		return []v1.Pod{}, nil
-	} else {
-		return list.Items, nil
-	}
-}
-
-// isContainerInFailureState validate if container is in a failure state
-func (s *statusChecker) getReplicaSetByPod(instance interfaces.SpinnakerService, pod v1.Pod) (*appsv1.ReplicaSet, error) {
-	rs := &appsv1.ReplicaSet{}
-	rsName := ""
-	for _, or := range pod.GetOwnerReferences() {
-		if or.Kind == "ReplicaSet" {
-			rsName = or.Name
-		}
-	}
-
-	key := client.ObjectKey{instance.GetNamespace(), rsName}
-
-	err := s.client.Get(context.TODO(), key, rs)
-	if err != nil {
-		return &appsv1.ReplicaSet{}, err
-	}
-
-	return rs, nil
-}
-
-// hasExceededMaxWaitingTime validate if a replicaset has exceeded max waiting time
-func (s *statusChecker) hasExceededMaxWaitingTime(instance interfaces.SpinnakerService, pod v1.Pod) (bool, error) {
-	rs, err := s.getReplicaSetByPod(instance, pod)
-	if err != nil {
-		return false, err
-	}
-
-	if rs.Status.AvailableReplicas != rs.Status.Replicas || rs.Status.ReadyReplicas != rs.Status.Replicas {
-		diff := time.Now().Sub(rs.CreationTimestamp.Time)
-		if diff.Minutes() > MaxChecksWaitingForSpinnakerStability {
-			return true, nil
-		}
-		return false, nil
-	}
-	return false, nil
-}
-
 // getStatus check spinnaker status
 func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v1.Pod) (string, error) {
 	status := Ok
@@ -179,11 +98,12 @@ func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v
 	for _, p := range pods {
 		switch p.Status.Phase {
 		case v1.PodRunning:
-			timeOut, err := s.hasExceededMaxWaitingTime(instance, p)
+			timeOut, err := s.k8sLookup.HasExceededMaxWaitingTime(instance, p)
 			if err != nil {
 				return Failure, err
 			}
 			if timeOut {
+				s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployFailed", "Pod %s exceeds the time limit", p.Name)
 				return Failure, nil
 			}
 			for _, cs := range p.Status.ContainerStatuses {
@@ -202,7 +122,7 @@ func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v
 			}
 			break
 		case v1.PodPending:
-			timeOut, err := s.hasExceededMaxWaitingTime(instance, p)
+			timeOut, err := s.k8sLookup.HasExceededMaxWaitingTime(instance, p)
 			if err != nil {
 				return Failure, err
 			}

@@ -8,6 +8,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -139,7 +140,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{Requeue: true}, nil
 		}
 	}
-	sc := newStatusChecker(r.client, reqLogger, TypesFactory, r.evtRecorder)
+	sc := newStatusChecker(r.client, reqLogger, TypesFactory, r.evtRecorder, util.NewK8sLookup(r.client))
 	if err = sc.checks(instance); err != nil {
 		r.evtRecorder.Eventf(instance, corev1.EventTypeWarning, "StatusError", "Error updating SpinnakerService status: %s", err.Error())
 		return reconcile.Result{Requeue: true}, err

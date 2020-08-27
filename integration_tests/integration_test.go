@@ -101,6 +101,47 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }
 
+func TestUpdateSpinsvcStatus(t *testing.T) {
+	// setup
+	t.Parallel()
+	LogMainStep(t, `Test goals:
+- Install spinnaker
+- Check an OK status
+- Upgrade spinnaker with a bad configurations
+- Check a Failure status`)
+
+	spinOverlay := "testdata/spinnaker/base"
+	ns := RandomString("spinsvc-status")
+	e := InstallCrdsAndOperator(ns, true, defaults, t)
+	if t.Failed() {
+		return
+	}
+
+	// install
+	if !e.InstallSpinnaker(ns, spinOverlay, t) {
+		return
+	}
+
+	v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
+	if t.Failed() || !assert.Equal(t, "OK", strings.TrimSpace(v)) {
+		return
+	}
+
+	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_spinsvc_status", t) {
+		return
+	}
+	time.Sleep(20 * time.Second)
+
+	v = RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
+	if t.Failed() || !assert.Equal(t, "Failure", strings.TrimSpace(v)) {
+		return
+	}
+
+	// uninstall
+	LogMainStep(t, "Uninstalling spinnaker")
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
+}
+
 func TestSecretsAndDuplicateOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
