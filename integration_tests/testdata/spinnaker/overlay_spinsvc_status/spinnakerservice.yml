@@ -6,5 +6,5 @@ spec:
   spinnakerConfig:
     service-settings:
       deck:
-        artifactId: docker.io/example/deck-armory:latest
+        artifactId: docker.io/example/deck:custom
 

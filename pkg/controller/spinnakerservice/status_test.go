@@ -2,69 +2,178 @@ package spinnakerservice
 
 import (
 	"context"
+	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
 
 func Test_statusChecker_checks(t *testing.T) {
-	// given
-	ctrl := gomock.NewController(t)
-	mkl := util.NewMockIk8sLookup(ctrl)
 
-	deployments := []appsv1.Deployment{{
-		TypeMeta:   metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec:       appsv1.DeploymentSpec{},
-		Status:     appsv1.DeploymentStatus{},
-	}}
+	spinSvc := test.ManifestFileToSpinService("testdata/spinsvc.yml", t)
 
-	pods := []v1.Pod{{
-		TypeMeta:   metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec:       v1.PodSpec{},
-		Status: v1.PodStatus{
-			Phase: v1.PodPending,
-		},
-	}}
-
-	mkl.EXPECT().GetSpinnakerDeployments(gomock.Any()).Return(deployments, nil)
-	mkl.EXPECT().GetSpinnakerServiceImageFromDeployment(gomock.Any()).Return("armory/clouddriver")
-	mkl.EXPECT().GetPodsByDeployment(gomock.Any(), gomock.Any()).Return(pods, nil)
-	mkl.EXPECT().HasExceededMaxWaitingTime(gomock.Any(), gomock.Any()).Return(false, nil)
-	spinSvc := test.ManifestFileToSpinService("testdata/spinsvc_expose.yml", t)
-
-	// Register operator types with the runtime scheme.
-	ss := scheme.Scheme
-	ss.AddKnownTypes(spinSvc.GetObjectKind().GroupVersionKind().GroupVersion(), spinSvc)
-
-	//// Create a fake client to mock API calls.
-	cl := fake.NewFakeClientWithScheme(ss, spinSvc)
-
-	//
-	s := &statusChecker{
-		client:       cl,
-		logger:       nil,
-		typesFactory: nil,
-		evtRecorder:  nil,
-		k8sLookup:    mkl,
+	type fields struct {
+		logger       logr.Logger
+		typesFactory interfaces.TypesFactory
+		k8sLookup    util.Ik8sLookup
 	}
+	type args struct {
+		instance           interfaces.SpinnakerService
+		mockedPods         []v1.Pod
+		mockedDeployments  []appsv1.Deployment
+		mockedExceededTime bool
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+		status  string
+	}{
+		{
+			name:   "Spinsvc should have Ok status",
+			fields: fields{},
+			args: args{
+				instance: spinSvc,
+				mockedPods: []v1.Pod{{
+					Status: v1.PodStatus{
+						Phase: v1.PodRunning,
+					},
+				}},
+				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedExceededTime: false,
+			},
+			wantErr: false,
+			status:  Ok,
+		},
+		{
+			name:   "Spinsvc should have Failure status",
+			fields: fields{},
+			args: args{
+				instance: spinSvc,
+				mockedPods: []v1.Pod{{
+					Status: v1.PodStatus{
+						Phase: v1.PodFailed,
+					},
+				}},
+				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedExceededTime: false,
+			},
+			wantErr: false,
+			status:  Failure,
+		},
+		{
+			name:   "Spinsvc should have Updating status because the container is being created",
+			fields: fields{},
+			args: args{
+				instance: spinSvc,
+				mockedPods: []v1.Pod{{
+					Status: v1.PodStatus{
+						Phase: v1.PodPending,
+						ContainerStatuses: []v1.ContainerStatus{
+							{
+								State: v1.ContainerState{
+									Waiting: &v1.ContainerStateWaiting{
+										Reason: "ContainerCreating",
+									},
+								},
+							},
+						},
+					},
+				}},
+				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedExceededTime: false,
+			},
+			wantErr: true,
+			status:  Updating,
+		},
+		{
+			name:   "Spinsvc should have Failure status because time has exceeded",
+			fields: fields{},
+			args: args{
+				instance: spinSvc,
+				mockedPods: []v1.Pod{{
+					Status: v1.PodStatus{
+						Phase: v1.PodRunning,
+					},
+				}},
+				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedExceededTime: true,
+			},
+			wantErr: false,
+			status:  Failure,
+		},
+		{
+			name:   "Spinsvc should have Failure status because pod status is unknown",
+			fields: fields{},
+			args: args{
+				instance: spinSvc,
+				mockedPods: []v1.Pod{{
+					Status: v1.PodStatus{
+						Phase: v1.PodUnknown,
+					},
+				}},
+				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedExceededTime: true,
+			},
+			wantErr: false,
+			status:  Failure,
+		},
+		{
+			name:   "Spinsvc should have N/A status because there is not services managed by operator",
+			fields: fields{},
+			args: args{
+				instance:           spinSvc,
+				mockedPods:         []v1.Pod{},
+				mockedDeployments:  []appsv1.Deployment{},
+				mockedExceededTime: false,
+			},
+			wantErr: false,
+			status:  Na,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 
-	// when
-	err := s.checks(spinSvc)
+			// given
+			ctrl := gomock.NewController(t)
+			mkl := util.NewMockIk8sLookup(ctrl)
 
-	// then
-	key := client.ObjectKey{Namespace: spinSvc.GetNamespace(), Name: spinSvc.GetName()}
-	_ = s.client.Get(context.Background(), key, spinSvc)
+			mkl.EXPECT().GetSpinnakerDeployments(gomock.Any()).Return(tt.args.mockedDeployments, nil)
+			mkl.EXPECT().GetSpinnakerServiceImageFromDeployment(gomock.Any()).Return("armory/clouddriver")
+			mkl.EXPECT().GetPodsByDeployment(gomock.Any(), gomock.Any()).Return(tt.args.mockedPods, nil)
+			mkl.EXPECT().HasExceededMaxWaitingTime(gomock.Any(), gomock.Any()).Return(tt.args.mockedExceededTime, nil)
 
-	assert.Equal(t, Ok, spinSvc.GetStatus().Status)
-	assert.Empty(t, err)
+			ss := scheme.Scheme
+			ss.AddKnownTypes(tt.args.instance.GetObjectKind().GroupVersionKind().GroupVersion(), tt.args.instance)
+
+			s := &statusChecker{
+				client:       fake.NewFakeClientWithScheme(ss, tt.args.instance),
+				logger:       tt.fields.logger,
+				typesFactory: tt.fields.typesFactory,
+				evtRecorder:  &record.FakeRecorder{},
+				k8sLookup:    mkl,
+			}
+
+			// when
+			if err := s.checks(tt.args.instance); (err != nil) != tt.wantErr {
+				t.Errorf("checks() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// then
+			key := client.ObjectKey{Namespace: tt.args.instance.GetNamespace(), Name: tt.args.instance.GetName()}
+			_ = s.client.Get(context.Background(), key, spinSvc)
+
+			assert.Equal(t, tt.status, spinSvc.GetStatus().Status)
+		})
+	}
 }

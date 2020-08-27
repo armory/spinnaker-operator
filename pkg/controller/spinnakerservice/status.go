@@ -144,8 +144,7 @@ func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v
 				}
 			}
 			break
-		case v1.PodFailed:
-		case v1.PodUnknown:
+		case v1.PodFailed, v1.PodUnknown:
 			s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployFailed", "Pod %s is in State: %s. Message: %s", p.Name, p.Status.Phase, p.Status.Message)
 			return Failure, nil
 		default:
