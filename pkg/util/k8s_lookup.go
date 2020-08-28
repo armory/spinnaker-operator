@@ -75,7 +75,6 @@ func (l K8sLookup) GetPodsByDeployment(instance interfaces.SpinnakerService, dep
 	}
 }
 
-// isContainerInFailureState validate if container is in a failure state
 func (l K8sLookup) GetReplicaSetByPod(instance interfaces.SpinnakerService, pod v1.Pod) (*appsv1.ReplicaSet, error) {
 	rs := &appsv1.ReplicaSet{}
 	rsName := ""

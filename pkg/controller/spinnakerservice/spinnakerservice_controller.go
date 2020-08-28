@@ -143,7 +143,7 @@ func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconc
 	sc := newStatusChecker(r.client, reqLogger, TypesFactory, r.evtRecorder, util.NewK8sLookup(r.client))
 	if err = sc.checks(instance); err != nil {
 		r.evtRecorder.Eventf(instance, corev1.EventTypeWarning, "StatusError", "Error updating SpinnakerService status: %s", err.Error())
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{}, err
 	}
 	r.evtRecorder.Eventf(instance, corev1.EventTypeNormal, "DeploySuccess", "Spinnaker updated")
 	return reconcile.Result{}, nil
