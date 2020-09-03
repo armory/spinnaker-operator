@@ -1,3 +1,7 @@
+# Unreleased (1.2.x)
+
+- refactor: Introducing a better way to check spinnaker health validating correct status of each pod.
+
 # v1.1.0
 
 Breaking change:
