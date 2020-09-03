@@ -61,7 +61,7 @@ func (l K8sLookup) GetSpinnakerServiceImageFromDeployment(p v1.PodSpec) string {
 	return ""
 }
 
-// isContainerInFailureState validate if container is in a failure state
+// GetPodsByDeployment returns the list of pods that belongs to a deployment
 func (l K8sLookup) GetPodsByDeployment(instance interfaces.SpinnakerService, deployment appsv1.Deployment) ([]v1.Pod, error) {
 	list := &v1.PodList{}
 	err := l.client.List(context.TODO(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels{"app.kubernetes.io/name": deployment.Labels["app.kubernetes.io/name"]})
@@ -75,6 +75,7 @@ func (l K8sLookup) GetPodsByDeployment(instance interfaces.SpinnakerService, dep
 	}
 }
 
+// GetReplicaSetByPod returns the replica set that belongs to a pod
 func (l K8sLookup) GetReplicaSetByPod(instance interfaces.SpinnakerService, pod v1.Pod) (*appsv1.ReplicaSet, error) {
 	rs := &appsv1.ReplicaSet{}
 	rsName := ""

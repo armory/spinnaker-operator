@@ -4,6 +4,7 @@ package integration_tests
 
 import (
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -123,19 +124,23 @@ func TestUpdateSpinsvcStatus(t *testing.T) {
 	}
 
 	v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-	if t.Failed() || !assert.Equal(t, "OK", strings.TrimSpace(v)) {
+	if t.Failed() || !assert.Equal(t, spinnakerservice.Ok, strings.TrimSpace(v)) {
 		return
 	}
 
 	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_spinsvc_status", t) {
 		return
 	}
-	time.Sleep(20 * time.Second)
 
-	v = RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-	if t.Failed() || !assert.Equal(t, "Failure", strings.TrimSpace(v)) {
-		return
-	}
+	ExponentialBackOff(func(ns, status string, e *TestEnv, t *testing.T) error {
+
+		v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
+		if t.Failed() || !assert.Equal(t, status, strings.TrimSpace(v)) {
+			return fmt.Errorf("spinnaker is not in %s status yet", status)
+		}
+
+		return nil
+	}(t, ns, spinnakerservice.Failure, e, t), 3)
 
 	// uninstall
 	LogMainStep(t, "Uninstalling spinnaker")
