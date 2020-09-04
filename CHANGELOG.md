@@ -1,4 +1,8 @@
-# Unreleased (1.1.x)
+# Unreleased (1.2.x)
+
+- refactor: Introducing a better way to check spinnaker health validating correct status of each pod.
+
+# v1.1.0
 
 Breaking change:
 - `roles.yaml` has changed for `Ingress` support. You only need to update if you want to use `Ingress`. 
