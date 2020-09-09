@@ -24,8 +24,11 @@ ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     OPERATOR_HOME=/opt/spinnaker-operator
 
 EXPOSE 8383
+
+RUN dnf copr enable ngompa/musl-libc -y --disableplugin=subscription-manager
+
 RUN yum update -y --disableplugin=subscription-manager \
-	&& yum install -y --disableplugin=subscription-manager ca-certificates bash curl wget unzip python27 \
+	&& yum install -y --disableplugin=subscription-manager ca-certificates bash curl wget unzip python27 musl-devel \
 	&& adduser -u ${USER_UID} ${USER_NAME}
 
 # Install aws iam authenticator
@@ -45,8 +48,6 @@ RUN wget -nv https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.zip && \
     rm -rf ~/.config/gcloud
 ENV PATH=$PATH:/opt/google-cloud-sdk/bin/
 
-USER ${USER_NAME}
-
 # Everything after this line is never cached
 ARG CACHE_DATE
 
@@ -54,5 +55,14 @@ RUN echo "CACHE_DATE: ${CACHE_DATE}"
 COPY --from=builder /opt/spinnaker-operator/build/build/bin/linux_amd64/spinnaker-operator ${OPERATOR}
 COPY --from=builder /opt/spinnaker-operator/build/build/bin/linux_amd64/MANIFEST ${OPERATOR_HOME}/MANIFEST
 COPY --from=builder /opt/spinnaker-operator/build/build-tools/entrypoint /usr/local/bin/entrypoint
+
+USER root
+
+# https://docs.openshift.com/container-platform/4.5/openshift_images/create-images.html#images-create-guide-openshift_create-images
+RUN chmod -R u+x ${OPERATOR_HOME} && \
+    chgrp -R 0 ${OPERATOR_HOME} && \
+    chmod -R g=u ${OPERATOR_HOME} /etc/passwd
+
+USER ${USER_UID}
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
