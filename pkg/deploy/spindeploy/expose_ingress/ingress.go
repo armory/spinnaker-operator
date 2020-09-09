@@ -98,7 +98,10 @@ func (i *ingressExplorer) getActualExtensionHost(host string, ingress v1beta1.In
 		return ""
 	}
 	// Take first host defined for the ingress
-	return ingress.Status.LoadBalancer.Ingress[0].Hostname
+	if ingress.Status.LoadBalancer.Ingress[0].Hostname != "" {
+		return ingress.Status.LoadBalancer.Ingress[0].Hostname
+	}
+	return ingress.Status.LoadBalancer.Ingress[0].IP
 }
 
 func (i *ingressExplorer) getNetworkingIngressUrl(serviceName string, servicePort int32) *url.URL {
