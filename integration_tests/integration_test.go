@@ -135,7 +135,7 @@ func TestUpdateSpinsvcStatus(t *testing.T) {
 	sc := func() error {
 		v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
 		if t.Failed() || !assert.Equal(t, spinnakerservice.Failure, strings.TrimSpace(v)) {
-			return fmt.Errorf("spinnaker is not in %s status yet", status)
+			return fmt.Errorf("spinnaker is not in %s status yet", spinnakerservice.Failure)
 		}
 
 		return nil
