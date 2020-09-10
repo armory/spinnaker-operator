@@ -132,15 +132,15 @@ func TestUpdateSpinsvcStatus(t *testing.T) {
 		return
 	}
 
-	ExponentialBackOff(func(ns, status string, e *TestEnv, t *testing.T) error {
-
+	sc := func() error {
 		v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-		if t.Failed() || !assert.Equal(t, status, strings.TrimSpace(v)) {
+		if t.Failed() || !assert.Equal(t, spinnakerservice.Failure, strings.TrimSpace(v)) {
 			return fmt.Errorf("spinnaker is not in %s status yet", status)
 		}
 
 		return nil
-	}(t, ns, spinnakerservice.Failure, e, t), 3)
+	}
+	ExponentialBackOff(sc, 3)
 
 	// uninstall
 	LogMainStep(t, "Uninstalling spinnaker")
