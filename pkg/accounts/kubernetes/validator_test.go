@@ -26,15 +26,26 @@ clusters:
     api-version: v1
     server: http://mycluster.com
   name: test-cluster
+- cluster:
+    api-version: v1
+    server: http://2nd-mycluster.com
+  name: 2nd-test-cluster
 contexts:
 - context:
     cluster: test-cluster
     user: test-user
   name: test-context
+- context:
+    cluster: 2nd-test-cluster
+    user: 2nd-test-user
+  name: 2nd-test-context
 users:
 - name: test-user
   user:
     token: test-token
+- name: 2nd-test-user
+  user:
+    token: 2nd-test-token
 `
 	a := &Account{
 		Name: "test",
@@ -51,6 +62,58 @@ users:
 		return
 	}
 	assert.Equal(t, "http://mycluster.com", c.Host)
+}
+
+func TestCurrentContextMakeClient(t *testing.T) {
+	s := `
+apiVersion: v1
+kind: Config
+current-context: test-context
+clusters:
+- cluster:
+    api-version: v1
+    server: http://mycluster.com
+  name: test-cluster
+- cluster:
+    api-version: v1
+    server: http://current.com
+  name: this-should-be-curent
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+- context:
+    cluster: this-should-be-curent
+    user: current-user
+  name: current-context
+users:
+- name: test-user
+  user:
+    token: test-token
+- name: current-user
+  user:
+    token: current-token
+`
+	a := &Account{
+		Name: "test",
+		Auth: &interfaces.KubernetesAuth{
+			KubeconfigFile: fmt.Sprintf("encryptedFile:noop!%s", s),
+		},
+		Settings: map[string]interface{}{
+			"context": "current-context",
+		},
+	}
+	kv := &kubernetesAccountValidator{account: a}
+	ctx := secrets.NewContext(context.TODO(), nil, "ns1")
+	defer secrets.Cleanup(ctx)
+	spinCfg := TypesFactory.NewService()
+
+	c, err := kv.makeClient(ctx, spinCfg, nil)
+	if !assert.Nil(t, err) {
+		return
+	}
+	assert.Equal(t, "http://current.com", c.Host)
 }
 
 func TestMakeClientWithFileFromConfig(t *testing.T) {
@@ -97,6 +160,66 @@ spec:
 		return
 	}
 	assert.Equal(t, "http://mycluster.com", c.Host)
+}
+
+func TestCurrentContextMakeClientWithFileFromConfig(t *testing.T) {
+	y := `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    files:
+      kubecfg: | 
+        apiVersion: v1
+        kind: Config
+        current-context: test-context
+        clusters:
+        - cluster:
+            api-version: v1
+            server: http://mycluster.com
+          name: test-cluster
+        - cluster:
+            api-version: v1
+            server: http://current.com
+          name: this-should-be-curent
+        contexts:
+        - context:
+            cluster: test-cluster
+            user: test-user
+          name: test-context
+        - context:
+            cluster: this-should-be-curent
+            user: current-user
+          name: current-context
+        users:
+        - name: test-user
+          user:
+            token: test-token
+        - name: current-user
+          user:
+            token: current-token
+`
+	spinSvc := TypesFactory.NewService()
+	if !assert.Nil(t, yaml.Unmarshal([]byte(y), spinSvc)) {
+		return
+	}
+	a := &Account{
+		Name: "test",
+		Auth: &interfaces.KubernetesAuth{
+			KubeconfigFile: "kubecfg",
+		},
+		Settings: map[string]interface{}{
+			"context": "current-context",
+		},
+	}
+	kv := &kubernetesAccountValidator{account: a}
+	c, err := kv.makeClient(context.TODO(), spinSvc, nil)
+	if !assert.Nil(t, err) {
+		return
+	}
+	assert.Equal(t, "http://current.com", c.Host)
 }
 
 func TestSettingsTest(t *testing.T) {

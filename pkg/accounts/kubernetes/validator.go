@@ -53,19 +53,25 @@ func (k *kubernetesAccountValidator) Validate(spinSvc interfaces.SpinnakerServic
 }
 
 func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc interfaces.SpinnakerService, c client.Client) (*rest.Config, error) {
+	aSettings := &authSettings{}
+	if err := inspect.Source(aSettings, k.account.Settings); err != nil {
+		return nil, err
+	}
+
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, k.account.Settings, spinSvc.GetSpinnakerConfig())
+		return makeClientFromSettings(ctx, aSettings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.KubeconfigFile != "" {
-		return makeClientFromFile(ctx, auth.KubeconfigFile, nil, spinSvc.GetSpinnakerConfig())
+		return makeClientFromFile(ctx, auth.KubeconfigFile, aSettings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.Kubeconfig != nil {
-		return makeClientFromConfigAPI(auth.Kubeconfig)
+		// checking this
+		return makeClientFromConfigAPI(auth.Kubeconfig, aSettings)
 	}
 	if auth.KubeconfigSecret != nil {
-		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
+		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret, aSettings)
 	}
 	if auth.UseServiceAccount {
 		return makeClientFromServiceAccount(ctx, spinSvc, c)
@@ -101,6 +107,9 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
 	}
+	if settings.Context != "" {
+		cfg.CurrentContext = settings.Context
+	}
 	restCfg, err := clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 	if err != nil {
 		return restCfg, fmt.Errorf("Error building rest config from kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
@@ -109,7 +118,7 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamespaceReference) (*rest.Config, error) {
+func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamespaceReference, settings *authSettings) (*rest.Config, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
@@ -122,32 +131,43 @@ func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamesp
 	if err != nil {
 		return nil, err
 	}
-	return config.ClientConfig()
+
+	cfg, err := config.RawConfig()
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, str)
+	}
+	if settings.Context != "" {
+		cfg.CurrentContext = settings.Context
+	}
+	return clientcmd.NewDefaultClientConfig(cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
 // makeClientFromConfigAPI makes a client config from the v1 Config (the usual format for kubeconfig) inlined
 // into the CRD.
-func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
+func makeClientFromConfigAPI(config *clientcmdv1.Config, settings *authSettings) (*rest.Config, error) {
 	cfg := clientcmdapi.NewConfig()
 	if err := clientcmdlatest.Scheme.Convert(config, cfg, nil); err != nil {
 		return nil, nil
+	}
+	if settings.Context != "" {
+		cfg.CurrentContext = settings.Context
 	}
 	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
-	aSettings := &authSettings{}
-	if err := inspect.Source(aSettings, settings); err != nil {
-		return nil, err
-	}
+func makeClientFromSettings(ctx context.Context, aSettings *authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	if aSettings.KubeconfigFile != "" {
+		// this is checked
 		return makeClientFromFile(ctx, aSettings.KubeconfigFile, aSettings, spinCfg)
 	}
 	if aSettings.KubeconfigContents != "" {
 		cfg, err := clientcmd.Load([]byte(aSettings.KubeconfigContents))
 		if err != nil {
 			return nil, err
+		}
+		if aSettings.Context != "" {
+			cfg.CurrentContext = aSettings.Context
 		}
 		return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, aSettings)).ClientConfig()
 	}
