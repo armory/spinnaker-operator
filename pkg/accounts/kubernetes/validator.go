@@ -53,7 +53,7 @@ func (k *kubernetesAccountValidator) Validate(spinSvc interfaces.SpinnakerServic
 }
 
 func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc interfaces.SpinnakerService, c client.Client) (*rest.Config, error) {
-	aSettings := authSettings{}
+	aSettings := &authSettings{}
 	if k.account.Settings != nil {
 		if err := inspect.Source(aSettings, k.account.Settings); err != nil {
 			return nil, err
@@ -63,17 +63,17 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc int
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, aSettings, spinSvc.GetSpinnakerConfig())
+		return makeClientFromSettings(ctx, *aSettings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.KubeconfigFile != "" {
-		return makeClientFromFile(ctx, auth.KubeconfigFile, aSettings, spinSvc.GetSpinnakerConfig())
+		return makeClientFromFile(ctx, auth.KubeconfigFile, *aSettings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.Kubeconfig != nil {
 		// checking this
-		return makeClientFromConfigAPI(auth.Kubeconfig, aSettings)
+		return makeClientFromConfigAPI(auth.Kubeconfig, *aSettings)
 	}
 	if auth.KubeconfigSecret != nil {
-		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret, aSettings)
+		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret, *aSettings)
 	}
 	if auth.UseServiceAccount {
 		return makeClientFromServiceAccount(ctx, spinSvc, c)
