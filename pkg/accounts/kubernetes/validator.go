@@ -53,9 +53,11 @@ func (k *kubernetesAccountValidator) Validate(spinSvc interfaces.SpinnakerServic
 }
 
 func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc interfaces.SpinnakerService, c client.Client) (*rest.Config, error) {
-	aSettings := &authSettings{}
-	if err := inspect.Source(aSettings, k.account.Settings); err != nil {
-		return nil, err
+	aSettings := authSettings{}
+	if k.account.Settings != nil {
+		if err := inspect.Source(aSettings, k.account.Settings); err != nil {
+			return nil, err
+		}
 	}
 
 	auth := k.account.Auth
@@ -80,7 +82,7 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc int
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
+func makeClientFromFile(ctx context.Context, file string, settings authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	var cfg *clientcmdapi.Config
 	var kubeconfigBytes []byte
 	var err error
@@ -118,7 +120,7 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamespaceReference, settings *authSettings) (*rest.Config, error) {
+func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamespaceReference, settings authSettings) (*rest.Config, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
@@ -144,7 +146,7 @@ func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamesp
 
 // makeClientFromConfigAPI makes a client config from the v1 Config (the usual format for kubeconfig) inlined
 // into the CRD.
-func makeClientFromConfigAPI(config *clientcmdv1.Config, settings *authSettings) (*rest.Config, error) {
+func makeClientFromConfigAPI(config *clientcmdv1.Config, settings authSettings) (*rest.Config, error) {
 	cfg := clientcmdapi.NewConfig()
 	if err := clientcmdlatest.Scheme.Convert(config, cfg, nil); err != nil {
 		return nil, nil
@@ -156,7 +158,7 @@ func makeClientFromConfigAPI(config *clientcmdv1.Config, settings *authSettings)
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, aSettings *authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
+func makeClientFromSettings(ctx context.Context, aSettings authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	if aSettings.KubeconfigFile != "" {
 		// this is checked
 		return makeClientFromFile(ctx, aSettings.KubeconfigFile, aSettings, spinCfg)
@@ -244,11 +246,8 @@ func getAPIServerHost() (string, error) {
 	return fmt.Sprintf("https://%s", net.JoinHostPort(host, port)), nil
 }
 
-func makeOverrideFromAuthSettings(config *clientcmdapi.Config, settings *authSettings) *clientcmd.ConfigOverrides {
+func makeOverrideFromAuthSettings(config *clientcmdapi.Config, settings authSettings) *clientcmd.ConfigOverrides {
 	overrides := &clientcmd.ConfigOverrides{}
-	if settings == nil {
-		return overrides
-	}
 	if settings.Context != "" {
 		overrides.CurrentContext = settings.Context
 	}
