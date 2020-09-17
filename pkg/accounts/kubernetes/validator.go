@@ -87,17 +87,17 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 	if tools.IsEncryptedSecret(file) {
 		f, err := secrets.DecodeAsFile(ctx, file)
 		if err != nil {
-			return nil, fmt.Errorf("Error decoding kubeconfigFile from secret reference \"%s\":\n  %w", file, err)
+			return nil, fmt.Errorf("error decoding kubeconfigFile from secret reference \"%s\":\n  %w", file, err)
 		}
 		kubeconfigBytes, err = ioutil.ReadFile(f)
 		if err != nil {
-			return nil, fmt.Errorf("Error loading kubeconfigFile \"%s\":\n  %w", f, err)
+			return nil, fmt.Errorf("error loading kubeconfigFile \"%s\":\n  %w", f, err)
 		}
 	} else if filepath.IsAbs(file) {
 		// if file path is absolute, it may already be a path decoded by secret engines
 		kubeconfigBytes, err = ioutil.ReadFile(file)
 		if err != nil {
-			return nil, fmt.Errorf("Error loading kubeconfigFile \"%s\":\n  %w", file, err)
+			return nil, fmt.Errorf("error loading kubeconfigFile \"%s\":\n  %w", file, err)
 		}
 	} else {
 		// we're taking relative file paths as files defined inside spec.spinnakerConfig.files
@@ -105,14 +105,14 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 	}
 	cfg, err = clientcmd.Load(kubeconfigBytes)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
+		return nil, fmt.Errorf("error parsing kubeconfigFile:\n  %w", err)
 	}
 	if settings.Context != "" {
 		cfg.CurrentContext = settings.Context
 	}
 	restCfg, err := clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 	if err != nil {
-		return restCfg, fmt.Errorf("Error building rest config from kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
+		return restCfg, fmt.Errorf("error building rest config from kubeconfigFile:\n  %w", err)
 	}
 	return restCfg, nil
 }
@@ -134,7 +134,7 @@ func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamesp
 
 	cfg, err := config.RawConfig()
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, str)
+		return nil, fmt.Errorf("error parsing kubeconfigFile:\n  %w", err)
 	}
 	if settings.Context != "" {
 		cfg.CurrentContext = settings.Context
@@ -189,7 +189,7 @@ func makeClientFromServiceAccount(ctx context.Context, spinSvc interfaces.Spinna
 	}
 	tlsClientConfig := rest.TLSClientConfig{}
 	if _, err := certutil.NewPool(caPath); err != nil {
-		klog.Errorf("Expected to load root CA config from %s, but got err: %v", caPath, err)
+		klog.Errorf("expected to load root CA config from %s, but got err: %v", caPath, err)
 	} else {
 		tlsClientConfig.CAFile = caPath
 	}
@@ -293,7 +293,7 @@ type authSettings struct {
 func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 	clientset, err := kubernetes.NewForConfig(cc)
 	if err != nil {
-		return fmt.Errorf("Unable to build kubernetes clientset from rest config: %w", err)
+		return fmt.Errorf("unable to build kubernetes clientset from rest config: %w", err)
 	}
 	// We want to keep the validation short (ideally just one request), so any improvement should remain short (e.g. not a request per namespace)
 	ns, err := inspect.GetStringArray(k.account.Settings, "namespaces")
@@ -302,13 +302,13 @@ func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 		// The test is analogous to what is done in Halyard
 		_, err = clientset.CoreV1().Namespaces().List(v13.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("Error listing namespaces in account \"%s\":\n  %w", k.account.Name, err)
+			return fmt.Errorf("error listing namespaces in account \"%s\":\n  %w", k.account.Name, err)
 		}
 	} else {
 		// Otherwise read resources just for the first namespace configured
 		_, err = clientset.CoreV1().Pods(ns[0]).List(v13.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("Error listing pods in account \"%s\", namespace \"%s\":\n  %w", k.account.Name, ns[0], err)
+			return fmt.Errorf("error listing pods in account \"%s\", namespace \"%s\":\n  %w", k.account.Name, ns[0], err)
 		}
 	}
 	return nil
@@ -324,7 +324,7 @@ func (k *kubernetesAccountValidator) validateSettings(ctx context.Context, log l
 		omitNss = make([]string, 0)
 	}
 	if len(nss) > 0 && len(omitNss) > 0 {
-		return fmt.Errorf("At most one of \"namespaces\" and \"omitNamespaces\" can be supplied.")
+		return fmt.Errorf("at most one of \"namespaces\" and \"omitNamespaces\" can be supplied.")
 	}
 	return nil
 }
