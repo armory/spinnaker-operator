@@ -53,19 +53,25 @@ func (k *kubernetesAccountValidator) Validate(spinSvc interfaces.SpinnakerServic
 }
 
 func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc interfaces.SpinnakerService, c client.Client) (*rest.Config, error) {
+	aSettings := authSettings{}
+	if err := inspect.Source(&aSettings, k.account.Settings); err != nil {
+		return nil, err
+	}
+
 	auth := k.account.Auth
 	if auth == nil {
 		// Attempt from settings
-		return makeClientFromSettings(ctx, k.account.Settings, spinSvc.GetSpinnakerConfig())
+		return makeClientFromSettings(ctx, aSettings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.KubeconfigFile != "" {
-		return makeClientFromFile(ctx, auth.KubeconfigFile, nil, spinSvc.GetSpinnakerConfig())
+		return makeClientFromFile(ctx, auth.KubeconfigFile, aSettings, spinSvc.GetSpinnakerConfig())
 	}
 	if auth.Kubeconfig != nil {
-		return makeClientFromConfigAPI(auth.Kubeconfig)
+		// checking this
+		return makeClientFromConfigAPI(auth.Kubeconfig, aSettings)
 	}
 	if auth.KubeconfigSecret != nil {
-		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret)
+		return makeClientFromSecretRef(ctx, auth.KubeconfigSecret, aSettings)
 	}
 	if auth.UseServiceAccount {
 		return makeClientFromServiceAccount(ctx, spinSvc, c)
@@ -74,24 +80,24 @@ func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc int
 }
 
 // makeClientFromFile loads the client config from a file path which can be a secret
-func makeClientFromFile(ctx context.Context, file string, settings *authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
+func makeClientFromFile(ctx context.Context, file string, settings authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	var cfg *clientcmdapi.Config
 	var kubeconfigBytes []byte
 	var err error
 	if tools.IsEncryptedSecret(file) {
 		f, err := secrets.DecodeAsFile(ctx, file)
 		if err != nil {
-			return nil, fmt.Errorf("Error decoding kubeconfigFile from secret reference \"%s\":\n  %w", file, err)
+			return nil, fmt.Errorf("error decoding kubeconfigFile from secret reference \"%s\":\n  %w", file, err)
 		}
 		kubeconfigBytes, err = ioutil.ReadFile(f)
 		if err != nil {
-			return nil, fmt.Errorf("Error loading kubeconfigFile \"%s\":\n  %w", f, err)
+			return nil, fmt.Errorf("error loading kubeconfigFile \"%s\":\n  %w", f, err)
 		}
 	} else if filepath.IsAbs(file) {
 		// if file path is absolute, it may already be a path decoded by secret engines
 		kubeconfigBytes, err = ioutil.ReadFile(file)
 		if err != nil {
-			return nil, fmt.Errorf("Error loading kubeconfigFile \"%s\":\n  %w", file, err)
+			return nil, fmt.Errorf("error loading kubeconfigFile \"%s\":\n  %w", file, err)
 		}
 	} else {
 		// we're taking relative file paths as files defined inside spec.spinnakerConfig.files
@@ -99,17 +105,17 @@ func makeClientFromFile(ctx context.Context, file string, settings *authSettings
 	}
 	cfg, err = clientcmd.Load(kubeconfigBytes)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
+		return nil, fmt.Errorf("error parsing kubeconfigFile:\n  %w", err)
 	}
 	restCfg, err := clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 	if err != nil {
-		return restCfg, fmt.Errorf("Error building rest config from kubeconfigFile:\n  %w\n  kubeconfigFile contents:\n\n%s", err, kubeconfigBytes)
+		return restCfg, fmt.Errorf("error building rest config from kubeconfigFile:\n  %w", err)
 	}
 	return restCfg, nil
 }
 
 // makeClientFromSecretRef reads the client config from a Kubernetes secret in the current context's namespace
-func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamespaceReference) (*rest.Config, error) {
+func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamespaceReference, settings authSettings) (*rest.Config, error) {
 	sc, err := secrets.FromContextWithError(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to make kubeconfig file")
@@ -122,26 +128,29 @@ func makeClientFromSecretRef(ctx context.Context, ref *interfaces.SecretInNamesp
 	if err != nil {
 		return nil, err
 	}
-	return config.ClientConfig()
+
+	cfg, err := config.RawConfig()
+	if err != nil {
+		return nil, fmt.Errorf("error parsing kubeconfigFile:\n  %w", err)
+	}
+	return clientcmd.NewDefaultClientConfig(cfg, makeOverrideFromAuthSettings(&cfg, settings)).ClientConfig()
 }
 
 // makeClientFromConfigAPI makes a client config from the v1 Config (the usual format for kubeconfig) inlined
 // into the CRD.
-func makeClientFromConfigAPI(config *clientcmdv1.Config) (*rest.Config, error) {
+func makeClientFromConfigAPI(config *clientcmdv1.Config, settings authSettings) (*rest.Config, error) {
 	cfg := clientcmdapi.NewConfig()
 	if err := clientcmdlatest.Scheme.Convert(config, cfg, nil); err != nil {
 		return nil, nil
 	}
-	return clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
+
+	return clientcmd.NewDefaultClientConfig(*cfg, makeOverrideFromAuthSettings(cfg, settings)).ClientConfig()
 }
 
 // makeClientFromSettings makes a client config from Spinnaker settings
-func makeClientFromSettings(ctx context.Context, settings map[string]interface{}, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
-	aSettings := &authSettings{}
-	if err := inspect.Source(aSettings, settings); err != nil {
-		return nil, err
-	}
+func makeClientFromSettings(ctx context.Context, aSettings authSettings, spinCfg *interfaces.SpinnakerConfig) (*rest.Config, error) {
 	if aSettings.KubeconfigFile != "" {
+		// this is checked
 		return makeClientFromFile(ctx, aSettings.KubeconfigFile, aSettings, spinCfg)
 	}
 	if aSettings.KubeconfigContents != "" {
@@ -169,7 +178,7 @@ func makeClientFromServiceAccount(ctx context.Context, spinSvc interfaces.Spinna
 	}
 	tlsClientConfig := rest.TLSClientConfig{}
 	if _, err := certutil.NewPool(caPath); err != nil {
-		klog.Errorf("Expected to load root CA config from %s, but got err: %v", caPath, err)
+		klog.Errorf("expected to load root CA config from %s, but got err: %v", caPath, err)
 	} else {
 		tlsClientConfig.CAFile = caPath
 	}
@@ -224,11 +233,8 @@ func getAPIServerHost() (string, error) {
 	return fmt.Sprintf("https://%s", net.JoinHostPort(host, port)), nil
 }
 
-func makeOverrideFromAuthSettings(config *clientcmdapi.Config, settings *authSettings) *clientcmd.ConfigOverrides {
+func makeOverrideFromAuthSettings(config *clientcmdapi.Config, settings authSettings) *clientcmd.ConfigOverrides {
 	overrides := &clientcmd.ConfigOverrides{}
-	if settings == nil {
-		return overrides
-	}
 	if settings.Context != "" {
 		overrides.CurrentContext = settings.Context
 	}
@@ -273,7 +279,7 @@ type authSettings struct {
 func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 	clientset, err := kubernetes.NewForConfig(cc)
 	if err != nil {
-		return fmt.Errorf("Unable to build kubernetes clientset from rest config: %w", err)
+		return fmt.Errorf("unable to build kubernetes clientset from rest config: %w", err)
 	}
 	// We want to keep the validation short (ideally just one request), so any improvement should remain short (e.g. not a request per namespace)
 	ns, err := inspect.GetStringArray(k.account.Settings, "namespaces")
@@ -282,13 +288,13 @@ func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 		// The test is analogous to what is done in Halyard
 		_, err = clientset.CoreV1().Namespaces().List(v13.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("Error listing namespaces in account \"%s\":\n  %w", k.account.Name, err)
+			return fmt.Errorf("error listing namespaces in account \"%s\":\n  %w", k.account.Name, err)
 		}
 	} else {
 		// Otherwise read resources just for the first namespace configured
 		_, err = clientset.CoreV1().Pods(ns[0]).List(v13.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("Error listing pods in account \"%s\", namespace \"%s\":\n  %w", k.account.Name, ns[0], err)
+			return fmt.Errorf("error listing pods in account \"%s\", namespace \"%s\":\n  %w", k.account.Name, ns[0], err)
 		}
 	}
 	return nil
@@ -304,7 +310,7 @@ func (k *kubernetesAccountValidator) validateSettings(ctx context.Context, log l
 		omitNss = make([]string, 0)
 	}
 	if len(nss) > 0 && len(omitNss) > 0 {
-		return fmt.Errorf("At most one of \"namespaces\" and \"omitNamespaces\" can be supplied.")
+		return fmt.Errorf("at most one of \"namespaces\" and \"omitNamespaces\" can be supplied.")
 	}
 	return nil
 }
