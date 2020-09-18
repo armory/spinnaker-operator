@@ -1,5 +1,6 @@
-# Unreleased (1.2.x)
+# Unreleased (1.1.2)
 
+- fix: Validation Kubernetes accounts using the context passed on Spinnaker Service.
 - refactor: Introducing a better way to check spinnaker health validating correct status of each pod.
 
 # v1.1.0
