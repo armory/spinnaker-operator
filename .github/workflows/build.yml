@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - release-*
+      - update/operator-registry
   pull_request:
 
 jobs:
