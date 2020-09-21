@@ -123,24 +123,29 @@ func TestUpdateSpinsvcStatus(t *testing.T) {
 		return
 	}
 
-	v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-	if t.Failed() || !assert.Equal(t, spinnakerservice.Ok, strings.TrimSpace(v)) {
-		return
+	sc := func() error {
+		v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
+		if t.Failed() || !assert.Equal(t, spinnakerservice.Ok, strings.TrimSpace(v)) {
+			return fmt.Errorf("spinnaker is not in %s status yet", spinnakerservice.Ok)
+		}
+
+		return nil
 	}
+	ExponentialBackOff(sc, 3)
 
 	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_spinsvc_status", t) {
 		return
 	}
 
-	ExponentialBackOff(func(ns, status string, e *TestEnv, t *testing.T) error {
-
+	sc = func() error {
 		v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-		if t.Failed() || !assert.Equal(t, status, strings.TrimSpace(v)) {
-			return fmt.Errorf("spinnaker is not in %s status yet", status)
+		if t.Failed() || !assert.Equal(t, spinnakerservice.Failure, strings.TrimSpace(v)) {
+			return fmt.Errorf("spinnaker is not in %s status yet", spinnakerservice.Failure)
 		}
 
 		return nil
-	}(t, ns, spinnakerservice.Failure, e, t), 3)
+	}
+	ExponentialBackOff(sc, 3)
 
 	// uninstall
 	LogMainStep(t, "Uninstalling spinnaker")
