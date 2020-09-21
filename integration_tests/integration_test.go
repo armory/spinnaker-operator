@@ -133,7 +133,10 @@ func TestUpdateSpinsvcStatus(t *testing.T) {
 	}
 	ExponentialBackOff(sc, 3)
 
-	if !e.InstallSpinnaker(ns, "testdata/spinnaker/overlay_spinsvc_status", t) {
+	LogMainStep(t, "Installing spinnaker in namespace %s", ns)
+	if !ApplyKustomizeAndAssert(ns, "testdata/spinnaker/overlay_spinsvc_status", e, t) {
+		t.Logf("Error deploying spinnaker")
+		PrintOperatorLogs(e, t)
 		return
 	}
 
