@@ -155,7 +155,44 @@ items:
 				assert.Equal(t, "/api", str)
 			},
 		},
-	}
+		{
+			"ingress, load balancer with IP",
+			`
+kind: IngressList
+apiVersion: extensions/v1beta1
+items:
+  - kind: Ingress
+    apiVersion: extensions/v1beta1
+    metadata:
+      name: my-ingress
+      namespace: ns1
+    spec:
+      rules:
+        - http:
+            paths:
+              - path: /api
+                backend:
+                  serviceName: spin-gate
+                  servicePort: http
+              - path: /
+                backend:
+                  serviceName: spin-deck
+                  servicePort: 9000
+    status:
+      loadBalancer:
+        ingress:
+          - ip: 1.2.3.4
+`,
+			"http://1.2.3.4/api",
+			"http://1.2.3.4/",
+			func(t *testing.T, svc interfaces.SpinnakerService) {
+				p := svc.GetSpinnakerConfig().Profiles["gate"]
+				assert.NotNil(t, p)
+				str, err := inspect.GetObjectPropString(context.TODO(), p, "server.servlet.contextPath")
+				assert.Nil(t, err)
+				assert.Equal(t, "/api", str)
+			},
+		}}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

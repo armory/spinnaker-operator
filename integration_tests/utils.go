@@ -3,6 +3,7 @@ package integration_tests
 import (
 	"context"
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
 	"html/template"
 	"io/ioutil"
@@ -280,4 +281,12 @@ func SubstituteOverlayVars(overlayHome string, vars interface{}, t *testing.T) b
 
 func GetPodName(ns, svc string, e *TestEnv, t *testing.T) string {
 	return strings.TrimSpace(RunCommandAndAssert(fmt.Sprintf("%s -n %s get pods | grep %s | grep \"1/1\" | grep \"Running\" | awk '{print $1}'", e.KubectlPrefix(), ns, svc), t))
+}
+
+func ExponentialBackOff(operation backoff.Operation, minutes time.Duration) error {
+	b := backoff.NewExponentialBackOff()
+	b.MaxElapsedTime = minutes * time.Minute
+	b.MaxInterval = 20 * time.Minute
+
+	return backoff.Retry(operation, b)
 }
