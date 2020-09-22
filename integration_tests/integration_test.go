@@ -4,6 +4,7 @@ package integration_tests
 
 import (
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -95,6 +96,59 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 		return
 	}
 	LogMainStep(t, "Upgrade successful")
+
+	// uninstall
+	LogMainStep(t, "Uninstalling spinnaker")
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
+}
+
+func TestUpdateSpinsvcStatus(t *testing.T) {
+	// setup
+	t.Parallel()
+	LogMainStep(t, `Test goals:
+- Install spinnaker
+- Check an OK status
+- Upgrade spinnaker with a bad configurations
+- Check a Failure status`)
+
+	spinOverlay := "testdata/spinnaker/base"
+	ns := RandomString("spinsvc-status")
+	e := InstallCrdsAndOperator(ns, true, defaults, t)
+	if t.Failed() {
+		return
+	}
+
+	// install
+	if !e.InstallSpinnaker(ns, spinOverlay, t) {
+		return
+	}
+
+	sc := func() error {
+		v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
+		if t.Failed() || spinnakerservice.Ok != strings.TrimSpace(v) {
+			return fmt.Errorf("spinnaker is not in %s status yet", spinnakerservice.Ok)
+		}
+
+		return nil
+	}
+	ExponentialBackOff(sc, 3)
+
+	LogMainStep(t, "Installing spinnaker in namespace %s", ns)
+	if !ApplyKustomizeAndAssert(ns, "testdata/spinnaker/overlay_spinsvc_status", e, t) {
+		t.Logf("Error deploying spinnaker")
+		PrintOperatorLogs(e, t)
+		return
+	}
+
+	sc = func() error {
+		v := RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName), t)
+		if t.Failed() || spinnakerservice.Failure != strings.TrimSpace(v) {
+			return fmt.Errorf("spinnaker is not in %s status yet", spinnakerservice.Failure)
+		}
+
+		return nil
+	}
+	ExponentialBackOff(sc, 3)
 
 	// uninstall
 	LogMainStep(t, "Uninstalling spinnaker")

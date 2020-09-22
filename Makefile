@@ -18,12 +18,14 @@ VERSION_TYPE    ?= "snapshot" # Must be one of: "snapshot", "rc", or "release"
 BRANCH_OVERRIDE ?=
 VERSION 	 	?= $(shell build-tools/version.sh $(VERSION_TYPE) $(BRANCH_OVERRIDE))
 REGISTRY_ORG    ?= "armory"
+REDHAT_PID      ?= ""
 OS      	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 1)
 ARCH    	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 2)
 NAMESPACE 	 	?= "spinnaker-operator"
 PWD 		  	= $(shell pwd)
 
 REGISTRY        ?= docker.io
+REDHAT_REGISTRY ?= scan.connect.redhat.com
 SRC_DIRS        := cmd pkg integration-tests
 COMMAND         := cmd/manager/main
 BUILD_HOME      := ${PWD}/build
@@ -88,14 +90,33 @@ docker-package: Makefile ## Builds the docker image to distribute
 	-f build-tools/Dockerfile build-tools
 	@echo "Successfully built image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)"
 
+.PHONY: docker-package-ubi
+docker-package-ubi: Makefile ## Builds the ubi image to distribute
+	@echo "Packaging final docker image"
+	@docker build \
+	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi \
+	--build-arg BUILDER=docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
+	--build-arg CACHE_DATE=$(shell date +%s) \
+	-f build-tools/Dockerfile.ubi build-tools
+	@echo "Successfully built image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi"
+
 .PHONY: docker-push
 docker-push: ## Pushes the docker image to the docker registry with the full "version" tag
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: docker-push-dev
 docker-push-dev: ## Pushes the docker image under "dev" tag
 	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
+
+.PHONY: docker-push-ubi
+docker-push-ubi: ## Pushes the ubi image
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
+	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev-ubi
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
+	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev-ubi
+	@docker push $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: reverse-proxy
 reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug locally

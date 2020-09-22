@@ -58,12 +58,8 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 
 	fs := flag.FlagSet{}
 	var disableAdmission bool
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-	defaultCertsDir := filepath.Join(home, "spinnaker-operator-certs")
+
+	defaultCertsDir := filepath.Join(getHome(), "spinnaker-operator-certs")
 	fs.BoolVar(&disableAdmission, "disable-admission-controller", false, "Set to disable admission controller")
 	fs.StringVar(&webhook.CertsDir, "certs-dir", defaultCertsDir, "Directory where tls.crt, tls.key and ca.crt files are found. Default: $HOME/spinnaker-operator-certs")
 	pflag.CommandLine.AddGoFlagSet(&fs)
@@ -190,4 +186,17 @@ func getGVKs(m manager.Manager) ([]schema.GroupVersionKind, error) {
 		gvks = append(gvks, gvk)
 	}
 	return gvks, nil
+}
+
+func getHome() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	// Openshift will execute the container with random uid.
+	if home == "/" {
+		home = os.Getenv("OPERATOR_HOME")
+	}
+	return home
 }
