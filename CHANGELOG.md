@@ -1,6 +1,8 @@
-# Unreleased (1.1.2)
+# v1.1.2
 
+- fix: Support ingress with load balancer IP (GCE/bare metal)
 - chore: Update halyard version.
+- feature: Create UBI image.
 - fix: Validation Kubernetes accounts using the context passed on Spinnaker Service.
 - refactor: Introducing a better way to check spinnaker health validating correct status of each pod.
 
