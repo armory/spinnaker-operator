@@ -1,0 +1,10 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    service-settings:
+      deck:
+        artifactId: docker.io/example/deck:custom
+
