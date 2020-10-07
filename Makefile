@@ -113,9 +113,7 @@ docker-push-dev: ## Pushes the docker image under "dev" tag
 .PHONY: docker-push-ubi
 docker-push-ubi: ## Pushes the ubi image
 	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
-	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev-ubi
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
-	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev-ubi
 	@docker push $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: reverse-proxy
