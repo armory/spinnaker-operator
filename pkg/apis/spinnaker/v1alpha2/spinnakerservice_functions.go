@@ -31,6 +31,10 @@ func (s *SpinnakerService) GetKustomization() map[string]interfaces.ServiceKusto
 	return s.Spec.Kustomize
 }
 
+func (s *SpinnakerService) GetOperatorConfig() *interfaces.OperatorConfig {
+	return &s.Spec.Operator
+}
+
 func (s *SpinnakerService) GetStatus() *interfaces.SpinnakerServiceStatus {
 	return &s.Status
 }

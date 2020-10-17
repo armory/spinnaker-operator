@@ -55,6 +55,7 @@ type SpinnakerService interface {
 	GetAccountConfig() *AccountConfig
 	GetStatus() *SpinnakerServiceStatus
 	GetKustomization() map[string]ServiceKustomization
+	GetOperatorConfig() *OperatorConfig
 	DeepCopyInterface() SpinnakerService
 	DeepCopySpinnakerService() SpinnakerService
 }
@@ -120,6 +121,8 @@ type Kustomization struct {
 	Patches []Patch `json:"patches,omitempty" yaml:"patches,omitempty"`
 }
 
+// PatchStrategicMerge represents a relative path
+// to a strategic merge patch with the format https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md
 type PatchStrategicMerge string
 type PatchJson6902 string
 type Patch string
@@ -209,6 +212,9 @@ type SpinnakerServiceSpec struct {
 	// Patch Kustomization of service and deployment per service
 	// +optional
 	Kustomize map[string]ServiceKustomization `json:"kustomize,omitempty"`
+	// configuration for operator
+	// +optional
+	Operator OperatorConfig `json:"operator,omitempty"`
 }
 
 // SpinnakerDeploymentStatus represents the deployment status of a single service
@@ -306,6 +312,14 @@ type SecretInNamespaceReference struct {
 type SpinnakerAccountStatus struct {
 	InvalidReason   string        `json:"invalidReason"`
 	LastValidatedAt *v1.Timestamp `json:"lastValidatedAt"`
+}
+
+// +k8s:openapi-gen=true
+type OperatorConfig struct {
+	// Services not manage by operator
+	// +optional
+	// +listType=map
+	UnmanagedServices map[string]struct{} `json:"unmanagedServices,omitempty"`
 }
 
 var _ TypesFactory = &TypesFactoryImpl{}
