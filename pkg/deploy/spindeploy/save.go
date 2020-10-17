@@ -18,7 +18,7 @@ import (
 )
 
 // TransformManifests adjusts settings to the configuration
-func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig, logger logr.Logger) error {
+func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig, logger logr.Logger, unmanage map[string]struct{}) error {
 	// Set SpinnakerService instance as the owner and controller
 	count := 0
 	for _, v := range gen.Config {
@@ -36,6 +36,10 @@ func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen
 	// the status. But things happen.
 	d.log.Info(fmt.Sprintf("saving %d manifests across %d services", count, len(gen.Config)))
 	for k := range gen.Config {
+		if _, ok := unmanage[k]; ok {
+			logger.Info(fmt.Sprintf("skip applying updates for %s", k))
+			continue
+		}
 		s := gen.Config[k]
 		if s.Deployment != nil {
 			logger.Info(fmt.Sprintf("saving deployment manifest for %s", k))
