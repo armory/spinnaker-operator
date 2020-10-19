@@ -318,9 +318,11 @@ type SpinnakerAccountStatus struct {
 type OperatorConfig struct {
 	// Services not manage by operator
 	// +optional
-	// +listType=map
-	UnmanagedServices map[string]struct{} `json:"unmanagedServices,omitempty"`
+	// +listType=list
+	UnmanagedServices []ServiceName `json:"unmanagedServices,omitempty" yaml:"unmanagedServices,omitempty"`
 }
+
+type ServiceName string
 
 var _ TypesFactory = &TypesFactoryImpl{}
 

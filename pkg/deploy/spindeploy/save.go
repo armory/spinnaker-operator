@@ -18,7 +18,7 @@ import (
 )
 
 // TransformManifests adjusts settings to the configuration
-func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig, logger logr.Logger, unmanage map[string]struct{}) error {
+func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen *generated.SpinnakerGeneratedConfig, logger logr.Logger, unmanage map[string]string) error {
 	// Set SpinnakerService instance as the owner and controller
 	count := 0
 	for _, v := range gen.Config {
