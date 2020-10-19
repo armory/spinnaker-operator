@@ -125,8 +125,8 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	sUnmanaged := nSvc.GetOperatorConfig().UnmanagedServices
 	rLogger.Info(fmt.Sprintf("%d services will not be managed by operator", len(sUnmanaged)))
 	uServices := make(map[string]string)
-	for i := 0; i < len(sUnmanaged); i += 2 {
-		uServices[string(sUnmanaged[i])] = ""
+	for _, s := range sUnmanaged {
+		uServices[string(s)] = ""
 	}
 
 	if err = d.deployConfig(ctx, scheme, l, rLogger, uServices); err != nil {
