@@ -35,7 +35,15 @@ func (s *dockerRegistryService) GetTagsCount(image string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	b, err := s.httpService.ParseResponseBody(resp.Body)
+
+	var b []byte
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		b, err = s.httpService.ParseResponseBodyCompressed(resp.Body)
+	default:
+		b, err = s.httpService.ParseResponseBody(resp.Body)
+	}
+
 	if err != nil {
 		return 0, err
 	}
@@ -136,7 +144,14 @@ func (s *dockerRegistryService) requestToken(authenticateDetails map[string]stri
 	}
 
 	if resp.StatusCode == 200 {
-		b, err := s.httpService.ParseResponseBody(resp.Body)
+
+		var b []byte
+		switch resp.Header.Get("Content-Encoding") {
+		case "gzip":
+			b, err = s.httpService.ParseResponseBodyCompressed(resp.Body)
+		default:
+			b, err = s.httpService.ParseResponseBody(resp.Body)
+		}
 		if err != nil {
 			return "", fmt.Errorf("Error parsing response from %s:\n  %w", authenticateDetails["realm"], err)
 		}

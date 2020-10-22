@@ -1,11 +1,14 @@
 package halyard
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type responseHolder struct {
@@ -29,13 +32,23 @@ type halyardGenericErrorResponse struct {
 
 func (s *Service) executeRequest(req *http.Request, ctx context.Context) responseHolder {
 	req = req.WithContext(ctx)
-	client := &http.Client{}
+	req.Header.Add("Accept-Encoding", "gzip")
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return responseHolder{Err: err}
 	}
 	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	var reader io.ReadCloser
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		reader, err = gzip.NewReader(resp.Body)
+		defer reader.Close()
+	default:
+		reader = resp.Body
+	}
+
+	b, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return responseHolder{Err: err, StatusCode: resp.StatusCode}
 	}

@@ -1,11 +1,13 @@
 package util
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type HttpService struct {
@@ -47,7 +49,8 @@ func (s *HttpService) Request(ctx context.Context, method HttpMethod, url string
 
 func (s *HttpService) Execute(ctx context.Context, req *http.Request) (*http.Response, error) {
 	req = req.WithContext(ctx)
-	client := &http.Client{}
+	req.Header.Add("Accept-Encoding", "gzip")
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return resp, fmt.Errorf("Error sending %s request to \"%s\":\n  %w", req.Method, req.URL, err)
@@ -58,6 +61,22 @@ func (s *HttpService) Execute(ctx context.Context, req *http.Request) (*http.Res
 func (s *HttpService) ParseResponseBody(body io.ReadCloser) ([]byte, error) {
 	defer body.Close()
 	f, err := ioutil.ReadAll(body)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error reading HTTP response:\n  %w", err)
+	}
+
+	return f, nil
+}
+
+func (s *HttpService) ParseResponseBodyCompressed(body io.ReadCloser) ([]byte, error) {
+	defer body.Close()
+
+	var reader io.ReadCloser
+	reader, err := gzip.NewReader(body)
+	defer reader.Close()
+
+	f, err := ioutil.ReadAll(reader)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error reading HTTP response:\n  %w", err)
