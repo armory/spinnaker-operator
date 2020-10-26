@@ -2,7 +2,6 @@ package spinnakerservice
 
 import (
 	"context"
-	"errors"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -78,10 +77,6 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 	err = s.client.Status().Update(context.Background(), svc)
 	if err != nil {
 		return err
-	}
-
-	if Updating == status.Status {
-		return errors.New("spinnaker still updating")
 	}
 
 	return nil

@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - release-*
+      - fix/timeout
   pull_request:
 
 jobs:
