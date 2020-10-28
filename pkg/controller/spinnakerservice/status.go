@@ -2,7 +2,6 @@ package spinnakerservice
 
 import (
 	"context"
-	"errors"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -80,10 +79,6 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 		return err
 	}
 
-	if Updating == status.Status {
-		return errors.New("spinnaker still updating")
-	}
-
 	return nil
 }
 
@@ -95,6 +90,7 @@ func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v
 		return Na, nil
 	}
 
+	var podsRunningOk []v1.Pod
 	for _, p := range pods {
 		switch p.Status.Phase {
 		case v1.PodRunning:
@@ -106,18 +102,12 @@ func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v
 				s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployFailed", "Pod %s exceeds the time limit", p.Name)
 				return Failure, nil
 			}
+
 			for _, cs := range p.Status.ContainerStatuses {
-				if cs.State.Terminated != nil {
-					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, cs.State.Terminated.Reason)
-					return Updating, nil
-				}
-				if cs.State.Waiting != nil {
-					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, cs.State.Waiting.Reason)
-					return Updating, nil
-				}
-				if !cs.Ready {
-					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, p.Status.Reason)
-					return Updating, nil
+				if cs.State.Running != nil {
+					if p.DeletionTimestamp == nil {
+						podsRunningOk = append(podsRunningOk, p)
+					}
 				}
 			}
 			break
@@ -138,10 +128,6 @@ func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v
 					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployFailed", "Pod %s has not been able to reach a healthy state is in Phase: %s. Message: %s", p.Name, p.Status.Phase, cs.State.Waiting.Reason)
 					return Failure, nil
 				}
-				if !cs.Ready {
-					s.evtRecorder.Eventf(instance, v1.EventTypeWarning, "DeployInProgress", "Pod %s is in Phase: %s. Message: %s", p.Name, p.Status.Phase, p.Status.Reason)
-					return Updating, nil
-				}
 			}
 			break
 		case v1.PodFailed, v1.PodUnknown:
@@ -151,5 +137,10 @@ func (s *statusChecker) getStatus(instance interfaces.SpinnakerService, pods []v
 			break
 		}
 	}
+
+	if instance.GetStatus().ServiceCount != len(podsRunningOk) {
+		status = Updating
+	}
+
 	return status, nil
 }

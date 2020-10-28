@@ -93,7 +93,7 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedDeployments:  []appsv1.Deployment{{}},
 				mockedExceededTime: false,
 			},
-			wantErr: true,
+			wantErr: false,
 			status:  Updating,
 		},
 		{
