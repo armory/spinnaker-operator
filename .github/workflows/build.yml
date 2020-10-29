@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - release-*
+      - operator-bundle
   pull_request:
 
 jobs:

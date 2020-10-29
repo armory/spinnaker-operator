@@ -9,6 +9,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/controller/accountvalidating"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakeraccount"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
+	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerstatus"
 	"github.com/armory/spinnaker-operator/pkg/controller/spinnakervalidating"
 	"github.com/armory/spinnaker-operator/pkg/operator"
 )
@@ -19,6 +20,7 @@ func main() {
 	accountvalidating.TypesFactory = interfaces.DefaultTypesFactory
 	spinnakerservice.TypesFactory = interfaces.DefaultTypesFactory
 	spinnakeraccount.TypesFactory = interfaces.DefaultTypesFactory
+	spinnakerstatus.TypesFactory = interfaces.DefaultTypesFactory
 	accounts.TypesFactory = interfaces.DefaultTypesFactory
 	kubernetes.TypesFactory = interfaces.DefaultTypesFactory
 	operator.Start(apis.AddToScheme)
