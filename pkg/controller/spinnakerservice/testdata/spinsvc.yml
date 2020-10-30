@@ -28,3 +28,4 @@ spec:
 status:
   apiUrl: http://acme.com
   uiUrl: http://acme.com
+  serviceCount: 1

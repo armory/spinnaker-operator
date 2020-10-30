@@ -10,11 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
+	"time"
 )
 
 func Test_statusChecker_checks(t *testing.T) {
@@ -47,6 +49,15 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedPods: []v1.Pod{{
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
+						ContainerStatuses: []v1.ContainerStatus{
+							{
+								State: v1.ContainerState{
+									Running: &v1.ContainerStateRunning{
+										StartedAt: metav1.Time{Time: time.Now()},
+									},
+								},
+							},
+						},
 					},
 				}},
 				mockedDeployments:  []appsv1.Deployment{{}},
@@ -139,6 +150,35 @@ func Test_statusChecker_checks(t *testing.T) {
 			},
 			wantErr: false,
 			status:  Na,
+		},
+		{
+			name:   "Spinsvc should have Updating status because pods are terminating",
+			fields: fields{},
+			args: args{
+				instance: spinSvc,
+				mockedPods: []v1.Pod{{
+					ObjectMeta: metav1.ObjectMeta{
+						DeletionTimestamp: &metav1.Time{Time: time.Now()},
+					},
+					Status: v1.PodStatus{
+						Phase: v1.PodRunning,
+						ContainerStatuses: []v1.ContainerStatus{
+							{
+								State: v1.ContainerState{
+									Running: &v1.ContainerStateRunning{
+										StartedAt: metav1.Time{Time: time.Now()},
+									},
+								},
+							},
+						},
+					},
+				},
+				},
+				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedExceededTime: false,
+			},
+			wantErr: false,
+			status:  Updating,
 		},
 	}
 	for _, tt := range tests {
