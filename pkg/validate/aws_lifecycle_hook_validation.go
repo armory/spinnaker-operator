@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	snsRattern     = "^arn:aws:sns:[^:]+:[^:]+:[^:]+$"
+	snsPattern     = "^arn:aws:sns:[^:]+:[^:]+:[^:]+$"
 	iamRolePattern = "^arn:aws:iam::[^:]+:[^:]+$"
 )
 
@@ -44,7 +44,7 @@ func (a *awsLifecycleHookValidation) validate(hook AwsLifecycleHook) []error {
 }
 
 func (a *awsLifecycleHookValidation) isValidSnsArn(arn string) bool {
-	if len(regexp.MustCompile(snsRattern).FindStringSubmatch(arn)) == 0 {
+	if len(regexp.MustCompile(snsPattern).FindStringSubmatch(arn)) == 0 {
 		return false
 	}
 	return true

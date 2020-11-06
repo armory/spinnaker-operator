@@ -75,10 +75,8 @@ func (s *SpinnakerValidation) GetValidationSettings() *ValidationSetting {
 }
 
 func (s *SpinnakerValidation) IsProviderValidationEnabled(key string) bool {
-	provider, ok := s.Providers[key]
-	if ok {
+	if provider, ok := s.Providers[key]; ok {
 		return provider.Enabled
 	}
 	return true
-
 }
