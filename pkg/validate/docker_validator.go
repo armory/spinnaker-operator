@@ -66,7 +66,7 @@ func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, 
 		return ValidationResult{}
 	}
 
-	if !d.validationEnabled(spinSvc.GetSpinnakerValidation()) || !accountEnabled {
+	if !spinSvc.GetSpinnakerValidation().IsProviderValidationEnabled(dockerRegistryAccountType) || !accountEnabled {
 		return ValidationResult{}
 	}
 
@@ -89,15 +89,6 @@ func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, 
 	}
 
 	return ValidationResult{}
-}
-
-func (d *dockerRegistryValidator) validationEnabled(v *interfaces.SpinnakerValidation) bool {
-	for n, s := range v.Providers {
-		if strings.ToLower(n) == strings.ToLower(dockerRegistryAccountType) {
-			return s.Enabled
-		}
-	}
-	return v.GetValidationSettings().Enabled
 }
 
 func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, []error) {
