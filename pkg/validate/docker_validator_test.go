@@ -211,10 +211,8 @@ func Test_validationEnabled(t *testing.T) {
 		return
 	}
 
-	dockerValidator := dockerRegistryValidator{}
-
 	// when
-	validate := dockerValidator.validationEnabled(spinsvc.GetSpinnakerValidation())
+	validate := spinsvc.GetSpinnakerValidation().IsProviderValidationEnabled(dockerRegistryAccountType)
 
 	// then
 	assert.Equal(t, true, validate)
@@ -231,10 +229,9 @@ func Test_validationEnabled_Provider_Not_Enabled(t *testing.T) {
 		"docker": {Enabled: false},
 	}
 	spinsvc.GetSpinnakerValidation().Providers = providers
-	dockerValidator := dockerRegistryValidator{}
 
 	// when
-	validate := dockerValidator.validationEnabled(spinsvc.GetSpinnakerValidation())
+	validate := spinsvc.GetSpinnakerValidation().IsProviderValidationEnabled(dockerRegistryAccountType)
 
 	// then
 	assert.Equal(t, false, validate)
