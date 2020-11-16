@@ -2,6 +2,8 @@ package spinnakervalidating
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
@@ -9,7 +11,9 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/validate"
+	"gomodules.xyz/jsonpatch/v2"
 	"k8s.io/api/admission/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -20,6 +24,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"time"
+)
+
+const (
+	ValidationConfigHashKey      = "validation"
+	DefaultValidationFreqSeconds = 10
 )
 
 // +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
@@ -65,6 +75,13 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		return admission.ValidationResponse(true, "")
 	}
 
+	hc := svc.GetStatus().GetHash(ValidationConfigHashKey)
+	if hc != nil {
+		if !v.NeedsValidation(hc.LastUpdatedAt) {
+			return admission.Allowed("")
+		}
+	}
+
 	opts := validate.Options{
 		Ctx:          secrets.NewContext(ctx, v.restConfig, req.Namespace),
 		Client:       v.client,
@@ -86,6 +103,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	// Update the status with any admission status change, only if there's already an existing SpinnakerService
 	if req.AdmissionRequest.Operation == v1beta1.Update {
 		if len(validationResult.StatusPatches) > 0 {
+			validationResult.StatusPatches = append(validationResult.StatusPatches, v.addLastValidation(svc))
 			log.Info(fmt.Sprintf("patching SpinnakerService status with %v", validationResult.StatusPatches), "metadata.name", svc.GetName())
 			if err := v.client.Status().Patch(ctx, svc, &precomputedPatch{validationResult}); err != nil {
 				return admission.Errored(http.StatusInternalServerError, err)
@@ -94,6 +112,31 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 	}
 	log.Info("SpinnakerService is valid", "metadata.name", svc.GetName())
 	return admission.ValidationResponse(true, "")
+}
+
+func (v *spinnakerValidatingController) NeedsValidation(lastValid metav1.Time) bool {
+	if lastValid.IsZero() {
+		return true
+	}
+	n := lastValid.Time.Add(time.Duration(DefaultValidationFreqSeconds) * time.Second)
+	return time.Now().After(n)
+}
+
+func (v *spinnakerValidatingController) getHash(config interface{}) (string, error) {
+	data, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	m := md5.Sum(data)
+	return hex.EncodeToString(m[:]), nil
+}
+
+func (v *spinnakerValidatingController) addLastValidation(svc interfaces.SpinnakerService) jsonpatch.JsonPatchOperation {
+	hash, _ := v.getHash(svc.GetStatus())
+	return jsonpatch.NewPatch("replace", fmt.Sprintf("/status/lastDeployed/%s", ValidationConfigHashKey), interfaces.HashStatus{
+		Hash:          hash,
+		LastUpdatedAt: metav1.NewTime(time.Now()),
+	})
 }
 
 // InjectClient injects the client.

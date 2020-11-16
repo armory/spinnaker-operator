@@ -73,3 +73,10 @@ func (s *SpinnakerValidation) GetValidationSettings() *ValidationSetting {
 		FrequencySeconds: f,
 	}
 }
+
+func (s *SpinnakerValidation) IsProviderValidationEnabled(key string) bool {
+	if provider, ok := s.Providers[key]; ok {
+		return provider.Enabled
+	}
+	return true
+}

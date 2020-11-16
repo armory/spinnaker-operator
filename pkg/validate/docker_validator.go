@@ -66,7 +66,7 @@ func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, 
 		return ValidationResult{}
 	}
 
-	if !d.validationEnabled(spinSvc.GetSpinnakerValidation()) || !accountEnabled {
+	if !spinSvc.GetSpinnakerValidation().IsProviderValidationEnabled(dockerRegistryAccountType) || !accountEnabled {
 		return ValidationResult{}
 	}
 
@@ -91,25 +91,16 @@ func (d *dockerRegistryValidator) Validate(spinSvc interfaces.SpinnakerService, 
 	return ValidationResult{}
 }
 
-func (d *dockerRegistryValidator) validationEnabled(v *interfaces.SpinnakerValidation) bool {
-	for n, s := range v.Providers {
-		if strings.ToLower(n) == strings.ToLower(dockerRegistryAccountType) {
-			return s.Enabled
-		}
-	}
-	return v.GetValidationSettings().Enabled
-}
-
 func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, []error) {
 
 	var errs []error
 	if len(registry.Name) == 0 {
-		err := fmt.Errorf("Error validating docker account with address \"%s\": missing account name", registry.Address)
+		err := fmt.Errorf("error validating docker account with address \"%s\": missing account name", registry.Address)
 		return false, append(errs, err)
 	}
 
 	if len(regexp.MustCompile(namePattern).FindStringSubmatch(registry.Name)) == 0 {
-		err := fmt.Errorf("Error validating docker account \"%s\": Account name must match pattern %s\nIt must start and end with a lower-case character or number, and only contain lower-case characters, numbers, or dashes", registry.Name, namePattern)
+		err := fmt.Errorf("error validating docker account \"%s\": Account name must match pattern %s\nIt must start and end with a lower-case character or number, and only contain lower-case characters, numbers, or dashes", registry.Name, namePattern)
 		return false, append(errs, err)
 	}
 
@@ -119,7 +110,7 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 	passwordFileProvided := len(registry.PasswordFile) != 0
 
 	if passwordProvided && passwordFileProvided || passwordCommandProvided && passwordProvided || passwordCommandProvided && passwordFileProvided {
-		err := fmt.Errorf("Error validating docker account \"%s\": You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.", registry.Name)
+		err := fmt.Errorf("error validating docker account \"%s\": You have provided more than one of password, password command, or password file for your docker registry. You can specify at most one.", registry.Name)
 		return false, append(errs, err)
 	}
 
@@ -135,35 +126,35 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 		}
 		password, err := d.loadPasswordFromFile(pf, ctx, spinSvc.GetSpinnakerConfig())
 		if err != nil {
-			err := fmt.Errorf("Error loading credentials for docker account \"%s\" from file \"%s\":\n  %w", registry.Name, pf, err)
+			err := fmt.Errorf("error loading credentials for docker account \"%s\" from file \"%s\":\n  %w", registry.Name, pf, err)
 			return false, append(errs, err)
 		}
 		resolvedPassword = password
 		if len(resolvedPassword) == 0 {
-			err := fmt.Errorf("Error loading credentials for docker account \"%s\" from file \"%s\": The supplied password file is empty.", registry.Name, pf)
+			err := fmt.Errorf("error loading credentials for docker account \"%s\" from file \"%s\": The supplied password file is empty.", registry.Name, pf)
 			return false, append(errs, err)
 		}
 	} else if passwordCommandProvided {
 		out, err := exec.Command("bash", "-c", registry.PasswordCommand).Output()
 
 		if err != nil {
-			err := fmt.Errorf("Error validating docker account \"%s\": Password command returned non 0 return code, stderr/stdout was: \n%s\n%w", registry.Name, out, err)
+			err := fmt.Errorf("error validating docker account \"%s\": Password command returned non 0 return code, stderr/stdout was: \n%s\n%w", registry.Name, out, err)
 			return false, append(errs, err)
 		}
 
 		resolvedPassword = strings.Trim(string(out), "\n")
 		if len(resolvedPassword) == 0 {
-			err := fmt.Errorf("Error validating docker account \"%s\": Resolved password from command \"%s\" was empty, missing dependencies for running password command?", registry.Name, registry.PasswordCommand)
+			err := fmt.Errorf("error validating docker account \"%s\": Resolved password from command \"%s\" was empty, missing dependencies for running password command?", registry.Name, registry.PasswordCommand)
 			return false, append(errs, err)
 		}
 
 	}
 
 	if len(resolvedPassword) != 0 && len(registry.Username) == 0 {
-		err := fmt.Errorf("Error validating docker account \"%s\": You have supplied a password but no username.", registry.Name)
+		err := fmt.Errorf("error validating docker account \"%s\": You have supplied a password but no username.", registry.Name)
 		return false, append(errs, err)
 	} else if len(resolvedPassword) == 0 && len(registry.Username) != 0 {
-		err := fmt.Errorf("Error validating docker account \"%s\": You have a supplied a username but no password.", registry.Name)
+		err := fmt.Errorf("error validating docker account \"%s\": You have a supplied a username but no password.", registry.Name)
 		return false, append(errs, err)
 	}
 
@@ -180,12 +171,12 @@ func (d *dockerRegistryValidator) validateRegistry(registry dockerRegistryAccoun
 			if len(resolvedPassword) != 0 {
 				c := resolvedPassword[len(resolvedPassword)-1]
 				if unicode.IsSpace(rune(c)) {
-					err := fmt.Errorf("Error validating docker account \"%s\": Your password file has a trailing newline; many text editors append a newline to files they open."+" If you think this is causing authentication issues, you can strip the newline with the command:\n\n"+" tr -d '\\n' < PASSWORD_FILE | tee PASSWORD_FILE", registry.Name)
+					err := fmt.Errorf("error validating docker account \"%s\": Your password file has a trailing newline; many text editors append a newline to files they open."+" If you think this is causing authentication issues, you can strip the newline with the command:\n\n"+" tr -d '\\n' < PASSWORD_FILE | tee PASSWORD_FILE", registry.Name)
 					return false, append(errs, err)
 				}
 			}
 
-			err := fmt.Errorf("Error validating docker account \"%s\": Unable to establish a connection with docker registry \"%s\" with provided credentials", registry.Name, registry.GetAddress())
+			err := fmt.Errorf("error validating docker account \"%s\": Unable to establish a connection with docker registry \"%s\" with provided credentials", registry.Name, registry.GetAddress())
 			return false, append(errs, err)
 		}
 	}
@@ -247,7 +238,7 @@ func (d *dockerRepositoryValidate) imageTags(repository string, service *dockerR
 	}
 
 	if tagCount == 0 {
-		return fmt.Errorf("Repository %s contain any tags. Spinnaker will not be able to deploy any docker images, Push some images to your registry.", repository)
+		return fmt.Errorf("repository %s contain any tags. Spinnaker will not be able to deploy any docker images, Push some images to your registry.", repository)
 	}
 
 	return nil

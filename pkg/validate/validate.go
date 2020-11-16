@@ -16,6 +16,7 @@ import (
 var ParallelValidators = []SpinnakerValidator{
 	&versionValidator{},
 	&dockerRegistryValidator{},
+	&awsAccountValidator{},
 }
 
 type SpinnakerValidator interface {

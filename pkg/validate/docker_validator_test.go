@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
+	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/ghodss/yaml"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -210,10 +211,8 @@ func Test_validationEnabled(t *testing.T) {
 		return
 	}
 
-	dockerValidator := dockerRegistryValidator{}
-
 	// when
-	validate := dockerValidator.validationEnabled(spinsvc.GetSpinnakerValidation())
+	validate := spinsvc.GetSpinnakerValidation().IsProviderValidationEnabled(dockerRegistryAccountType)
 
 	// then
 	assert.Equal(t, true, validate)
@@ -230,11 +229,65 @@ func Test_validationEnabled_Provider_Not_Enabled(t *testing.T) {
 		"docker": {Enabled: false},
 	}
 	spinsvc.GetSpinnakerValidation().Providers = providers
-	dockerValidator := dockerRegistryValidator{}
 
 	// when
-	validate := dockerValidator.validationEnabled(spinsvc.GetSpinnakerValidation())
+	validate := spinsvc.GetSpinnakerValidation().IsProviderValidationEnabled(dockerRegistryAccountType)
 
 	// then
 	assert.Equal(t, false, validate)
+}
+
+func Test_dockerRepositoryValidate_imageTags(t *testing.T) {
+	type fields struct {
+		ctx                 context.Context
+		repositoryValidator dockerRepositoryValidator
+	}
+	type args struct {
+		repository string
+		service    *dockerRegistryService
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "Registry should return tags given the repository",
+			fields: fields{},
+			args: args{
+				repository: "armory/spinnaker-operator",
+				service: &dockerRegistryService{
+					address:     "https://index.docker.io",
+					httpService: util.HttpService{},
+					ctx:         context.TODO(),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "Registry should send and error since the given repository not exist",
+			fields: fields{},
+			args: args{
+				repository: "armory/example",
+				service: &dockerRegistryService{
+					address:     "https://index.docker.io",
+					httpService: util.HttpService{},
+					ctx:         context.TODO(),
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &dockerRepositoryValidate{
+				ctx:                 tt.fields.ctx,
+				repositoryValidator: tt.fields.repositoryValidator,
+			}
+			if err := d.imageTags(tt.args.repository, tt.args.service); (err != nil) != tt.wantErr {
+				t.Errorf("imageTags() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
