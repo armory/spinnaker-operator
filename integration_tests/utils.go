@@ -106,7 +106,7 @@ func WaitForSpinnakerToStabilize(ns string, e *TestEnv, t *testing.T) {
 func AssertSpinnakerHealthy(ns, spinName string, e *TestEnv, t *testing.T) {
 	t.Logf("Asserting spinnaker pods are healthy")
 	for _, s := range SpinBaseSvcs {
-		o := RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s), t)
+		o := RunCommandAndAssert(fmt.Sprintf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s), t)
 		if t.Failed() {
 			return
 		}
