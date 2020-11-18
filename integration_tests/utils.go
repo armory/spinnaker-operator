@@ -30,7 +30,7 @@ var SpinBaseSvcs []string
 
 func init() {
 	SpinBaseSvcs = append(SpinBaseSvcs, "spin-deck")
-	SpinBaseSvcs = append(SpinBaseSvcs, "spin-gate")
+	//SpinBaseSvcs = append(SpinBaseSvcs, "spin-gate")
 	SpinBaseSvcs = append(SpinBaseSvcs, "spin-orca")
 	SpinBaseSvcs = append(SpinBaseSvcs, "spin-clouddriver")
 	SpinBaseSvcs = append(SpinBaseSvcs, "spin-echo")
