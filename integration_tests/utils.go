@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -82,7 +83,9 @@ func ApplyKustomizeAndAssert(ns, path string, e *TestEnv, t *testing.T) bool {
 
 func WaitForSpinnakerToStabilize(ns string, e *TestEnv, t *testing.T) {
 	c := fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.status}'", e.KubectlPrefix(), ns, SpinServiceName)
+	log.Print(c)
 	t.Logf("Waiting for spinnaker to become ready (%s)", c)
+	log.Printf("Waiting for spinnaker to become ready (%s)", c)
 	errCount := 0
 	for counter := 0; counter < MaxChecksWaitingForSpinnakerStability; counter++ {
 		o, err := RunCommandSilent(c, t)
@@ -93,6 +96,7 @@ func WaitForSpinnakerToStabilize(ns string, e *TestEnv, t *testing.T) {
 				return
 			}
 		}
+		log.Printf("Status : (%s)", strings.TrimSpace(o))
 		if strings.TrimSpace(o) == "OK" {
 			AssertSpinnakerHealthy(ns, SpinServiceName, e, t)
 			return
@@ -104,12 +108,15 @@ func WaitForSpinnakerToStabilize(ns string, e *TestEnv, t *testing.T) {
 }
 
 func AssertSpinnakerHealthy(ns, spinName string, e *TestEnv, t *testing.T) {
+	log.Print("Asserting spinnaker pods are healthy")
 	t.Logf("Asserting spinnaker pods are healthy")
 	for _, s := range SpinBaseSvcs {
 		o := RunCommandAndAssert(fmt.Sprintf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s), t)
+		log.Printf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s)
 		if t.Failed() {
 			return
 		}
+		log.Printf("output %s", o)
 		if !assert.Equal(t, "1", strings.TrimSpace(o), fmt.Sprintf("Expected %s deployment to have %d ready replicas, but was %s", s, 1, o)) {
 			return
 		}
