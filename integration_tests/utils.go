@@ -31,11 +31,11 @@ var SpinBaseSvcs []string
 func init() {
 	SpinBaseSvcs = append(SpinBaseSvcs, "spin-deck")
 	//SpinBaseSvcs = append(SpinBaseSvcs, "spin-gate")
-	SpinBaseSvcs = append(SpinBaseSvcs, "spin-orca")
-	SpinBaseSvcs = append(SpinBaseSvcs, "spin-clouddriver")
-	SpinBaseSvcs = append(SpinBaseSvcs, "spin-echo")
-	SpinBaseSvcs = append(SpinBaseSvcs, "spin-front50")
-	SpinBaseSvcs = append(SpinBaseSvcs, "spin-rosco")
+	//SpinBaseSvcs = append(SpinBaseSvcs, "spin-orca")
+	//SpinBaseSvcs = append(SpinBaseSvcs, "spin-clouddriver")
+	//SpinBaseSvcs = append(SpinBaseSvcs, "spin-echo")
+	//SpinBaseSvcs = append(SpinBaseSvcs, "spin-front50")
+	//SpinBaseSvcs = append(SpinBaseSvcs, "spin-rosco")
 }
 
 // DeploySpinnaker returns spinnaker Deck and Gate public urls
