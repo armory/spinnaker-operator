@@ -109,22 +109,22 @@ func (d *Deployer) Deploy(ctx context.Context, svc interfaces.SpinnakerService, 
 	}
 
 	rLogger.Info("generating manifests with Halyard")
-	l, err := d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
+	_, err = d.m.Generate(ctx, nSvc.GetSpinnakerConfig())
 	if err != nil {
 		return true, err
 	}
 
 	rLogger.Info("applying options to generated manifests")
 	// Traverse transformers in reverse order
-	for i := range transformers {
-		if err = transformers[len(transformers)-i-1].TransformManifests(ctx, l); err != nil {
-			return true, err
-		}
+	for _ = range transformers {
+		//if err = transformers[len(transformers)-i-1].TransformManifests(ctx, l); err != nil {
+		//	return true, err
+		//}
 	}
 
-	if err = d.deployConfig(ctx, scheme, l, rLogger); err != nil {
-		return true, err
-	}
+	//if err = d.deployConfig(ctx, scheme, l, rLogger); err != nil {
+	//	return true, err
+	//}
 
 	// Update status with the cloned service status
 	// otherwise we'll have updated the instance

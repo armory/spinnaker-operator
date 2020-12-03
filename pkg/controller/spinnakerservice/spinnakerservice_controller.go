@@ -6,7 +6,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy"
-	"github.com/armory/spinnaker-operator/pkg/halyard"
+	"github.com/armory/spinnaker-operator/pkg/kleat"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -42,11 +42,12 @@ type deployerGenerator func(m deploy.ManifestGenerator, mgr manager.Manager, cli
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	h := halyard.NewService()
+	//h := halyard.NewService()
+	k := kleat.NewKleat()
 	rawClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	deps := make([]deploy.Deployer, 0)
 	for _, g := range DeployerGenerators {
-		deps = append(deps, g(h, mgr, rawClient, log))
+		deps = append(deps, g(k, mgr, rawClient, log))
 	}
 	return &ReconcileSpinnakerService{
 		client:      mgr.GetClient(),

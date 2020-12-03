@@ -118,10 +118,10 @@ docker-push-ubi: ## Pushes the ubi image
 
 .PHONY: reverse-proxy
 reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug locally
-	kubectl --kubeconfig=${KUBECONFIG} create cm ssh-key --from-file=authorized_keys=${HOME}/.ssh/id_rsa.pub --dry-run -o yaml | kubectl apply -f -
-	kubectl --kubeconfig=${KUBECONFIG} apply -f build-tools/deployment-reverseproxy.yml
+	kubectl --kubeconfig=${KUBECONFIG} -n kleat create cm ssh-key --from-file=authorized_keys=${HOME}/.ssh/id_rsa.pub --dry-run -o yaml | kubectl -n kleat  apply -f -
+	kubectl --kubeconfig=${KUBECONFIG}  -n kleat  apply -f build-tools/deployment-reverseproxy.yml
 	sleep 5
-	kubectl --kubeconfig=${KUBECONFIG} port-forward deployment/spinnaker-operator-proxy 2222:22 & echo $$! > pf-pid
+	kubectl --kubeconfig=${KUBECONFIG} -n kleat port-forward deployment/spinnaker-operator-proxy 2222:22 & echo $$! > pf-pid
 	sleep 5
 	echo 'please set OPERATOR_NAME env var to spinnaker-operator-proxy' > /dev/stderr
 	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -TNngR 9876:localhost:9876 ssh://root@localhost:2222
