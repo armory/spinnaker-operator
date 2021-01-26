@@ -116,13 +116,11 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 		}
 		return int32(p)
 	}
-	if defaultPort == 0 {
-		switch u.Scheme {
-		case "http":
-			return 80
-		case "https":
-			return 443
-		}
+	switch u.Scheme {
+	case "http":
+		return 80
+	case "https":
+		return 443
 	}
 	return defaultPort
 }
@@ -130,6 +128,7 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 // GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
 func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc interfaces.SpinnakerService) int32 {
 	desiredPort := defaultPort
+	overrideBaseUrl := ""
 	exp := spinSvc.GetExposeConfig()
 	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {
 		if c.PublicPort != 0 {
@@ -137,21 +136,21 @@ func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defa
 		}
 	} else if exp.Service.PublicPort != 0 {
 		desiredPort = exp.Service.PublicPort
+	} else {
+		// Get port from overrideBaseUrl, if any
+		propName := ""
+		formattedSvcName := fmt.Sprintf("spin-%s", svcNameWithoutPrefix)
+		if formattedSvcName == GateServiceName {
+			propName = GateOverrideBaseUrlProp
+		} else if formattedSvcName == DeckServiceName {
+			propName = DeckOverrideBaseUrlProp
+		}
+		if propName != "" {
+			// ignore error, prop may be missing
+			overrideBaseUrl, _ = spinSvc.GetSpinnakerConfig().GetHalConfigPropString(ctx, propName)
+		}	
 	}
 
-	// Get port from overrideBaseUrl, if any
-	propName := ""
-	formattedSvcName := fmt.Sprintf("spin-%s", svcNameWithoutPrefix)
-	if formattedSvcName == GateServiceName {
-		propName = GateOverrideBaseUrlProp
-	} else if formattedSvcName == DeckServiceName {
-		propName = DeckOverrideBaseUrlProp
-	}
-	overrideBaseUrl := ""
-	if propName != "" {
-		// ignore error, prop may be missing
-		overrideBaseUrl, _ = spinSvc.GetSpinnakerConfig().GetHalConfigPropString(ctx, propName)
-	}
 	return GetPort(overrideBaseUrl, desiredPort)
 }
 
