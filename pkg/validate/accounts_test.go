@@ -37,6 +37,28 @@ spec:
 	}
 }
 
+func TestPrimaryAccount(t *testing.T) {
+	s := `
+kind: SpinnakerService
+spec:
+  spinnakerConfig:
+    config:
+      providers:
+        kubernetes:
+          primaryAccount: acc3
+          accounts:
+          - name: acc1
+            kubeconfigFile: test-1.yml
+          - name: acc2
+            kubeconfigFile: test-2.yml
+`
+	spinsvc := interfaces.DefaultTypesFactory.NewService()
+	if assert.Nil(t, yaml.Unmarshal([]byte(s), spinsvc)) {
+		_, err := getAccountsFromConfig(context.TODO(), spinsvc, &kubernetes.AccountType{})
+		assert.NotNil(t, err)
+	}
+}
+
 func TestNoAccounts(t *testing.T) {
 	s := `
 kind: SpinnakerService
