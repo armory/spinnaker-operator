@@ -116,11 +116,13 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 		}
 		return int32(p)
 	}
-	switch u.Scheme {
-	case "http":
-		return 80
-	case "https":
-		return 443
+	if defaultPort == nil {
+		switch u.Scheme {
+		case "http":
+			return 80
+		case "https":
+			return 443
+		}
 	}
 	return defaultPort
 }
