@@ -27,6 +27,8 @@ type SpinnakerAccountType interface {
 	GetConfigAccountsKey() string
 	// GetValidationSettings returns validation settings if validation must happen
 	GetValidationSettings(spinsvc interfaces.SpinnakerService) *interfaces.ValidationSetting
+	// Key under which primary account is stored in service
+	GetPrimaryAccountsKey() string
 }
 
 // Accounts represents a single account of a certain type. It must contain a FreeForm (aka a map)

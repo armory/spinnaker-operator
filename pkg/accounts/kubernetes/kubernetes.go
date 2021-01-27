@@ -37,6 +37,10 @@ func (k *AccountType) GetServices() []string {
 	return []string{"clouddriver"}
 }
 
+func (k *AccountType) GetPrimaryAccountsKey() string {
+	return "providers.kubernetes.primaryAccount"
+}
+
 func (k *AccountType) newAccount() *Account {
 	return &Account{
 		Env: Env{},
