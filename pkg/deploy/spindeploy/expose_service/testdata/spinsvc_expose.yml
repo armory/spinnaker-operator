@@ -21,7 +21,6 @@ spec:
     type: service
     service:
       type: LoadBalancer
-      publicPort: 80
       annotations:
         "service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http"
       overrides: {}
