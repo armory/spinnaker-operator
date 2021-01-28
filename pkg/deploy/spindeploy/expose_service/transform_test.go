@@ -39,6 +39,20 @@ func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
 	assert.Equal(t, expected, gen.Config["gate"].Service)
 }
 
+func TestTransformManifests_ExposedWithOverridePort(t *testing.T) {
+	tr, spinSvc := transformertest.SetupTransformerFromSpinFile(&TransformerGenerator{}, "testdata/spinsvc_expose_publicPort.yml", t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
+	err := spinSvc.GetSpinnakerConfig().SetHalConfigProp("security.apiSecurity.overrideBaseUrl", "https://my-api.spin.com")
+
+	err = tr.TransformManifests(context.TODO(), gen)
+	assert.Nil(t, err)
+
+	expected := &corev1.Service{}
+	test.ReadYamlFile("testdata/output_service_lb.yml", expected, t)
+	assert.Equal(t, expected, gen.Config["gate"].Service)
+}
+
 func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
 	s := `
 apiVersion: spinnaker.io/v1alpha2
