@@ -149,20 +149,17 @@ func ApplyExposeServiceConfig(exp *interfaces.ExposeConfig, svc *corev1.Service,
 }
 
 func (t *exposeTransformer) applyPortChanges(ctx context.Context, portName string, portDefault int32, svc *corev1.Service) error {
-	for i := 0; i < len(svc.Spec.Ports); i++ {
-		// avoid to override patches
-		if svc.Spec.Ports[i].Name == "" {
-			svc.Spec.Ports[i].Port = portDefault
-			svc.Spec.Ports[i].Name = portName
-			if strings.Contains(portName, "gate") {
-				// ignore error, property may be missing
-				if targetPort, _ := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
-					intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
-					if err != nil {
-						return err
-					}
-					svc.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: int32(intTargetPort)}
+	if len(svc.Spec.Ports) > 0 {
+		svc.Spec.Ports[0].Port = portDefault
+		svc.Spec.Ports[0].Name = portName
+		if strings.Contains(portName, "gate") {
+			// ignore error, property may be missing
+			if targetPort, _ := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, "gate", "server.port"); targetPort != "" {
+				intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
+				if err != nil {
+					return err
 				}
+				svc.Spec.Ports[0].TargetPort = intstr.IntOrString{IntVal: int32(intTargetPort)}
 			}
 		}
 	}
