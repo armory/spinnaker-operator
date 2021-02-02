@@ -3,11 +3,14 @@ package secrets
 import (
 	"context"
 	"errors"
-	"k8s.io/client-go/rest"
 	"os"
+	"sync"
+
+	"k8s.io/client-go/rest"
 )
 
 type SecretContext struct {
+	mutex      *sync.RWMutex
 	Cache      map[string]string
 	FileCache  map[string]string
 	RestConfig *rest.Config
@@ -19,6 +22,7 @@ var secretContextKey = "secretContext"
 
 func NewContext(ctx context.Context, c *rest.Config, namespace string) context.Context {
 	return context.WithValue(ctx, secretContextKey, &SecretContext{
+		mutex:      &sync.RWMutex{},
 		Cache:      make(map[string]string),
 		FileCache:  make(map[string]string),
 		RestConfig: c,
