@@ -24,7 +24,7 @@ ARCH    	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 2)
 NAMESPACE 	 	?= "spinnaker-operator"
 PWD 		  	= $(shell pwd)
 
-REGISTRY        ?= docker.io
+REGISTRY        ?= gcr.io/pso-supreme-cicd-99s2
 REDHAT_REGISTRY ?= scan.connect.redhat.com
 SRC_DIRS        := cmd pkg integration-tests
 COMMAND         := cmd/manager/main
