@@ -30,7 +30,6 @@ github.com/armory-io/kleat/api/client/security/authn
 github.com/armory-io/kleat/api/client/security/authz
 github.com/armory-io/kleat/api/client/storage
 github.com/armory-io/kleat/no-internal/convert
-github.com/armory-io/kleat/no-internal/fileio
 github.com/armory-io/kleat/no-internal/protoyaml
 github.com/armory-io/kleat/no-internal/serializer
 github.com/armory-io/kleat/no-internal/validate

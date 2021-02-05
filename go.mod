@@ -21,11 +21,9 @@ require (
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190926170752-c0a7fc360048
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0 // indirect
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
 	github.com/prometheus/procfs v0.0.4 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
-	go.uber.org/atomic v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.0.1

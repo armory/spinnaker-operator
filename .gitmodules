@@ -1,0 +1,3 @@
+[submodule "kustomization-base"]
+	path = kustomization-base
+	url = https://github.com/spinnaker/kustomization-base.git
