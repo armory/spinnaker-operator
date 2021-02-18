@@ -99,6 +99,19 @@ func getAccountsFromConfig(ctx context.Context, spinSvc interfaces.SpinnakerServ
 		// Ignore, key or format don't match expectations
 		return nil, nil
 	}
+
+	primaryAccount, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropString(ctx, accountType.GetPrimaryAccountsKey())
+	if primaryAccount != "" {
+		var primaryAccountExist bool
+		for _, account := range arr {
+			if primaryAccount == account["name"] {
+				primaryAccountExist = true
+			}
+		}
+		if !primaryAccountExist {
+			return nil, fmt.Errorf("primary account defined on '%s' is not present under '%s'", accountType.GetPrimaryAccountsKey(), accountType.GetConfigAccountsKey())
+		}
+	}
 	return accounts.FromSpinnakerConfigSlice(ctx, accountType, arr, false)
 }
 

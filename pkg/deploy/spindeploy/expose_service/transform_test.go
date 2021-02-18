@@ -39,6 +39,20 @@ func TestTransformManifests_ExposedWithOverrideUrlChangingPort(t *testing.T) {
 	assert.Equal(t, expected, gen.Config["gate"].Service)
 }
 
+func TestTransformManifests_ExposedWithOverridePort(t *testing.T) {
+	tr, spinSvc := transformertest.SetupTransformerFromSpinFile(&TransformerGenerator{}, "testdata/spinsvc_expose_publicPort.yml", t)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
+	err := spinSvc.GetSpinnakerConfig().SetHalConfigProp("security.apiSecurity.overrideBaseUrl", "https://my-api.spin.com")
+
+	err = tr.TransformManifests(context.TODO(), gen)
+	assert.Nil(t, err)
+
+	expected := &corev1.Service{}
+	test.ReadYamlFile("testdata/output_service_lb.yml", expected, t)
+	assert.Equal(t, expected, gen.Config["gate"].Service)
+}
+
 func TestTransformManifests_ExposedAggregatedAnnotations(t *testing.T) {
 	s := `
 apiVersion: spinnaker.io/v1alpha2
@@ -281,4 +295,18 @@ func TestTransformHalconfig_ExposedPortRemovedFromConfig(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "http://abc.com", actualOverrideUrl)
 	assert.Equal(t, "http://abc.com", (tr.(*exposeTransformer)).svc.GetStatus().APIUrl)
+}
+
+// Input: existing services running on custom port, then spin config override port
+func TestTransformHalconfig_ExposedPortOverridedFromConfig(t *testing.T) {
+	gateSvc := &corev1.Service{}
+	test.ReadYamlFile("testdata/output_service_lb.yml", gateSvc, t)
+	tr, spinSvc := transformertest.SetupTransformerFromSpinFile(&TransformerGenerator{}, "testdata/spinsvc_override_port.yml", t, gateSvc)
+	gen := &generated.SpinnakerGeneratedConfig{}
+	test.AddServiceToGenConfig(gen, "gate", "testdata/input_service.yml", t)
+	spinSvc.GetExposeConfig().Service.PublicPort = 0
+
+	err := tr.TransformManifests(context.TODO(), gen)
+	assert.Nil(t, err)
+	assert.Equal(t, int32(8089), gen.Config["gate"].Service.Spec.Ports[0].Port)
 }
