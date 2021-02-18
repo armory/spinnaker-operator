@@ -40,10 +40,10 @@ func (t *exposeTransformer) TransformManifests(ctx context.Context, gen *generat
 	if !applies(t.svc) {
 		return nil
 	}
-	if err := t.transformServiceManifest(ctx, "deck", util.DeckOverrideBaseUrlProp, gen.Config["deck"].Service); err != nil {
+	if err := t.transformServiceManifest(ctx, "deck", gen.Config["deck"].Service); err != nil {
 		return err
 	}
-	return t.transformServiceManifest(ctx, "gate", util.GateOverrideBaseUrlProp, gen.Config["gate"].Service)
+	return t.transformServiceManifest(ctx, "gate", gen.Config["gate"].Service)
 }
 
 func (t *exposeTransformer) TransformConfig(ctx context.Context) error {
@@ -124,12 +124,12 @@ func (t *exposeTransformer) generateOverrideUrl(ctx context.Context, serviceName
 	return util.BuildUrl(parsedLbUrl.Scheme, parsedLbUrl.Hostname(), desiredPort), nil
 }
 
-func (t *exposeTransformer) transformServiceManifest(ctx context.Context, svcName, overrideUrlKeyName string, svc *corev1.Service) error {
+func (t *exposeTransformer) transformServiceManifest(ctx context.Context, svcName string, svc *corev1.Service) error {
 	if svc == nil {
 		return nil
 	}
 	defaultPort := util.GetDesiredExposePort(ctx, svcName, int32(80), t.svc)
-	if err := t.applyPortChanges(ctx, fmt.Sprintf("%s-tcp", svcName), defaultPort, overrideUrlKeyName, svc); err != nil {
+	if err := t.applyPortChanges(ctx, fmt.Sprintf("%s-tcp", svcName), defaultPort, svc); err != nil {
 		return err
 	}
 	ApplyExposeServiceConfig(t.svc.GetExposeConfig(), svc, svcName)
@@ -148,10 +148,9 @@ func ApplyExposeServiceConfig(exp *interfaces.ExposeConfig, svc *corev1.Service,
 	svc.Annotations = exp.GetAggregatedAnnotations(serviceName)
 }
 
-func (t *exposeTransformer) applyPortChanges(ctx context.Context, portName string, portDefault int32, overrideUrlName string, svc *corev1.Service) error {
+func (t *exposeTransformer) applyPortChanges(ctx context.Context, portName string, portDefault int32, svc *corev1.Service) error {
 	if len(svc.Spec.Ports) > 0 {
-		overrideUrl, _ := t.svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, overrideUrlName)
-		svc.Spec.Ports[0].Port = util.GetPort(overrideUrl, portDefault)
+		svc.Spec.Ports[0].Port = portDefault
 		svc.Spec.Ports[0].Name = portName
 		if strings.Contains(portName, "gate") {
 			// ignore error, property may be missing
