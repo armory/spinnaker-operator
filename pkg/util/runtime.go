@@ -128,14 +128,6 @@ func GetPort(aUrl string, defaultPort int32) int32 {
 // GetDesiredExposePort returns the expected public port to have for the given service, according to halyard and expose configurations
 func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defaultPort int32, spinSvc interfaces.SpinnakerService) int32 {
 	desiredPort := defaultPort
-	exp := spinSvc.GetExposeConfig()
-	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {
-		if c.PublicPort != 0 {
-			desiredPort = c.PublicPort
-		}
-	} else if exp.Service.PublicPort != 0 {
-		desiredPort = exp.Service.PublicPort
-	}
 
 	// Get port from overrideBaseUrl, if any
 	propName := ""
@@ -150,7 +142,18 @@ func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defa
 		// ignore error, prop may be missing
 		overrideBaseUrl, _ = spinSvc.GetSpinnakerConfig().GetHalConfigPropString(ctx, propName)
 	}
-	return GetPort(overrideBaseUrl, desiredPort)
+	desiredPort = GetPort(overrideBaseUrl, desiredPort)
+
+	exp := spinSvc.GetExposeConfig()
+	if c, ok := exp.Service.Overrides[svcNameWithoutPrefix]; ok {
+		if c.PublicPort != 0 {
+			desiredPort = c.PublicPort
+		}
+	} else if exp.Service.PublicPort != 0 {
+		desiredPort = exp.Service.PublicPort
+	}
+
+	return desiredPort
 }
 
 func CreateOrUpdateService(svc *corev1.Service, rawClient *kubernetes.Clientset) error {
