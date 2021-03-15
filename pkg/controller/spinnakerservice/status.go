@@ -46,6 +46,7 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 	}
 
 	var pods []v1.Pod
+	var replicasReady []bool
 
 	for i := range deployments {
 		deployment := deployments[i]
@@ -56,7 +57,7 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 			ReadyReplicas: deployment.Status.ReadyReplicas,
 			Image:         s.k8sLookup.GetSpinnakerServiceImageFromDeployment(deployment.Spec.Template.Spec),
 		}
-
+		replicasReady = append(replicasReady, deployment.Status.Replicas == deployment.Status.ReadyReplicas)
 		pd, err := s.k8sLookup.GetPodsByDeployment(instance, deployment)
 		if err != nil {
 			return err
@@ -68,6 +69,14 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 	spinsvcStatus, err := s.getStatus(instance, pods)
 	if err != nil {
 		return err
+	}
+	if spinsvcStatus == Updating {
+		for _, v := range replicasReady {
+			if !v {
+				break
+			}
+		}
+		spinsvcStatus = Ok
 	}
 	status.Status = spinsvcStatus
 	status.Services = svcs
