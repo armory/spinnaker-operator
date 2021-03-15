@@ -101,7 +101,12 @@ func Test_statusChecker_checks(t *testing.T) {
 						},
 					},
 				}},
-				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedDeployments: []appsv1.Deployment{{
+					Status: appsv1.DeploymentStatus{
+						Replicas:      int32(1),
+						ReadyReplicas: int32(0),
+					},
+				}},
 				mockedExceededTime: false,
 			},
 			wantErr: false,
@@ -174,7 +179,12 @@ func Test_statusChecker_checks(t *testing.T) {
 					},
 				},
 				},
-				mockedDeployments:  []appsv1.Deployment{{}},
+				mockedDeployments: []appsv1.Deployment{{
+					Status: appsv1.DeploymentStatus{
+						Replicas:      int32(1),
+						ReadyReplicas: int32(0),
+					},
+				}},
 				mockedExceededTime: false,
 			},
 			wantErr: false,

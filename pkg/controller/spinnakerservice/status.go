@@ -71,12 +71,10 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 		return err
 	}
 	if spinsvcStatus == Updating {
-		for _, v := range replicasReady {
-			if !v {
-				break
-			}
+		areReplicasReady := s.replicasReady(replicasReady)
+		if areReplicasReady {
+			spinsvcStatus = Ok
 		}
-		spinsvcStatus = Ok
 	}
 	status.Status = spinsvcStatus
 	status.Services = svcs
@@ -89,6 +87,16 @@ func (s *statusChecker) checks(instance interfaces.SpinnakerService) error {
 	}
 
 	return nil
+}
+
+// getStatus check spinnaker status
+func (s *statusChecker) replicasReady(replicasReady []bool) bool {
+	for _, v := range replicasReady {
+		if !v {
+			return false
+		}
+	}
+	return true
 }
 
 // getStatus check spinnaker status
