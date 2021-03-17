@@ -12,7 +12,7 @@ import (
 
 //go:generate mockgen -destination=k8s_lookup_mocks.go -package util -source k8s_lookup.go
 
-const MaxChecksWaitingForSpinnakerStability = 1
+const MaxChecksWaitingForSpinnakerStability = 2
 
 type Ik8sLookup interface {
 	GetSpinnakerDeployments(instance interfaces.SpinnakerService) ([]appsv1.Deployment, error)
