@@ -13,6 +13,7 @@ const (
 	cloudFoundryAccountType        = "cloudfoundry"
 	cloudFoundryAccountsEnabledKey = "providers.cloudfoundry.enabled"
 	cloudFoundryAccountsKey        = "providers.cloudfoundry.accounts"
+	apiPattern 					   = "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$"
 )
 
 type cloudFoundryAccount struct {
@@ -63,59 +64,43 @@ func (d *cloudFoundryValidator) Validate(spinSvc interfaces.SpinnakerService, op
 	return ValidationResult{}
 }
 
-func (d *cloudFoundryValidator) validateAccount(registry cloudFoundryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, []error) {
+func (d *cloudFoundryValidator) validateAccount(cfAccount cloudFoundryAccount, ctx context.Context, spinSvc interfaces.SpinnakerService) (bool, []error) {
 
 	var errs []error
-	if len(registry.Name) == 0 {
+	if len(cfAccount.Name) == 0 {
 		err := fmt.Errorf("error validating cloudFoundry account missing account name")
 		return false, append(errs, err)
 	}
 
-	if len(regexp.MustCompile(namePattern).FindStringSubmatch(registry.Name)) == 0 {
-		err := fmt.Errorf("error validating cloudFoundry account \"%s\": Account name must match pattern %s\nIt must start and end with a lower-case character or number, and only contain lower-case characters, numbers, or dashes", registry.Name, namePattern)
+	if len(regexp.MustCompile(namePattern).FindStringSubmatch(cfAccount.Name)) == 0 {
+		err := fmt.Errorf("error validating cloudFoundry account \"%s\": Account name must match pattern %s\nIt must start and end with a lower-case character or number, and only contain lower-case characters, numbers, or dashes", cfAccount.Name, namePattern)
 		return false, append(errs, err)
 	}
 
-	service := cloudFoundryService{api: registry.Api, appsManagerUri: registry.AppsManagerUri, user: registry.User, password: registry.Password, skipHttps: registry.SkipSslValidation, httpService: util.HttpService{}, ctx: ctx}
-		info, err := service.GetInfo()
+	if len(cfAccount.User) == 0 || len(cfAccount.Password) == 0 {
+		err := fmt.Errorf("error validating cloudFoundry You must provide a user and a password")
+		return false, append(errs, err)
+	}
+
+	if len(regexp.MustCompile(apiPattern).FindStringSubmatch(cfAccount.Api)) == 0 {
+		err := fmt.Errorf("error validating cloudFoundry account \"%s\": API must match pattern %s\nDomain format", cfAccount.Name, apiPattern)
+		return false, append(errs, err)
+	}
+
+	cfClient := NewCloudFoundryClient()
+	cfService := NewCloudFoundryService(cfClient)
+
+	token, err := cfService.RequestToken(cfAccount.Api, cfAccount.AppsManagerUri, cfAccount.User, cfAccount.Password, cfAccount.SkipSslValidation, util.HttpService{})
+
 		if err != nil {
 			return false, append(errs, err)
 		}
-		if info {
-			token, err := service.requestToken()
-			if err != nil {
-				return false, append(errs, err)
-			}
 
-			var validation, error = service.GetOrganizations(token)
-			if error != nil {
-				return false, append(errs, error)
-			}
-			return validation, nil
+		var validation, error = cfService.GetOrganizations(token, cfAccount.Api, cfAccount.AppsManagerUri, cfAccount.SkipSslValidation)
+		if error != nil {
+			return false, append(errs, error)
 		}
+		return validation, nil
 
 	return true, nil
-}
-
-type cloudFoundryValidate struct {
-	ctx                 	context.Context
-	cfValidator 			cloudFoundryValidator
-}
-
-type cfValidator interface {
-	info(service *cloudFoundryService) []error
-}
-
-func (d *cloudFoundryValidate) info(service *cloudFoundryService) error {
-	info, err := service.GetInfo()
-
-	if err != nil {
-		return err
-	}
-
-	if !info {
-		return fmt.Errorf("Unable to get Info from CF Api %s", service.api)
-	}
-
-	return nil
 }

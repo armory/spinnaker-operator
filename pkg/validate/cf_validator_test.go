@@ -2,48 +2,102 @@ package validate
 
 import (
 	"context"
-	"github.com/armory/spinnaker-operator/pkg/util"
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func Test_cloudFoundryValidate_info(t *testing.T) {
-	type fields struct {
-		ctx                 context.Context
-		cloudFoundryValidator cloudFoundryValidator
+func Test_cloudFoundryValidator_Validate_Account_Name(t *testing.T) {
+
+	// given
+	spinsvc, err := getSpinnakerService()
+	if !assert.Nil(t, err) {
+		return
 	}
-	type args struct {
-		service    *cloudFoundryService
+	cfValidator := cloudFoundryValidator{}
+	cfAccount := cloudFoundryAccount{}
+
+	// when
+	ok, errs := cfValidator.validateAccount (cfAccount, context.TODO(), spinsvc)
+
+	// then
+	assert.Equal(t, false, ok)
+	assert.Contains(t, fmt.Sprintf("%v", errs), "missing account name")
+
+}
+
+func Test_cloudFoundryValidator_Validate_Account_Name_Pattern(t *testing.T) {
+
+	// given
+	spinsvc, err := getSpinnakerService()
+	if !assert.Nil(t, err) {
+		return
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name:   "CloudFoundry API should return info",
-			fields: fields{},
-			args: args{
-				service: &cloudFoundryService{
-					api:     			"api.sys.sprintyellow.cf-app.com",
-					appsManagerUri: 	"https://apps.sprintyellow.cf-app.com",
-					skipHttps:			true,
-					httpService: 		util.HttpService{},
-					ctx:         		context.TODO(),
-				},
-			},
-			wantErr: false,
-		},
+	cfValidator := cloudFoundryValidator{}
+	cfAccount := cloudFoundryAccount{Name: "abcCloudFoundry"}
+
+	// when
+	ok, errs := cfValidator.validateAccount (cfAccount, context.TODO(), spinsvc)
+
+	// then
+	assert.Equal(t, false, ok)
+	assert.Contains(t, fmt.Sprintf("%v", errs), "Account name must match pattern ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$")
+
+}
+
+func Test_cloudFoundryValidator_Validate_Account_UsernameAndPassword(t *testing.T) {
+
+	// given
+	spinsvc, err := getSpinnakerService()
+	if !assert.Nil(t, err) {
+		return
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := &cloudFoundryValidate{
-				ctx:                 tt.fields.ctx,
-				cfValidator: tt.fields.cloudFoundryValidator,
-			}
-			if err := d.info(tt.args.service); (err != nil) != tt.wantErr {
-				t.Errorf("imageTags() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+	cfValidator := cloudFoundryValidator{}
+	cfAccount := cloudFoundryAccount{Name: "dev"}
+
+	// when
+	ok, errs := cfValidator.validateAccount (cfAccount, context.TODO(), spinsvc)
+
+	// then
+	assert.Equal(t, false, ok)
+	assert.Contains(t, fmt.Sprintf("%v", errs), "You must provide a user and a password")
+
+}
+
+func Test_cloudFoundryValidator_Validate_Account_UsernameButNoPassword(t *testing.T) {
+
+	// given
+	spinsvc, err := getSpinnakerService()
+	if !assert.Nil(t, err) {
+		return
 	}
+	cfValidator := cloudFoundryValidator{}
+	cfAccount := cloudFoundryAccount{Name: "dev", User: "admin"}
+
+	// when
+	ok, errs := cfValidator.validateAccount (cfAccount, context.TODO(), spinsvc)
+
+	// then
+	assert.Equal(t, false, ok)
+	assert.Contains(t, fmt.Sprintf("%v", errs), "You must provide a user and a password")
+
+}
+
+func Test_cloudFoundryValidator_Validate_Account_API(t *testing.T) {
+
+	// given
+	spinsvc, err := getSpinnakerService()
+	if !assert.Nil(t, err) {
+		return
+	}
+	cfValidator := cloudFoundryValidator{}
+	cfAccount := cloudFoundryAccount{Name: "dev", User: "admin", Password: "123password", Api: "invalidApi.com"}
+
+	// when
+	ok, errs := cfValidator.validateAccount (cfAccount, context.TODO(), spinsvc)
+
+	// then
+	assert.Equal(t, false, ok)
+	assert.Contains(t, fmt.Sprintf("%v", errs), "API must match pattern")
+
 }
