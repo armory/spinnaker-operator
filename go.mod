@@ -2,6 +2,9 @@ module github.com/armory/spinnaker-operator
 
 require (
 	github.com/armory/go-yaml-tools v0.0.0-20200316192928-75770481ad01
+	github.com/aws/aws-sdk-go v1.28.9
+	github.com/aws/aws-sdk-go-v2/config v1.1.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.5.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.0.2
 	github.com/emicklei/go-restful v2.9.3+incompatible // indirect
 	github.com/evanphx/json-patch v4.5.0+incompatible
@@ -29,7 +32,7 @@ require (
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.0.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f
 	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
