@@ -148,6 +148,10 @@ $ kubectl create ns <spinnaker-namespace>
 $ kustomize build deploy/spinnaker/kustomize/ | kubectl -n <spinnaker-namespace> apply -f -
 ```
 
+## Install Spinnaker plugins
+
+See the [Armory Operator Plugins reference](https://docs.armory.io/docs/installation/operator-reference/plugins/) and the [pf4jStagePlugin Deployment Using the Armory Operator](https://docs.armory.io/docs/plugin-guide/pf4j-deploy-example/) guide.
+
 ## Migrate from Halyard to Operator
 See [how to migrate from Halyard to Spinnaker Operator](doc/migrate.md).
  
