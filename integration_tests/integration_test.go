@@ -25,12 +25,12 @@ func init() {
 }
 
 func TestIntegrationTests(t *testing.T) {
-	SpinnakerBase(t)
-	KubernetesAndUpgradeOverlay(t)
-	UpdateSpinsvcStatus(t)
-	SecretsAndDuplicateOverlay(t)
-	ProfilesOverlay(t)
-	Validations(t)
+	t.Run("Operator=1", SpinnakerBase(t))
+	t.Run("Operator=2", KubernetesAndUpgradeOverlay(t))
+	t.Run("Operator=3", UpdateSpinsvcStatus(t))
+	t.Run("Operator=4", SecretsAndDuplicateOverlay(t))
+	t.Run("Operator=5", ProfilesOverlay(t))
+	t.Run("Operator=6", Validations(t))
 }
 
 func SpinnakerBase(t *testing.T) {
