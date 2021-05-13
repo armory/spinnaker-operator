@@ -1,6 +1,6 @@
 # Development Guide for Spinnaker Operator
 
-This document gives a detailed breakdown of the various build processes and options for building Operator from source.
+This document gives a breakdown of the various build processes and options for building Operator from source.
 
 <!-- TOC depthFrom:2 -->
 
@@ -17,9 +17,6 @@ This document gives a detailed breakdown of the various build processes and opti
 To build Operator from a source you need a Kubernetes cluster. If you do not have an existing
 Kubernetes cluster, you can install [kind](https://kind.sigs.k8s.io/) to have access
 to a cluster on your local machine.
-
-You will also need access to several command line utilities. See the [pre-requisites section](#build-pre-requisites) for
-more details.
 
 ## Build Pre-Requisites
 
