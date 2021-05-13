@@ -24,7 +24,15 @@ func init() {
 	}
 }
 
-func TestSpinnakerBase(t *testing.T) {
+func TestIntegrationTests(t *testing.T) {
+	SpinnakerBase(t)
+	KubernetesAndUpgradeOverlay(t)
+	UpdateSpinsvcStatus(t)
+	SecretsAndDuplicateOverlay(t)
+	ProfilesOverlay(t)
+	Validations(t)
+}
+func SpinnakerBase(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
@@ -38,7 +46,7 @@ func TestSpinnakerBase(t *testing.T) {
 	e.InstallSpinnaker(e.Operator.Namespace, "testdata/spinnaker/base", t)
 }
 
-func TestKubernetesAndUpgradeOverlay(t *testing.T) {
+func KubernetesAndUpgradeOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
@@ -102,7 +110,7 @@ func TestKubernetesAndUpgradeOverlay(t *testing.T) {
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }
 
-func TestUpdateSpinsvcStatus(t *testing.T) {
+func UpdateSpinsvcStatus(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
@@ -155,7 +163,7 @@ func TestUpdateSpinsvcStatus(t *testing.T) {
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }
 
-func TestSecretsAndDuplicateOverlay(t *testing.T) {
+func SecretsAndDuplicateOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
@@ -214,7 +222,7 @@ func TestSecretsAndDuplicateOverlay(t *testing.T) {
 	assert.NotNil(t, err, fmt.Sprintf("expected error but was %s", o))
 }
 
-func TestProfilesOverlay(t *testing.T) {
+func ProfilesOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
@@ -268,7 +276,7 @@ echo "hello world!"`, sh)
 	assert.NotEqual(t, "", strings.TrimSpace(o))
 }
 
-func TestValidations(t *testing.T) {
+func Validations(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
