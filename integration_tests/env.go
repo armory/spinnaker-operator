@@ -189,8 +189,8 @@ func InstallCrdsAndOperator(spinNs string, isClusterMode bool, d Defaults, t *te
 
 func (e *TestEnv) InstallCrds(d Defaults, t *testing.T) bool {
 	ApplyManifest("default", d.CRDManifests, e, t)
-	RunCommandAndAssert(fmt.Sprintf("%s get spinsvc", e.KubectlPrefix()), t)
-	RunCommandAndAssert(fmt.Sprintf("%s get spinnakeraccounts", e.KubectlPrefix()), t)
+	//RunCommandAndAssert(fmt.Sprintf("%s get spinsvc", e.KubectlPrefix()), t)
+	//RunCommandAndAssert(fmt.Sprintf("%s get spinnakeraccounts", e.KubectlPrefix()), t)
 	return !t.Failed()
 }
 
