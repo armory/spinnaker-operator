@@ -20,8 +20,8 @@ const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
-	MaxChecksWaitingForSpinnakerStability  = 300 // (300 * 2s) / 60 = 10 minutes
-	MaxChecksWaitingForLBStability         = 300 // (300 * 2s) / 60 = 10 minutes
+	MaxChecksWaitingForSpinnakerStability  = 450 // (300 * 2s) / 60 = 15 minutes
+	MaxChecksWaitingForLBStability         = 450 // (300 * 2s) / 60 = 15 minutes
 )
 
 var SpinBaseSvcs []string
