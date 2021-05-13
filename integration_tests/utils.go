@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -236,6 +237,7 @@ func RunCommandInContainerAndAssert(ns, svc, cmd string, e *TestEnv, t *testing.
 }
 
 func CopyFileToS3Bucket(f, dest string, e *TestEnv, t *testing.T) bool {
+	UpdateControlPlaneHost(f, t)
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s cp %s %s:/tmp/fileToCopy", e.KubectlPrefix(), e.Operator.Namespace, f, e.Operator.PodName), t)
 	if t.Failed() {
 		return !t.Failed()
@@ -281,4 +283,17 @@ func ExponentialBackOff(operation backoff.Operation, minutes time.Duration) erro
 	b.MaxInterval = 20 * time.Minute
 
 	return backoff.Retry(operation, b)
+}
+
+func GetLocalHost(t *testing.T) string {
+	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane", t)
+	return fmt.Sprintf(`https://%s:6443`, strings.TrimSpace(host))
+}
+
+func UpdateControlPlaneHost(path string, t *testing.T) {
+	c, _ := RunCommandSilent(fmt.Sprintf("cat %s", path), t)
+	re := regexp.MustCompile(`(http|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+	c = re.ReplaceAllString(c, GetLocalHost(t))
+	err := ioutil.WriteFile(path, []byte(c), os.ModePerm)
+	assert.Nil(t, err, "unable to generate files.yml file")
 }

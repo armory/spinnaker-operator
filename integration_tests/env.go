@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -301,15 +300,10 @@ spec:
 	}
 
 	f = fmt.Sprintf(f, name, string(indentedFile))
-	re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
-	LogMainStep(t, "========> CRISTHIAN CHANGE")
-	LogMainStep(t, f)
-	_, _ = RunCommand("docker ps", t)
-	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane", t)
-	f = re.ReplaceAllString(f, fmt.Sprintf(`https://%s:6443`, strings.TrimSpace(host)))
-	LogMainStep(t, f)
-	LogMainStep(t, "========> CRISTHIAN CHANGE")
 	err = ioutil.WriteFile(filepath.Join(kustPath, "files.yml"), []byte(f), os.ModePerm)
 	assert.Nil(t, err, "unable to generate files.yml file")
+
+	UpdateControlPlaneHost(filepath.Join(kustPath, "files.yml"), t)
+
 	return !t.Failed()
 }
