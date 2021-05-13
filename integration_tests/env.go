@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -299,6 +300,8 @@ spec:
 	}
 
 	f = fmt.Sprintf(f, name, string(indentedFile))
+	re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+	indentedFile = re.ReplaceAllString(indentedFile, `https://127.0.0.1:6443`)
 	err = ioutil.WriteFile(filepath.Join(kustPath, "files.yml"), []byte(f), os.ModePerm)
 	assert.Nil(t, err, "unable to generate files.yml file")
 	return !t.Failed()
