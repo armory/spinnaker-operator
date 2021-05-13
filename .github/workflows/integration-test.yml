@@ -25,6 +25,7 @@ jobs:
           kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml
           kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
           kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/metallb.yaml
+          kubectl apply -f integration_tests/metallb-configmap.yaml
           until [ "$(kubectl get pods --all-namespaces --no-headers | grep -cEv '([0-9]+)/\1')" -eq 0 ]; do
            sleep 5s
           done

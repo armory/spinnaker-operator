@@ -1,14 +1,12 @@
 package integration_tests
 
 import (
-	"context"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
 	"html/template"
 	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,7 +19,7 @@ const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
-	MaxChecksWaitingForSpinnakerStability  = 450 // (450 * 2s) / 60 = 15 minutes
+	MaxChecksWaitingForSpinnakerStability  = 300 // (450 * 2s) / 60 = 15 minutes
 	MaxChecksWaitingForLBStability         = 300 // (300 * 2s) / 60 = 10 minutes
 )
 
@@ -124,7 +122,7 @@ func WaitForLBReady(ns, statusPath string, e *TestEnv, t *testing.T) string {
 			lbUrl, _ = RunCommandSilent(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='%s'", e.KubectlPrefix(), ns, SpinServiceName, statusPath), t)
 		}
 		if lbUrl != "" {
-			_, err := RunCommandSilent(fmt.Sprintf("curl %s", lbUrl), t)
+			_, err := RunCommandSilent(fmt.Sprintf("docker run --rm --network host curlimages/curl %s", lbUrl), t)
 			if err == nil {
 				return lbUrl
 			}
@@ -201,22 +199,16 @@ func RunCommandSilentAndAssert(c string, t *testing.T) string {
 }
 
 func ExecuteGetRequest(reqUrl string, t *testing.T) string {
-	req, err := http.NewRequest("GET", reqUrl, nil)
-	if assert.Nil(t, err) {
-		req = req.WithContext(context.TODO())
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if !assert.Nil(t, err, fmt.Sprintf("Network error executing GET request to %s", reqUrl)) {
-			t.Logf("GET request to %s failed with error: %s", reqUrl, err.Error())
-			return ""
-		}
-		defer resp.Body.Close()
-		b, _ := ioutil.ReadAll(resp.Body)
-		o := string(b)
-		assert.Nil(t, err, fmt.Sprintf("GET %s failed: %s", reqUrl, o))
-		return o
+
+	resp, err := RunCommand(fmt.Sprintf("docker run --rm --network host curlimages/curl -s %s", reqUrl), t)
+	if !assert.Nil(t, err, fmt.Sprintf("Network error executing GET request to %s", reqUrl)) {
+		t.Logf("GET request to %s failed with error: %s", reqUrl, err.Error())
+		return ""
 	}
-	return ""
+	o := strings.TrimSpace(resp)
+	assert.Nil(t, err, fmt.Sprintf("GET %s failed: %s", reqUrl, o))
+
+	return o
 }
 
 func LogMainStep(t *testing.T, msg string, args ...interface{}) {
