@@ -173,10 +173,10 @@ func SecretsAndDuplicateOverlay(t *testing.T) {
 	t.Parallel()
 	LogMainStep(t, `Test goals:
 - Install spinnaker with:
- * S3 secret values
- * S3 secret files
- * Kubernetes secret values
- * Kubernetes secret files
+  * S3 secret values
+  * S3 secret files
+  * Kubernetes secret values
+  * Kubernetes secret files
 - Try to install a second spinnaker in the same namespace, should fail
 `)
 
@@ -235,7 +235,7 @@ func ProfilesOverlay(t *testing.T) {
 	// setup
 	t.Parallel()
 	LogMainStep(t, `Test goals:
-- Settings in profile configs should work
+- Settings in profile configs should work 
 - service-settings are merged and applied
 `)
 
@@ -264,8 +264,8 @@ func ProfilesOverlay(t *testing.T) {
 	j := strings.TrimSpace(RunCommandInContainerAndAssert(ns, "spin-rosco", fmt.Sprintf("cat /opt/rosco/config/packer/example-packer-config.json"), e, t))
 	assert.Equal(t,
 		`{
- "key1": "value1",
- "key2": "value2"
+  "key1": "value1",
+  "key2": "value2"
 }`, j)
 	sh := strings.TrimSpace(RunCommandInContainerAndAssert(ns, "spin-rosco", fmt.Sprintf("cat /opt/rosco/config/packer/my_custom_script.sh"), e, t))
 	assert.Equal(t,
