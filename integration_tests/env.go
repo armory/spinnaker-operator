@@ -15,22 +15,25 @@ import (
 )
 
 const (
-	KubeconfigVar    = "KUBECONFIG"
-	OperatorImageVar = "OPERATOR_IMAGE"
-	HalyardImageVar  = "HALYARD_IMAGE"
-	BucketVar        = "S3_BUCKET"
-	BucketRegionVar  = "S3_BUCKET_REGION"
-
+	KubeconfigVar                        = "KUBECONFIG"
+	OperatorImageVar                     = "OPERATOR_IMAGE"
+	HalyardImageVar                      = "HALYARD_IMAGE"
+	BucketVar                            = "S3_BUCKET"
+	BucketRegionVar                      = "S3_BUCKET_REGION"
+	BucketAccessKeyIdVar                 = "S3_BUCKET_ACCESS_KEY"
+	BucketSecretAccessKeyVar             = "S3_BUCKET_SECRET_ACCESS_KEY"
 	MaxChecksWaitingForAccountsAvailable = 20 // 20 * 2s = 40 seconds
 )
 
 type Defaults struct {
-	HalyardImageDefault   string
-	BucketDefault         string
-	BucketRegionDefault   string
-	OperatorKustomizeBase string
-	CRDManifests          string
-	OperatorImageDefault  string
+	HalyardImageDefault            string
+	BucketDefault                  string
+	BucketRegionDefault            string
+	BucketAccessKeyIdDefault       string
+	BucketSecretAccessKeyIdDefault string
+	OperatorKustomizeBase          string
+	CRDManifests                   string
+	OperatorImageDefault           string
 }
 
 var envLock sync.Mutex
@@ -61,12 +64,14 @@ type Account struct {
 
 // Vars are variables used in kustomize templates
 type Vars struct {
-	Kubeconfig     string
-	OperatorImage  string
-	HalyardImage   string
-	S3Bucket       string
-	S3BucketRegion string
-	SpinNamespace  string
+	Kubeconfig        string
+	OperatorImage     string
+	HalyardImage      string
+	S3Bucket          string
+	S3BucketRegion    string
+	S3AccessKeyId     string
+	S3SecretAccessKey string
+	SpinNamespace     string
 }
 
 // CommonSetup creates a new environment context, initializing common settings for all tests
@@ -122,7 +127,7 @@ func resolveEnvVars(d Defaults, t *testing.T) Vars {
 		t.Logf("%s env var not set, using default", BucketVar)
 		b = d.BucketDefault
 	}
-	t.Logf("Using bucekt %s", b)
+	t.Logf("Using bucket %s", b)
 
 	r := os.Getenv(BucketRegionVar)
 	if r == "" {
@@ -130,12 +135,25 @@ func resolveEnvVars(d Defaults, t *testing.T) Vars {
 		r = d.BucketRegionDefault
 	}
 	t.Logf("Using bucekt region %s", r)
+
+	a := os.Getenv(BucketAccessKeyIdVar)
+	if r == "" {
+		t.Logf("%s env var not set, using default", d.BucketRegionDefault)
+		r = d.BucketRegionDefault
+	}
+	s := os.Getenv(BucketSecretAccessKeyVar)
+	if r == "" {
+		t.Logf("%s env var not set, using default", d.BucketRegionDefault)
+		r = d.BucketRegionDefault
+	}
 	return Vars{
-		Kubeconfig:     k,
-		OperatorImage:  op,
-		HalyardImage:   h,
-		S3Bucket:       b,
-		S3BucketRegion: r,
+		Kubeconfig:        k,
+		OperatorImage:     op,
+		HalyardImage:      h,
+		S3Bucket:          b,
+		S3BucketRegion:    r,
+		S3AccessKeyId:     a,
+		S3SecretAccessKey: s,
 	}
 }
 

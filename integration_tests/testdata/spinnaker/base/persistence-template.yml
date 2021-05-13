@@ -8,3 +8,6 @@ spec:
       persistentStorage:
         s3:
           bucket: {{.S3Bucket}}
+          region: {{.S3Region}}
+          accessKeyId: {{.S3AccessKeyId}}
+          secretAccessKey: {{.S3SecretAccessKey}}
