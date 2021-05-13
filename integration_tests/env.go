@@ -20,9 +20,9 @@ const (
 	OperatorImageVar                     = "OPERATOR_IMAGE"
 	HalyardImageVar                      = "HALYARD_IMAGE"
 	BucketVar                            = "S3_BUCKET"
-	BucketRegionVar                      = "S3_BUCKET_REGION"
-	BucketAccessKeyIdVar                 = "S3_BUCKET_ACCESS_KEY"
-	BucketSecretAccessKeyVar             = "S3_BUCKET_SECRET_ACCESS_KEY"
+	BucketRegionVar                      = "AWS_DEFAULT_REGION"
+	BucketAccessKeyIdVar                 = "AWS_ACCESS_KEY_ID"
+	BucketSecretAccessKeyVar             = "AWS_SECRET_ACCESS_KEY"
 	MaxChecksWaitingForAccountsAvailable = 20 // 20 * 2s = 40 seconds
 )
 

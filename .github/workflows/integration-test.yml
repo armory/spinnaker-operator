@@ -32,8 +32,10 @@ jobs:
       - name: Run tests
         env:
           S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
-          S3_BUCKET_REGION: ${{ secrets.INTEGRATION_TEST_S3_BUCKET_REGION }}
-          S3_BUCKET_ACCESS_KEY: ${{ secrets.INTEGRATION_TEST_S3_USER }}
-          S3_BUCKET_SECRET_ACCESS_KEY: ${{ secrets.INTEGRATION_TEST_S3_PASSWORD }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INTEGRATION_TEST_S3_PASSWORD }}
+          AWS_DEFAULT_REGION: ${{ secrets.INTEGRATION_TEST_S3_BUCKET_REGION }}
+          AWS_EC2_METADATA_DISABLED: true
+          HALYARD_IMAGE: armory/halyard:operator-1bef9b8
         run: |
           make integration-test
