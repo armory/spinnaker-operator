@@ -27,7 +27,7 @@ func (s *SpinnakerAccountList) GetItems() []interfaces.SpinnakerAccount {
 	} else {
 		var result []interfaces.SpinnakerAccount
 		for _, i := range s.Items {
-			result = append(result, &i)
+			result = append(result, i.DeepCopy())
 		}
 		return result
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
+	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -89,6 +90,9 @@ func (r *ReconcileSpinnakerAccount) Reconcile(request reconcile.Request) (reconc
 	err := r.client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// We need to ensure accounts are getting deleted from secret
+			_ = r.updateSecret(ctx, &kubernetes.AccountType{}, request.Namespace)
+
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -127,8 +131,13 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 		log.Info("SpinnakerService not accepting dynamic accounts", "metadata.name", spinsvc.GetName())
 	}
 
+	return r.updateSecret(ctx, accountType, spinsvc.GetNamespace())
+}
+
+func (r *ReconcileSpinnakerAccount) updateSecret(ctx context.Context, accountType account.SpinnakerAccountType, namespace string) error {
+
 	// Get all Spinnaker accounts
-	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, account.GetNamespace())
+	allAccounts, err := accounts.AllValidCRDAccounts(ctx, r.client, namespace)
 	if err != nil {
 		return err
 	}
@@ -139,7 +148,7 @@ func (r *ReconcileSpinnakerAccount) deploy(ctx context.Context, account interfac
 		if err != nil {
 			return err
 		}
-		dep, err := util.FindDeployment(r.client, spinsvc, svc)
+		dep, err := util.FindDeployment(r.client, namespace, svc)
 		if err != nil {
 			return err
 		}

@@ -31,9 +31,9 @@ func FindSpinnakerService(c client.Client, ns string, builder interfaces.TypesFa
 	return nil, nil
 }
 
-func FindDeployment(c client.Client, spinsvc interfaces.SpinnakerService, service string) (*v12.Deployment, error) {
+func FindDeployment(c client.Client, namespace, service string) (*v12.Deployment, error) {
 	dep := &v12.Deployment{}
-	err := c.Get(context.TODO(), client.ObjectKey{Namespace: spinsvc.GetNamespace(), Name: fmt.Sprintf("spin-%s", service)}, dep)
+	err := c.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: fmt.Sprintf("spin-%s", service)}, dep)
 	return dep, err
 }
 
