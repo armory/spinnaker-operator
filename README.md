@@ -161,9 +161,7 @@ See [all SpinnakerService options](doc/options.md).
 ## Uninstalling the operator
 See [this section](doc/uninstalling.md).
 
-Contributing
-
-----
+---
 
 ## Getting help
 
