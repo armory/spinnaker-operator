@@ -32,6 +32,7 @@ func TestIntegrationTests(t *testing.T) {
 	ProfilesOverlay(t)
 	Validations(t)
 }
+
 func SpinnakerBase(t *testing.T) {
 	// setup
 	t.Parallel()
@@ -44,6 +45,10 @@ func SpinnakerBase(t *testing.T) {
 
 	// install
 	e.InstallSpinnaker(e.Operator.Namespace, "testdata/spinnaker/base", t)
+
+	// uninstall
+	LogMainStep(t, "Uninstalling spinnaker")
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), e.Operator.Namespace, SpinServiceName), t)
 }
 
 func KubernetesAndUpgradeOverlay(t *testing.T) {
@@ -220,6 +225,10 @@ func SecretsAndDuplicateOverlay(t *testing.T) {
 	// try to install a second spinnaker in the same namespace
 	o, err := ApplyKustomize(e.Operator.Namespace, "testdata/spinnaker/overlay_duplicate", e, t)
 	assert.NotNil(t, err, fmt.Sprintf("expected error but was %s", o))
+
+	// uninstall
+	LogMainStep(t, "Uninstalling spinnaker")
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }
 
 func ProfilesOverlay(t *testing.T) {
@@ -274,6 +283,10 @@ echo "hello world!"`, sh)
 	c := fmt.Sprintf("%s -n %s get pod %s -o=jsonpath='{.spec.containers[0].env[?(@.name==\"SVC_NAME\")]}'", e.KubectlPrefix(), ns, pod)
 	o = RunCommandSilentAndAssert(c, t)
 	assert.NotEqual(t, "", strings.TrimSpace(o))
+
+	// uninstall
+	LogMainStep(t, "Uninstalling spinnaker")
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }
 
 func Validations(t *testing.T) {
@@ -313,4 +326,8 @@ func Validations(t *testing.T) {
 	SubstituteOverlayVars(spinOverlay, vars, t)
 	o, err = ApplyKustomize(ns, spinOverlay, e, t)
 	assert.Nil(t, err, fmt.Sprintf("Expected validation error. Output: %s", o))
+
+	// uninstall
+	LogMainStep(t, "Uninstalling spinnaker")
+	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), ns, SpinServiceName), t)
 }
