@@ -29,6 +29,13 @@ spec:
         - name: halyard
           image: {{.HalyardImage}}
           imagePullPolicy: Always
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: {{.S3AccessKeyId}}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{.S3SecretAccessKey}}
+            - name: AWS_DEFAULT_REGION
+              value: {{.S3Region}}
           ports:
             - containerPort: 8064
               protocol: TCP
