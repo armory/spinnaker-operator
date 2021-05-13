@@ -48,23 +48,21 @@ accessible, is to place them on [Docker Hub](https://hub.docker.com/) or your pr
         docker login
 
 
-
 2. Make sure that the `REGISTRY_ORG` and `REGISTRY` environment variables are set to the same value as your
    username on the Docker Registry, and the Docker Registry you are using.
 
         export REGISTRY_ORG=docker_hub_username
         export REGISTRY=docker_registry_name  #defaults to docker.io if unset
 
-   \
-   When the Docker image is build, it will be labeled in the
-   form: `${REGISTRY}/${REGISTRY_ORG}/spinnaker-operator:dev` in your local repository.
-   
-
 3. Now build the Docker image and push them to your repository on Docker Hub:
 
         make docker-build
         make docker-package
         make docker-push-dev
+   \
+   When the Docker image is packaged, it will be tagged in the following
+   format: `${REGISTRY}/${REGISTRY_ORG}/spinnaker-operator:dev` in your local repository.
+
 
 4. To use the new built image, update
    the `deploy/operator/cluster/deployment.yaml`file replacing the image reference (in `image`
