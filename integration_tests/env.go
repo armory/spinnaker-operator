@@ -305,7 +305,7 @@ spec:
 	LogMainStep(t, "========> CRISTHIAN CHANGE")
 	LogMainStep(t, f)
 	_, _ = RunCommand("docker ps", t)
-	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kindest", t)
+	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane", t)
 	f = re.ReplaceAllString(f, fmt.Sprintf(`https://%s:6443`, host))
 	LogMainStep(t, f)
 	LogMainStep(t, "========> CRISTHIAN CHANGE")
