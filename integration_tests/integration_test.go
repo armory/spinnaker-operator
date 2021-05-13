@@ -4,6 +4,7 @@ package integration_tests
 
 import (
 	"fmt"
+	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
