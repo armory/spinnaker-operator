@@ -35,7 +35,7 @@ spec:
             - name: AWS_SECRET_ACCESS_KEY
               value: {{.S3SecretAccessKey}}
             - name: AWS_DEFAULT_REGION
-              value: {{.S3Region}}
+              value: {{.S3BucketRegion}}
           ports:
             - containerPort: 8064
               protocol: TCP
