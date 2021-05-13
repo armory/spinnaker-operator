@@ -190,7 +190,6 @@ func InstallCrdsAndOperator(spinNs string, isClusterMode bool, d Defaults, t *te
 func (e *TestEnv) InstallCrds(d Defaults, t *testing.T) bool {
 	ApplyManifest("default", d.CRDManifests, e, t)
 	_, _ = RunCommand("rm -rf ~/.kube/http-cache/ && rm -rf ~/.kube/cache/", t)
-
 	RunCommandAndAssert(fmt.Sprintf("%s get spinsvc", e.KubectlPrefix()), t)
 	RunCommandAndAssert(fmt.Sprintf("%s get spinnakeraccounts", e.KubectlPrefix()), t)
 	return !t.Failed()
@@ -303,7 +302,11 @@ spec:
 
 	f = fmt.Sprintf(f, name, string(indentedFile))
 	re := regexp.MustCompile(`(http|ftp|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+	LogMainStep(t, "========> CRISTHIAN CHANGE")
+	LogMainStep(t, indentedFile)
 	indentedFile = re.ReplaceAllString(indentedFile, `https://127.0.0.1:6443`)
+	LogMainStep(t, indentedFile)
+	LogMainStep(t, "========> CRISTHIAN CHANGE")
 	err = ioutil.WriteFile(filepath.Join(kustPath, "files.yml"), []byte(f), os.ModePerm)
 	assert.Nil(t, err, "unable to generate files.yml file")
 	return !t.Failed()
