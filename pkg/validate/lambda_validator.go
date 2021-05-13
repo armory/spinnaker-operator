@@ -14,16 +14,16 @@ import (
 )
 
 const (
-	lambdaAccountType        		= "lambda"
-	lambdaClouddriverEnabledKey 	= "aws.features.lambda.enabled"
-	AccessKeyId 					= "providers.aws.accessKeyId"
-	SecretAccessKey 				= "providers.aws.secretAccessKey"
-	lambdaAccountsKey        		= "aws.accounts"
+	lambdaAccountType               = "lambda"
+	lambdaClouddriverEnabledKey     = "aws.features.lambda.enabled"
+	AccessKeyId                     = "providers.aws.accessKeyId"
+	SecretAccessKey                 = "providers.aws.secretAccessKey"
+	lambdaAccountsKey               = "aws.accounts"
 )
 
 type lambdaAccount struct {
 	Name                    string                 `json:"name,omitempty"`
-	LambdaEnabled       	bool                   `json:"lambdaEnabled,omitempty"`
+	LambdaEnabled           bool                   `json:"lambdaEnabled,omitempty"`
 	AccountId               string                 `json:"accountId,omitempty"`
 	AssumeRole              string                 `json:"assumeRole,omitempty"`
 }
@@ -126,17 +126,17 @@ func (d *lambdaValidator) validateAWSLambda(accessKey string, secretKey string, 
 			input := &lambda.ListFunctionsInput{}
 
 			_, err := svc.ListFunctions(input)
-			if err != nil {
-				if err, ok := err.(awserr.Error); ok {
-					switch err.Code() {
-					case "AccessDenied":
-						return false, []error{fmt.Errorf("AccessDenied permission denied")}
-					default:
-						return false, []error{fmt.Errorf(err.Error())}
+				if err != nil {
+					if err, ok := err.(awserr.Error); ok {
+						switch err.Code() {
+						case "AccessDenied":
+							return false, []error{fmt.Errorf("AccessDenied permission denied")}
+						default:
+							return false, []error{fmt.Errorf(err.Error())}
+						}
 					}
+					return false, []error{fmt.Errorf(err.Error())}
 				}
-				return false, []error{fmt.Errorf(err.Error())}
-			}
 			return true, nil
 		}
 	}
