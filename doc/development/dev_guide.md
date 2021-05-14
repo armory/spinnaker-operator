@@ -38,15 +38,14 @@ The default kind setup should allow the integration tests to be run without addi
 
 ## Build and deploy from source
 
-To build Spinnaker Operator from a source the operator code needs to be compiled into container images and placed
-in a location accessible to the Kubernetes cluster. The easiest way to make your custom Operator build
-accessible, is to place them on [Docker Hub](https://hub.docker.com/) or your private docker registry. The instructions below use Docker Hub.
+To build Spinnaker Operator from a source the operator code needs to be compiled into a container image and deploy it
+in a Kubernetes cluster. The easiest way to make your custom Operator build
+accessible, is to publish docker image on [Docker Hub](https://hub.docker.com/) or your private docker registry. The instructions below use Docker Hub.
 
 1. If you don't have one already, create an account on [Docker Hub](https://hub.docker.com/). Then log your local
    Docker client into Docker Hub using:
 
         docker login
-
 
 2. Make sure that the `REGISTRY_ORG` and `REGISTRY` environment variables are set to the same value as your
    username on the Docker Registry, and the Docker Registry you are using.
@@ -66,18 +65,15 @@ accessible, is to place them on [Docker Hub](https://hub.docker.com/) or your pr
 
 4. To use the new built image, update
    the `deploy/operator/cluster/deployment.yaml`file replacing the image reference (in `image`
-   property) of `spinnaker-operator` container, with the one with the same name but with the repository changed, You also can update the halyard container
-   > *Note*: please ensure you don't commit these changes accidentally.
+   property) of `spinnaker-operator` container, with the one with the same name but with the repository changed, You also can update the halyard container image.
 
 
 5. The installation files assume you're installing into the namespace `spinnaker-operator`. If you want to use a different one,
    you'll need to replace it in the installation files.
 
        deploy/operator/cluster/role_binding.yaml
-   > *Note*: please ensure you don't commit these changes accidentally.
 
-
-6. Then deploy the Cluster Operator by running the following (replace `spinnaker-operator` with your desired namespace if
+6. Then deploy the Cluster Operator by running the following (replace `spinnaker-operator` with your namespace if
    necessary):
 
         kubectl -n spinnaker-operator apply -f deploy/operator/cluster
@@ -108,9 +104,4 @@ Target `docker-package` will take base image created from `docker_build` and bui
 
 ### Tagging and pushing Docker image
 
-Once image is built target `docker-push-dev` will push it to the defined  building the Docker image you can use an alternative JRE or use an alternate base image.
-
-* `REGISTRY_ORG` configures the Docker organization for tagging/pushing the images (defaults to the value of the `$USER`
-  environment variable)
-* `VERSION` configured Docker tag (default is `dev`)
-* `REGISTRY` configures the Docker registry where the image will be pushed (default is `docker.io`)
+Once image is built target `docker-push-dev` will push it to the defined docker registry.
