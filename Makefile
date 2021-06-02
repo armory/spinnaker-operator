@@ -78,7 +78,7 @@ docker-test: Makefile ## Runs "make test" in a docker container
 
 .PHONY: integration-test
 integration-test: build-dirs Makefile ## Run integration tests. See requirements in integration_tests/README.md
-	@go test -tags=integration -mod=vendor -timeout=120m -run IntegrationTests/Operator= ./integration_tests/...
+	@go test -tags=integration -mod=vendor -timeout=40m -run IntegrationTests/Operator= ./integration_tests/...
 
 .PHONY: docker-package
 docker-package: Makefile ## Builds the docker image to distribute
