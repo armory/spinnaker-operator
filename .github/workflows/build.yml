@@ -4,7 +4,7 @@ on:
     branches:
       - master
       - release-*
-      - fix/integration_tests
+
   pull_request:
 
 jobs:
