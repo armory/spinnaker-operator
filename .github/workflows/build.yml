@@ -140,7 +140,7 @@ jobs:
           AWS_EC2_METADATA_DISABLED: true
           OPERATOR_IMAGE: ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
         run: |
-          kind load ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }} ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
+          kind load docker-image ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
           halyard=$(cat halyard-version | head -1)
           export HALYARD_IMAGE="armory/halyard:$halyard"
           make integration-test
