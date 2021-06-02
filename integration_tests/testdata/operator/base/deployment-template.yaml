@@ -18,7 +18,7 @@ spec:
           image: {{.OperatorImage}}
           command:
             - spinnaker-operator
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: POD_NAME
               valueFrom:
