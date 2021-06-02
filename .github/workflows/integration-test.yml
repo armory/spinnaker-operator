@@ -16,17 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: engineerd/setup-kind@v0.5.0
-      - name: Restore Go cache
-        uses: actions/cache@v1
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.15.x
       - name: Install load balancer
         run: |
           kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml
@@ -36,13 +25,13 @@ jobs:
           until [ "$(kubectl get pods --all-namespaces --no-headers | grep -cEv '([0-9]+)/\1')" -eq 0 ]; do
            sleep 5s
           done
-#      - name: Run tests
-#        env:
-#          S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
-#          AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
-#          AWS_SECRET_ACCESS_KEY: ${{ secrets.INTEGRATION_TEST_S3_PASSWORD }}
-#          AWS_DEFAULT_REGION: ${{ secrets.INTEGRATION_TEST_S3_BUCKET_REGION }}
-#          AWS_EC2_METADATA_DISABLED: true
-#          HALYARD_IMAGE: armory/halyard:operator-1bef9b8
-#        run: |
-#          make integration-test
+      - name: Run tests
+        env:
+          S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INTEGRATION_TEST_S3_PASSWORD }}
+          AWS_DEFAULT_REGION: ${{ secrets.INTEGRATION_TEST_S3_BUCKET_REGION }}
+          AWS_EC2_METADATA_DISABLED: true
+          HALYARD_IMAGE: armory/halyard:operator-1bef9b8
+        run: |
+          make integration-test

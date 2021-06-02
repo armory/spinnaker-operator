@@ -160,19 +160,3 @@ See [all SpinnakerService options](doc/options.md).
 
 ## Uninstalling the operator
 See [this section](doc/uninstalling.md).
-
----
-
-## Getting help
-
-If you encounter any issues while using Operator, you can get help using:
-
-- [#kubernetes-operator channel on Spinnaker Slack](https://spinnakerteam.slack.com/)
-- [GitHub Discussions](https://github.com/armory/spinnaker-operator/discussions)
- 
-## Contributing
-
-All bugs or enhancements are tracked as [GitHub issues](https://github.com/armory/spinnaker-operator/issues).
-
-The [Dev guide](https://github.com/armory/spinnaker-operator/blob/master/doc/development/dev_guide.md) describes how to build Operator.
-Please make sure you validate your changes before opening a Pull Request [Test guide](https://github.com/armory/spinnaker-operator/blob/master/doc/development/testing_guide.md).
