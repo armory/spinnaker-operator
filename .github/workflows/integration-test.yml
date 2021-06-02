@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: ouzi-dev/commit-status-updater@v1.1.0
       - uses: engineerd/setup-kind@v0.5.0
       - name: Restore Go cache
         uses: actions/cache@v1
@@ -47,7 +46,3 @@ jobs:
 #          HALYARD_IMAGE: armory/halyard:operator-1bef9b8
 #        run: |
 #          make integration-test
-      - if: always()
-        uses: ouzi-dev/commit-status-updater@v1.1.0
-        with:
-          status: ${{ job.status }}
