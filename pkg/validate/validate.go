@@ -18,6 +18,7 @@ var ParallelValidators = []SpinnakerValidator{
 	&dockerRegistryValidator{},
 	&cloudFoundryValidator{},
 	&awsAccountValidator{},
+	&lambdaValidator{},
 }
 
 type SpinnakerValidator interface {
