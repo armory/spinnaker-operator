@@ -118,9 +118,9 @@ jobs:
           git tag v${{ steps.build_type.outputs.version }}
           git push origin v${{ steps.build_type.outputs.version }}
 
-      - name: Install load balancer
 #        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
-        uses: engineerd/setup-kind@v0.5.0
+      - uses: engineerd/setup-kind@v0.5.0
+      - name: Install load balancer
         run: |
           kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml
           kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
