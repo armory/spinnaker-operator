@@ -18,7 +18,7 @@ spec:
           image: {{.OperatorImage}}
           command:
             - spinnaker-operator
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: POD_NAME
               valueFrom:
@@ -26,9 +26,22 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "spinnaker-operator"
+            - name: AWS_ACCESS_KEY_ID
+              value: {{.S3AccessKeyId}}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{.S3SecretAccessKey}}
+            - name: AWS_DEFAULT_REGION
+              value: {{.S3BucketRegion}}
         - name: halyard
           image: {{.HalyardImage}}
           imagePullPolicy: Always
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value: {{.S3AccessKeyId}}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{.S3SecretAccessKey}}
+            - name: AWS_DEFAULT_REGION
+              value: {{.S3BucketRegion}}
           ports:
             - containerPort: 8064
               protocol: TCP

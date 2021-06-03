@@ -1,17 +1,16 @@
 package integration_tests
 
 import (
-	"context"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
 	"html/template"
 	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -21,8 +20,8 @@ const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
-	MaxChecksWaitingForSpinnakerStability  = 450 // (450 * 2s) / 60 = 15 minutes
-	MaxChecksWaitingForLBStability         = 300 // (300 * 2s) / 60 = 10 minutes
+	MaxChecksWaitingForSpinnakerStability  = 450 // (300 * 2s) / 60 = 15 minutes
+	MaxChecksWaitingForLBStability         = 450 // (300 * 2s) / 60 = 15 minutes
 )
 
 var SpinBaseSvcs []string
@@ -124,7 +123,7 @@ func WaitForLBReady(ns, statusPath string, e *TestEnv, t *testing.T) string {
 			lbUrl, _ = RunCommandSilent(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='%s'", e.KubectlPrefix(), ns, SpinServiceName, statusPath), t)
 		}
 		if lbUrl != "" {
-			_, err := RunCommandSilent(fmt.Sprintf("curl %s", lbUrl), t)
+			_, err := RunCommandSilent(fmt.Sprintf("docker run --rm --network host curlimages/curl %s", lbUrl), t)
 			if err == nil {
 				return lbUrl
 			}
@@ -200,23 +199,20 @@ func RunCommandSilentAndAssert(c string, t *testing.T) string {
 	return s
 }
 
+// ExecuteGetRequest
+// Since the integration tests are interacting with the spinnaker URL and the URL is generated within the docker network.
+// We need to emulate a curl call inside of the docker network, so we are using a docker image instead of the CURL command itself for it.
 func ExecuteGetRequest(reqUrl string, t *testing.T) string {
-	req, err := http.NewRequest("GET", reqUrl, nil)
-	if assert.Nil(t, err) {
-		req = req.WithContext(context.TODO())
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if !assert.Nil(t, err, fmt.Sprintf("Network error executing GET request to %s", reqUrl)) {
-			t.Logf("GET request to %s failed with error: %s", reqUrl, err.Error())
-			return ""
-		}
-		defer resp.Body.Close()
-		b, _ := ioutil.ReadAll(resp.Body)
-		o := string(b)
-		assert.Nil(t, err, fmt.Sprintf("GET %s failed: %s", reqUrl, o))
-		return o
+
+	resp, err := RunCommand(fmt.Sprintf("docker run --rm --network host curlimages/curl -s %s", reqUrl), t)
+	if !assert.Nil(t, err, fmt.Sprintf("Network error executing GET request to %s", reqUrl)) {
+		t.Logf("GET request to %s failed with error: %s", reqUrl, err.Error())
+		return ""
 	}
-	return ""
+	o := strings.TrimSpace(resp)
+	assert.Nil(t, err, fmt.Sprintf("GET %s failed: %s", reqUrl, o))
+
+	return o
 }
 
 func LogMainStep(t *testing.T, msg string, args ...interface{}) {
@@ -244,6 +240,7 @@ func RunCommandInContainerAndAssert(ns, svc, cmd string, e *TestEnv, t *testing.
 }
 
 func CopyFileToS3Bucket(f, dest string, e *TestEnv, t *testing.T) bool {
+	UpdateControlPlaneHost(f, t)
 	RunCommandAndAssert(fmt.Sprintf("%s -n %s cp %s %s:/tmp/fileToCopy", e.KubectlPrefix(), e.Operator.Namespace, f, e.Operator.PodName), t)
 	if t.Failed() {
 		return !t.Failed()
@@ -289,4 +286,17 @@ func ExponentialBackOff(operation backoff.Operation, minutes time.Duration) erro
 	b.MaxInterval = 20 * time.Minute
 
 	return backoff.Retry(operation, b)
+}
+
+func GetLocalHost(t *testing.T) string {
+	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane", t)
+	return fmt.Sprintf(`https://%s:6443`, strings.TrimSpace(host))
+}
+
+func UpdateControlPlaneHost(path string, t *testing.T) {
+	c, _ := RunCommandSilent(fmt.Sprintf("cat %s", path), t)
+	re := regexp.MustCompile(`(http|https):\/\/([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+	c = re.ReplaceAllString(c, GetLocalHost(t))
+	err := ioutil.WriteFile(path, []byte(c), os.ModePerm)
+	assert.Nil(t, err, "unable to generate files.yml file")
 }

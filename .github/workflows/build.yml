@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - release-*
+
   pull_request:
 
 jobs:
@@ -117,18 +118,32 @@ jobs:
           git tag v${{ steps.build_type.outputs.version }}
           git push origin v${{ steps.build_type.outputs.version }}
 
-      - name: Trigger integration tests
+      - uses: engineerd/setup-kind@v0.5.0
+      - name: Install load balancer
         if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
-          branch=$(git rev-parse --abbrev-ref HEAD)
-          sha=${{ github.sha }}
-          if [[ ${{github.event_name }} = "pull_request" ]] ; then branch=${{ github.head_ref }} ; fi
-          if [[ ${{github.event_name }} = "pull_request" ]] ; then sha=${{ github.event.pull_request.head.sha }} ; fi
-          halyard=$(cat halyard-version | head -1)
-          curl -H "Content-Type: application/json" \
-              -d "{\"secret\": \"${{ secrets.SPINNAKER_TOKEN }}\", \"parameters\": { \"OPERATOR_IMAGE\": \"${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}\", \"HALYARD_IMAGE\": \"armory/halyard:$halyard\", \"TESTS_BRANCH\": \"$branch\", \"COMMIT_SHA\": \"$sha\" } }" \
-              -X POST https://spinnaker-api.armory.io/webhooks/webhook/operator-int-tests
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml
+          kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/metallb.yaml
+          kubectl apply -f integration_tests/kind/metallb-configmap.yaml
+          until [ "$(kubectl get pods --all-namespaces --no-headers | grep -cEv '([0-9]+)/\1')" -eq 0 ]; do
+           sleep 5s
+          done
 
+      - name: Run tests
+        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        env:
+          S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INTEGRATION_TEST_S3_PASSWORD }}
+          AWS_DEFAULT_REGION: ${{ secrets.INTEGRATION_TEST_S3_BUCKET_REGION }}
+          AWS_EC2_METADATA_DISABLED: true
+          OPERATOR_IMAGE: ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
+        run: |
+          kind load docker-image ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
+          halyard=$(cat halyard-version | head -1)
+          export HALYARD_IMAGE="armory/halyard:$halyard"
+          make integration-test
 
       - name: Create Release
         if: steps.build_type.outputs.build_type == 'release'
