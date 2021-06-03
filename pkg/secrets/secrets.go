@@ -3,8 +3,9 @@ package secrets
 import (
 	"context"
 	"fmt"
-	"github.com/armory/go-yaml-tools/pkg/secrets"
 	"os"
+
+	"github.com/armory/go-yaml-tools/pkg/secrets"
 )
 
 func init() {
@@ -45,11 +46,14 @@ func Decode(ctx context.Context, val string) (string, bool, error) {
 	}
 
 	// If we could get the cache, update it
+	c.mutex.Lock()
 	if dec.IsFile() {
 		c.FileCache[val] = v
 	} else {
 		c.Cache[val] = v
 	}
+	c.mutex.Unlock()
+
 	return v, dec.IsFile(), nil
 }
 
