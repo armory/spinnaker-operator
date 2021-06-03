@@ -137,14 +137,12 @@ func resolveEnvVars(d Defaults, t *testing.T) Vars {
 	t.Logf("Using bucekt region %s", r)
 
 	a := os.Getenv(BucketAccessKeyIdVar)
-	if r == "" {
-		t.Logf("%s env var not set, using default", d.BucketRegionDefault)
-		r = d.BucketRegionDefault
+	if a == "" {
+		t.Fatalf("%s env var not set", BucketAccessKeyIdVar)
 	}
 	s := os.Getenv(BucketSecretAccessKeyVar)
-	if r == "" {
-		t.Logf("%s env var not set, using default", d.BucketRegionDefault)
-		r = d.BucketRegionDefault
+	if s == "" {
+		t.Fatalf("%s env var not set", BucketSecretAccessKeyVar)
 	}
 	return Vars{
 		Kubeconfig:        k,

@@ -199,6 +199,9 @@ func RunCommandSilentAndAssert(c string, t *testing.T) string {
 	return s
 }
 
+// ExecuteGetRequest
+// Since the integration tests are interacting with the spinnaker URL and the URL is generated within the docker network.
+// We need to emulate a curl call inside of the docker network, so we are using a docker image instead of the CURL command itself for it.
 func ExecuteGetRequest(reqUrl string, t *testing.T) string {
 
 	resp, err := RunCommand(fmt.Sprintf("docker run --rm --network host curlimages/curl -s %s", reqUrl), t)

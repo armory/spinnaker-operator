@@ -1,3 +1,5 @@
+# kind uses a load balancer implementation offer by "metallb" https://kind.sigs.k8s.io/docs/user/loadbalancer/
+# in order to get the range ip it should use to expose the load balancer services you need to use "docker network inspect -f '{{.IPAM.Config}}' kind"
 apiVersion: v1
 kind: ConfigMap
 metadata:
