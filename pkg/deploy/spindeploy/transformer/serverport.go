@@ -34,6 +34,11 @@ func (g *ServerPortTransformerGenerator) GetName() string {
 }
 
 func (t *serverPortTransformer) transformDeploymentManifest(ctx context.Context, deploymentName string, deployment *v1.Deployment) error {
+	healthEndpoint, err := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, deploymentName, "healthEndpoint")
+	if err != nil  {
+	   	healthEndpoint = "/health"
+	}
+
 	if targetPort, _ := t.svc.GetSpinnakerConfig().GetServiceConfigPropString(ctx, deploymentName, "server.port"); targetPort != "" {
 		intTargetPort, err := strconv.ParseInt(targetPort, 10, 32)
 		if err != nil {
@@ -50,7 +55,7 @@ func (t *serverPortTransformer) transformDeploymentManifest(ctx context.Context,
 				if !strings.Contains(cmd, "http://localhost") {
 					continue
 				}
-				c.ReadinessProbe.Exec.Command[i] = fmt.Sprintf("http://localhost:%d/health", intTargetPort)
+				c.ReadinessProbe.Exec.Command[i] = fmt.Sprintf("http://localhost:%d%s", intTargetPort, healthEndpoint)
 			}
 		}
 	}
