@@ -32,6 +32,19 @@ type lambdaValidator struct{}
 
 func (d *lambdaValidator) Validate(spinSvc interfaces.SpinnakerService, options Options) ValidationResult {
 
+	fmt.Println("Lambda Validator Start...")
+
+	//Lambda
+	isEnabled, err := spinSvc.GetSpinnakerConfig().GetRawServiceConfigPropString("clouddriver",lambdaClouddriverEnabledKey)
+	if err != nil {
+		return ValidationResult{}
+	}
+	accountEnabled, err := strconv.ParseBool(isEnabled)
+
+	if !spinSvc.GetSpinnakerValidation().IsProviderValidationEnabled(lambdaAccountType) || !accountEnabled {
+		return ValidationResult{}
+	}
+
 	//AWS
 	//Check if the AWS Provider is enabled
 	awsAccountEnabled, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropBool(awsAccountsEnabledKey, false)
@@ -46,24 +59,13 @@ func (d *lambdaValidator) Validate(spinSvc interfaces.SpinnakerService, options 
 	//Get the AccessKeyId
 	awsAccessKey, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropString(options.Ctx, AccessKeyId)
 	if err != nil {
-		return ValidationResult{Errors: []error{fmt.Errorf("AccessKeyId is missing")}}
+		//return ValidationResult{Errors: []error{fmt.Errorf("AccessKeyId is missing")}}
 	}
 
 	//Get the SecretAccessKey
 	awsSecretKey, err := spinSvc.GetSpinnakerConfig().GetHalConfigPropString(options.Ctx, SecretAccessKey)
 	if err != nil {
-		return ValidationResult{Errors: []error{fmt.Errorf("SecretAccessKey is missing")}}
-	}
-
-	//Lambda
-	isEnabled, err := spinSvc.GetSpinnakerConfig().GetRawServiceConfigPropString("clouddriver",lambdaClouddriverEnabledKey)
-	if err != nil {
-		return ValidationResult{}
-	}
-	accountEnabled, err := strconv.ParseBool(isEnabled)
-
-	if !spinSvc.GetSpinnakerValidation().IsProviderValidationEnabled(lambdaAccountType) || !accountEnabled {
-		return ValidationResult{}
+		//return ValidationResult{Errors: []error{fmt.Errorf("SecretAccessKey is missing")}}
 	}
 
 	//Get the Accounts
@@ -110,22 +112,31 @@ func (d *lambdaValidator) validateAWSLambda(accessKey string, secretKey string, 
 		return false, []error{fmt.Errorf("aws accounts name is required")}
 	}
 
-	os.Setenv("AWS_ACCESS_KEY_ID",     accessKey)
-	os.Setenv("AWS_SECRET_ACCESS_KEY", secretKey)
+	if len(accessKey) > 0 && len(secretKey) > 0 {
+		os.Setenv("AWS_ACCESS_KEY_ID",     accessKey)
+		os.Setenv("AWS_SECRET_ACCESS_KEY", secretKey)
+	}
 
-	for _, remap := range regions {
-		for _, region := range remap {
-			conf := aws.Config{Region: aws.String(region.(string))}
-			sess := session.New(&conf)
+	for _, regionMap := range regions {
+		for _, region := range regionMap {
+			//conf := aws.Config{Region: aws.String(region.(string))}
+			//sess := session.New(&conf)
+			sess, err := session.NewSession(&aws.Config{
+				Region: aws.String(region.(string)),
+			})
+
+			if err != nil {
+				return false, []error{fmt.Errorf("NewSession Error: %s", err)}
+			}
 
 			// Create the credentials from AssumeRoleProvider to assume the role
 			awsARN := "arn:aws:iam::"+account.AccountId+":"+account.AssumeRole
-			creds := stscreds.NewCredentials(sess, awsARN)
+			cred := stscreds.NewCredentials(sess, awsARN)
 
-			svc := lambda.New(sess, &aws.Config{Credentials: creds})
-			input := &lambda.ListFunctionsInput{}
+			svc := lambda.New(sess, &aws.Config{Credentials: cred})
+			//input := &lambda.ListFunctionsInput{}
 
-			_, err := svc.ListFunctions(input)
+			result, err := svc.ListFunctions(nil)
 				if err != nil {
 					if err, ok := err.(awserr.Error); ok {
 						switch err.Code() {
@@ -137,6 +148,11 @@ func (d *lambdaValidator) validateAWSLambda(accessKey string, secretKey string, 
 					}
 					return false, []error{fmt.Errorf(err.Error())}
 				}
+			for _, f := range result.Functions {
+				fmt.Println("Name:        " + aws.StringValue(f.FunctionName))
+				fmt.Println("Description: " + aws.StringValue(f.Description))
+				fmt.Println("")
+			}
 			return true, nil
 		}
 	}

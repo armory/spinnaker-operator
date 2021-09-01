@@ -8,10 +8,10 @@ import (
 	"testing"
 )
 
-func Test_lambdaValidator_Validate_AWS_Provider_Is_Disabled(t *testing.T) {
+func Test_lambdaValidator_Validate_ValidatorProvidersLambda_Is_Disabled(t *testing.T) {
 
 	// given
-	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_aws_disabled.yml", t)
+	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_validation_provider_disabled.yml", t)
 
 	awsLambdaValidator := lambdaValidator{}
 
@@ -24,10 +24,10 @@ func Test_lambdaValidator_Validate_AWS_Provider_Is_Disabled(t *testing.T) {
 	assert.Nil (t, result.Errors)
 }
 
-func Test_lambdaValidator_Validate_AccessKeyId_Missing(t *testing.T) {
+func Test_Features_Lambda_Is_Disabled(t *testing.T) {
 
 	// given
-	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_access_key.yml", t)
+	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_features_lambda_disabled.yml", t)
 
 	awsLambdaValidator := lambdaValidator{}
 
@@ -37,29 +37,13 @@ func Test_lambdaValidator_Validate_AccessKeyId_Missing(t *testing.T) {
 	result := awsLambdaValidator.Validate(spinsvc, options)
 
 	// then
-	assert.Contains(t, fmt.Sprintf("%v", result), "AccessKeyId is missing")
+	assert.Nil (t, result.Errors)
 }
 
-func Test_lambdaValidator_Validate_SecretKey_Missing(t *testing.T) {
+func Test_lambdaValidator_Validate_AWS_Provider_Is_Disabled(t *testing.T) {
 
 	// given
-	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_secret_key.yml", t)
-
-	awsLambdaValidator := lambdaValidator{}
-
-	options := Options{Ctx: context.TODO()}
-
-	// when
-	result := awsLambdaValidator.Validate(spinsvc, options)
-
-	// then
-	assert.Contains(t, fmt.Sprintf("%v", result), "SecretAccessKey is missing")
-}
-
-func Test_lambdaValidator_Validate_Lambda_Is_Disabled(t *testing.T) {
-
-	// given
-	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_disabled.yml", t)
+	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_aws_disabled.yml", t)
 
 	awsLambdaValidator := lambdaValidator{}
 
@@ -136,7 +120,7 @@ func Test_lambdaValidator_Validate_Assume_Role_Missing(t *testing.T) {
 	assert.Contains(t, fmt.Sprintf("%v", result), "aws accounts assumeRole is required")
 }
 
-func Test_lambdaValidator_Validate_AAccount_Name_Missing(t *testing.T) {
+func Test_lambdaValidator_Validate_Account_Name_Missing(t *testing.T) {
 
 	// given
 	spinsvc := test.ManifestFileToSpinService("testdata/spinvc_lambda_account_name.yml", t)

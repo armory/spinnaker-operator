@@ -7,7 +7,7 @@ spec:
     config:
       providers:
         aws:
-          enabled: false
+          enabled: true
           defaultRegions:
             - name: us-west-2
     profiles:
@@ -27,4 +27,4 @@ spec:
   validation:
     providers:
       lambda:
-        enabled: true
+        enabled: false

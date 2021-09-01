@@ -4,6 +4,7 @@ on:
     branches:
       - master
       - release-*
+      - feat-lambda-validator
   pull_request:
 
 jobs:
