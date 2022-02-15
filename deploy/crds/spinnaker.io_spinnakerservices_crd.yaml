@@ -167,17 +167,20 @@ spec:
                 properties:
                   config:
                     description: Main deployment configuration to be passed to Halyard
+                    type: object
                   files:
                     additionalProperties:
                       type: string
                     description: Supporting files for the Spinnaker config
                     type: object
                   profiles:
-                    additionalProperties: {}
+                    additionalProperties:
+                      type: string
                     description: Service profiles will be parsed as YAML
                     type: object
                   service-settings:
-                    additionalProperties: {}
+                    additionalProperties:
+                      type: string
                     description: Parsed service settings - comments are stripped
                     type: object
                 type: object
@@ -195,9 +198,7 @@ spec:
                             to true
                           type: boolean
                         frequencySeconds:
-                          anyOf:
-                          - type: string
-                          - type: integer
+                          x-kubernetes-int-or-string: true
                           description: Number of seconds between each validation
                       required:
                       - enabled
@@ -214,9 +215,7 @@ spec:
                             to true
                           type: boolean
                         frequencySeconds:
-                          anyOf:
-                          - type: string
-                          - type: integer
+                          x-kubernetes-int-or-string: true
                           description: Number of seconds between each validation
                       required:
                       - enabled
@@ -231,9 +230,7 @@ spec:
                       to true
                     type: boolean
                   frequencySeconds:
-                    anyOf:
-                    - type: string
-                    - type: integer
+                    x-kubernetes-int-or-string: true
                     description: Number of seconds between each validation
                   metricStores:
                     additionalProperties:
@@ -246,9 +243,7 @@ spec:
                             to true
                           type: boolean
                         frequencySeconds:
-                          anyOf:
-                          - type: string
-                          - type: integer
+                          x-kubernetes-int-or-string: true
                           description: Number of seconds between each validation
                       required:
                       - enabled
@@ -265,9 +260,7 @@ spec:
                             to true
                           type: boolean
                         frequencySeconds:
-                          anyOf:
-                          - type: string
-                          - type: integer
+                          x-kubernetes-int-or-string: true
                           description: Number of seconds between each validation
                       required:
                       - enabled
@@ -284,9 +277,7 @@ spec:
                             to true
                           type: boolean
                         frequencySeconds:
-                          anyOf:
-                          - type: string
-                          - type: integer
+                          x-kubernetes-int-or-string: true
                           description: Number of seconds between each validation
                       required:
                       - enabled
@@ -303,9 +294,7 @@ spec:
                             to true
                           type: boolean
                         frequencySeconds:
-                          anyOf:
-                          - type: string
-                          - type: integer
+                          x-kubernetes-int-or-string: true
                           description: Number of seconds between each validation
                       required:
                       - enabled
@@ -322,9 +311,7 @@ spec:
                             to true
                           type: boolean
                         frequencySeconds:
-                          anyOf:
-                          - type: string
-                          - type: integer
+                          x-kubernetes-int-or-string: true
                           description: Number of seconds between each validation
                       required:
                       - enabled
