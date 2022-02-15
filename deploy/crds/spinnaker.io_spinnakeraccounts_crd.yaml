@@ -12,8 +12,6 @@ spec:
       - spinaccount
     singular: spinnakeraccount
   scope: Namespaced
-
-
   versions:
   - name: v1alpha2
     subresources:
