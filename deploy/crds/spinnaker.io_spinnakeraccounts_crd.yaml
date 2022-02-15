@@ -3,27 +3,37 @@ kind: CustomResourceDefinition
 metadata:
   name: spinnakeraccounts.spinnaker.io
 spec:
+  group: spinnaker.io
+  names:
+    kind: SpinnakerAccount
+    listKind: SpinnakerAccountList
+    plural: spinnakeraccounts
+    shortNames:
+      - spinaccount
+    singular: spinnakeraccount
+  scope: Namespaced
+
 
   versions:
   - name: v1alpha2
-    additionalPrinterColumns:
-    - jsonPath: .spec.type
-      description: Type
-      name: type
-      type: string
-    - jsonPath: .status.LastValidatedAt
-      description: Last Validated
-      name: lastValidated
-      type: date
-    - jsonPath: .status.InvalidReason
-      description: Invalid Reason
-      name: reason
-      type: string
-    served: true
-    storage: true
     subresources:
-      status: {}
-    schema: 
+      status: { }
+    storage: true
+    served: true
+    additionalPrinterColumns:
+      - jsonPath: .spec.type
+        description: Type
+        name: type
+        type: string
+      - jsonPath: .status.LastValidatedAt
+        description: Last Validated
+        name: lastValidated
+        type: date
+      - jsonPath: .status.InvalidReason
+        description: Invalid Reason
+        name: reason
+        type: string
+    schema:
       openAPIV3Schema:
         description: SpinnakerAccount is the Schema for the spinnakeraccounts API
         properties:
@@ -54,8 +64,7 @@ spec:
                           remove this after eliminating downstream dependencies.'
                         type: string
                       clusters:
-                        description: Clusters is a map of referencable names to cluster
-                          configs
+                        description: Clusters is a map of referencable names to cluster configs
                         items:
                           description: NamedCluster relates nicknames to cluster information
                           properties:
@@ -86,8 +95,8 @@ spec:
                                         description: Name is the nickname for this Extension
                                         type: string
                                     required:
-                                    - extension
-                                    - name
+                                      - extension
+                                      - name
                                     type: object
                                   type: array
                                 insecure-skip-tls-verify:
@@ -100,14 +109,14 @@ spec:
                                     cluster (https://hostname:port).
                                   type: string
                               required:
-                              - server
+                                - server
                               type: object
                             name:
                               description: Name is the nickname for this Cluster
                               type: string
                           required:
-                          - cluster
-                          - name
+                            - cluster
+                            - name
                           type: object
                         type: array
                       contexts:
@@ -138,8 +147,8 @@ spec:
                                         description: Name is the nickname for this Extension
                                         type: string
                                     required:
-                                    - extension
-                                    - name
+                                      - extension
+                                      - name
                                     type: object
                                   type: array
                                 namespace:
@@ -151,15 +160,15 @@ spec:
                                     for this context
                                   type: string
                               required:
-                              - cluster
-                              - user
+                                - cluster
+                                - user
                               type: object
                             name:
                               description: Name is the nickname for this Context
                               type: string
                           required:
-                          - context
-                          - name
+                            - context
+                            - name
                           type: object
                         type: array
                       current-context:
@@ -181,8 +190,8 @@ spec:
                               description: Name is the nickname for this Extension
                               type: string
                           required:
-                          - extension
-                          - name
+                            - extension
+                            - name
                           type: object
                         type: array
                       kind:
@@ -210,8 +219,8 @@ spec:
                                   description: Name is the nickname for this Extension
                                   type: string
                               required:
-                              - extension
-                              - name
+                                - extension
+                                - name
                               type: object
                             type: array
                         type: object
@@ -255,8 +264,8 @@ spec:
                                     name:
                                       type: string
                                   required:
-                                  - config
-                                  - name
+                                    - config
+                                    - name
                                   type: object
                                 client-certificate:
                                   description: ClientCertificate is the path to a client
@@ -311,12 +320,12 @@ spec:
                                           value:
                                             type: string
                                         required:
-                                        - name
-                                        - value
+                                          - name
+                                          - value
                                         type: object
                                       type: array
                                   required:
-                                  - command
+                                    - command
                                   type: object
                                 extensions:
                                   description: Extensions holds additional information.
@@ -333,8 +342,8 @@ spec:
                                         description: Name is the nickname for this Extension
                                         type: string
                                     required:
-                                    - extension
-                                    - name
+                                      - extension
+                                      - name
                                     type: object
                                   type: array
                                 password:
@@ -357,16 +366,16 @@ spec:
                                   type: string
                               type: object
                           required:
-                          - name
-                          - user
+                            - name
+                            - user
                           type: object
                         type: array
                     required:
-                    - clusters
-                    - contexts
-                    - current-context
-                    - preferences
-                    - users
+                      - clusters
+                      - contexts
+                      - current-context
+                      - preferences
+                      - users
                     type: object
                   kubeconfigFile:
                     description: KubeconfigFile referenced as an encrypted secret
@@ -379,8 +388,8 @@ spec:
                       name:
                         type: string
                     required:
-                    - key
-                    - name
+                      - key
+                      - name
                     type: object
                   useServiceAccount:
                     description: UseServiceAccount authenticate to the target cluster
@@ -393,8 +402,7 @@ spec:
                     type: string
                   type: array
                 type: object
-              settings: {}
-              type:
+              settings:
                 type: string
               validation:
                 properties:
@@ -406,16 +414,14 @@ spec:
                       to true
                     type: boolean
                   frequencySeconds:
-                    anyOf:
-                    - type: string
-                    - type: integer
+                    x-kubernetes-int-or-string: true
                     description: Number of seconds between each validation
                 required:
-                - enabled
+                  - enabled
                 type: object
             required:
-            - enabled
-            - type
+              - enabled
+              - type
             type: object
           status:
             description: SpinnakerAccountStatus defines the observed state of SpinnakerAccount
@@ -441,20 +447,12 @@ spec:
                     format: int64
                     type: integer
                 required:
-                - nanos
-                - seconds
+                  - nanos
+                  - seconds
                 type: object
             required:
-            - invalidReason
-            - lastValidatedAt
+              - invalidReason
+              - lastValidatedAt
             type: object
         type: object
-  group: spinnaker.io
-  names:
-    kind: SpinnakerAccount
-    listKind: SpinnakerAccountList
-    plural: spinnakeraccounts
-    shortNames:
-    - spinaccount
-    singular: spinnakeraccount
-  scope: Namespaced
+
