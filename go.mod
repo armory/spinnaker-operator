@@ -9,7 +9,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.0
 	github.com/golang/mock v1.5.0
-	github.com/jinzhu/copier v0.3.5 // indirect
+	github.com/jinzhu/copier v0.3.5
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/openshift/origin v0.0.0-20160503220234-8f127d736703
@@ -44,7 +44,8 @@ replace (
 	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
 	k8s.io/component-base => k8s.io/component-base v0.20.15
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.0.0-20190409022021-00b8e31abe9d
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20220324211241-9f9c01d62a3a
+	// k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20220324211241-9f9c01d62a3a
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211104224443-923526ac052c
 	k8s.io/kubernetes => k8s.io/kubernetes v1.14.1
 )
 

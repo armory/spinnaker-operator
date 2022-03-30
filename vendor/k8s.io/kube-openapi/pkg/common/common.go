@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/emicklei/go-restful"
-
 	"k8s.io/kube-openapi/pkg/validation/spec"
 )
 
@@ -58,11 +57,6 @@ type PathHandler interface {
 	Handle(path string, handler http.Handler)
 }
 
-type PathHandlerByGroupVersion interface {
-	Handle(path string, handler http.Handler)
-	HandlePrefix(path string, handler http.Handler)
-}
-
 // Config is set of configuration for openAPI spec generation.
 type Config struct {
 	// List of supported protocols such as https, http, etc.
@@ -93,13 +87,7 @@ type Config struct {
 	GetDefinitions GetOpenAPIDefinitions
 
 	// GetOperationIDAndTags returns operation id and tags for a restful route. It is an optional function to customize operation IDs.
-	//
-	// Deprecated: GetOperationIDAndTagsFromRoute should be used instead. This cannot be specified if using the new Route
-	// interface set of funcs.
 	GetOperationIDAndTags func(r *restful.Route) (string, []string, error)
-
-	// GetOperationIDAndTagsFromRoute returns operation id and tags for a Route. It is an optional function to customize operation IDs.
-	GetOperationIDAndTagsFromRoute func(r Route) (string, []string, error)
 
 	// GetDefinitionName returns a friendly name for a definition base on the serving path. parameter `name` is the full name of the definition.
 	// It is an optional function to customize model names.
@@ -217,12 +205,4 @@ func EmbedOpenAPIDefinitionIntoV2Extension(main OpenAPIDefinition, embedded Open
 	}
 	main.Schema.Extensions[ExtensionV2Schema] = embedded.Schema
 	return main
-}
-
-// GenerateOpenAPIV3OneOfSchema generate the set of schemas that MUST be assigned to SchemaProps.OneOf
-func GenerateOpenAPIV3OneOfSchema(types []string) (oneOf []spec.Schema) {
-	for _, t := range types {
-		oneOf = append(oneOf, spec.Schema{SchemaProps: spec.SchemaProps{Type: []string{t}}})
-	}
-	return
 }
