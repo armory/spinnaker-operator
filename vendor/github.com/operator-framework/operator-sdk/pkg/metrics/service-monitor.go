@@ -15,6 +15,7 @@
 package metrics
 
 import (
+	"context"
 	"fmt"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -28,9 +29,12 @@ import (
 
 var ErrServiceMonitorNotPresent = fmt.Errorf("no ServiceMonitor registered with the API")
 
+type ServiceMonitorUpdater func(*monitoringv1.ServiceMonitor) error
+
 // CreateServiceMonitors creates ServiceMonitors objects based on an array of Service objects.
 // If CR ServiceMonitor is not registered in the Cluster it will not attempt at creating resources.
-func CreateServiceMonitors(config *rest.Config, ns string, services []*v1.Service) ([]*monitoringv1.ServiceMonitor, error) {
+func CreateServiceMonitors(config *rest.Config, ns string, services []*v1.Service,
+	updaters ...ServiceMonitorUpdater) ([]*monitoringv1.ServiceMonitor, error) {
 	// check if we can even create ServiceMonitors
 	exists, err := hasServiceMonitor(config)
 	if err != nil {
@@ -48,7 +52,13 @@ func CreateServiceMonitors(config *rest.Config, ns string, services []*v1.Servic
 			continue
 		}
 		sm := GenerateServiceMonitor(s)
-		smc, err := mclient.ServiceMonitors(ns).Create(sm)
+		for _, update := range updaters {
+			if err := update(sm); err != nil {
+				return nil, err
+			}
+		}
+
+		smc, err := mclient.ServiceMonitors(ns).Create(context.TODO(), sm, metav1.CreateOptions{})
 		if err != nil {
 			return serviceMonitors, err
 		}

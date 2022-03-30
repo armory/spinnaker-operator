@@ -1,9 +1,13 @@
+// Copyright 2013 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 /*
 
 Command goimports updates your Go import lines,
 adding missing ones and removing unreferenced ones.
 
-     $ go get golang.org/x/tools/cmd/goimports
+     $ go install golang.org/x/tools/cmd/goimports@latest
 
 In addition to fixing imports, goimports also formats
 your code in the same style as gofmt so it can be used
