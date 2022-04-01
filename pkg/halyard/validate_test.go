@@ -6,7 +6,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/ghodss/yaml"
-	testing2 "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"path"
@@ -74,7 +74,7 @@ func TestValidationResult(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := parseValidationResponse([]byte(tt.response), testing2.NullLogger{})
+			err := parseValidationResponse([]byte(tt.response), logr.Logger{})
 			tt.expected(t, err)
 		})
 	}

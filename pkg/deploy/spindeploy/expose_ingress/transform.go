@@ -152,7 +152,7 @@ func (t *ingressTransformer) setGateServerPathInDeployment(newPath string, port 
 	if c.ReadinessProbe == nil || c.ReadinessProbe.Exec != nil {
 		t.log.Info(fmt.Sprintf("overriding readiness probe with http get to %s on port %d", newPath, port))
 		c.ReadinessProbe = &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: newPath,
 					Port: intstr.FromInt(port),

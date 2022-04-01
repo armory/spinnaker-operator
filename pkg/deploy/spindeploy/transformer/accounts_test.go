@@ -2,6 +2,8 @@ package transformer
 
 import (
 	"context"
+	"testing"
+
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/accounts/kubernetes"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
@@ -12,8 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"testing"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestAddSpringProfile(t *testing.T) {
@@ -169,7 +170,7 @@ spec:
 	g := &generated.SpinnakerGeneratedConfig{
 		Config: map[string]generated.ServiceConfig{
 			"clouddriver": generated.ServiceConfig{
-				Resources:  []runtime.Object{dcs1, dcs2},
+				Resources:  []client.Object{dcs1, dcs2},
 				Deployment: dcd,
 			},
 		},

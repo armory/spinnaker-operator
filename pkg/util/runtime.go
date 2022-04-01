@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
-	"k8s.io/api/admissionregistration/v1beta1"
+	apiAdmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -158,36 +158,36 @@ func GetDesiredExposePort(ctx context.Context, svcNameWithoutPrefix string, defa
 
 func CreateOrUpdateService(svc *corev1.Service, rawClient *kubernetes.Clientset) error {
 	namespacedClient := rawClient.CoreV1().Services(svc.Namespace)
-	_, err := namespacedClient.Get(svc.Name, v1.GetOptions{})
+	_, err := namespacedClient.Get(context.TODO(), svc.Name, v1.GetOptions{})
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		_, err := namespacedClient.Create(svc)
+		_, err := namespacedClient.Create(context.TODO(), svc, v1.CreateOptions{})
 		return err
 	}
 	data, err := json.Marshal(svc)
 	if err != nil {
 		return err
 	}
-	_, err = namespacedClient.Patch(svc.Name, types.MergePatchType, data)
+	_, err = namespacedClient.Patch(context.TODO(), svc.Name, types.MergePatchType, data, v1.PatchOptions{})
 	return err
 }
 
-func CreateOrUpdateValidatingWebhookConfiguration(config *v1beta1.ValidatingWebhookConfiguration, rawClient *kubernetes.Clientset) error {
-	c := rawClient.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations()
-	_, err := c.Get(config.Name, v1.GetOptions{})
+func CreateOrUpdateValidatingWebhookConfiguration(config *apiAdmissionregistrationv1.ValidatingWebhookConfiguration, rawClient *kubernetes.Clientset) error {
+	c := rawClient.AdmissionregistrationV1().ValidatingWebhookConfigurations()
+	_, err := c.Get(context.TODO(), config.Name, v1.GetOptions{})
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
-		_, err := c.Create(config)
+		_, err := c.Create(context.TODO(), config, v1.CreateOptions{})
 		return err
 	}
 	data, err := json.Marshal(config)
 	if err != nil {
 		return err
 	}
-	_, err = c.Patch(config.Name, types.MergePatchType, data)
+	_, err = c.Patch(context.TODO(), config.Name, types.MergePatchType, data, v1.PatchOptions{})
 	return err
 }

@@ -1,12 +1,13 @@
 package interfaces
 
 import (
+	"reflect"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"reflect"
 )
 
 const (
@@ -44,6 +45,7 @@ type TypesFactory interface {
 	NewAccountList() SpinnakerAccountList
 	GetGroupVersion() schema.GroupVersion
 	DeepCopyLatestTypesFactory() TypesFactory
+	GetContinue() string
 }
 
 type SpinnakerService interface {
@@ -63,6 +65,14 @@ type SpinnakerServiceList interface {
 	runtime.Object
 	GetItems() []SpinnakerService
 	DeepCopySpinnakerServiceList() SpinnakerServiceList
+	GetContinue() string
+	GetRemainingItemCount() *int64
+	GetResourceVersion() string
+	GetSelfLink() string
+	SetContinue(c string)
+	SetRemainingItemCount(c *int64)
+	SetResourceVersion(c string)
+	SetSelfLink(c string)
 }
 
 type SpinnakerAccount interface {
@@ -78,6 +88,14 @@ type SpinnakerAccountList interface {
 	runtime.Object
 	GetItems() []SpinnakerAccount
 	DeepCopySpinnakerAccountList() SpinnakerAccountList
+	GetResourceVersion() string
+	SetResourceVersion(c string)
+	GetSelfLink() string
+	SetSelfLink(c string)
+	GetContinue() string
+	SetContinue(c string)
+	GetRemainingItemCount() *int64
+	SetRemainingItemCount(c *int64)
 }
 
 type SpinnakerConfig struct {
@@ -336,6 +354,10 @@ func (f *TypesFactoryImpl) GetGroupVersion() schema.GroupVersion {
 
 func (f *TypesFactoryImpl) DeepCopyLatestTypesFactory() TypesFactory {
 	return f.Factories[LatestVersion].DeepCopyLatestTypesFactory()
+}
+
+func (f *TypesFactoryImpl) GetContinue() string {
+	return f.Factories[LatestVersion].GetContinue()
 }
 
 func IsNil(i interface{}) bool {

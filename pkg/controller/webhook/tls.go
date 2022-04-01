@@ -9,13 +9,15 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
-	"k8s.io/client-go/util/cert"
-	"k8s.io/client-go/util/keyutil"
 	"math"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
+
+	"k8s.io/client-go/util/cert"
+	"k8s.io/client-go/util/keyutil"
 )
 
 const (
@@ -68,6 +70,10 @@ func createCerts(operatorNamespace string, operatorServiceName string) (*certCon
 		&cert.Config{
 			CommonName: operatorServiceName + "." + operatorNamespace + ".svc",
 			Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			AltNames: cert.AltNames{
+				DNSNames: []string{operatorServiceName + "." + operatorNamespace + ".svc"},
+				IPs:      []net.IP{net.ParseIP("::")},
+			},
 		},
 		key, signingCert, signingKey,
 	)
@@ -129,7 +135,7 @@ func newSignedCert(cfg *cert.Config, key crypto.Signer, caCert *x509.Certificate
 		SerialNumber: serial,
 		NotBefore:    caCert.NotBefore,
 		NotAfter:     time.Now().Add(duration365d).UTC(),
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:  cfg.Usages,
 	}
 	certDERBytes, err := x509.CreateCertificate(rand.Reader, &certTmpl, caCert, key.Public(), caKey)

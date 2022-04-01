@@ -6,7 +6,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/stretchr/testify/assert"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	log "github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"testing"
 	"time"
@@ -120,7 +120,7 @@ func TestParallel(t *testing.T) {
 			opts := Options{
 				Ctx: context.TODO(),
 				Req: admission.Request{},
-				Log: log.NullLogger{},
+				Log: log.Logger{},
 			}
 			spinsvc := &v1alpha2.SpinnakerService{}
 			spinsvc.Spec.Validation.FailFast = c.failfast

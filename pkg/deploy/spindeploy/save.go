@@ -4,16 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
 
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
+	"github.com/jinzhu/copier"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -74,7 +77,7 @@ func (d *Deployer) deployConfig(ctx context.Context, scheme *runtime.Scheme, gen
 	return nil
 }
 
-func (d *Deployer) saveObject(ctx context.Context, obj runtime.Object, logger logr.Logger) error {
+func (d *Deployer) saveObject(ctx context.Context, obj client.Object, logger logr.Logger) error {
 	// Check if it exists
 	if err := d.patch(ctx, obj); err != nil {
 		logger.Error(err, fmt.Sprintf("Unable to save object: %v", obj))
@@ -83,11 +86,11 @@ func (d *Deployer) saveObject(ctx context.Context, obj runtime.Object, logger lo
 	return nil
 }
 
-func (d *Deployer) deleteObject(ctx context.Context, obj runtime.Object) error {
+func (d *Deployer) deleteObject(ctx context.Context, obj client.Object) error {
 	return d.client.Delete(ctx, obj)
 }
 
-func (d *Deployer) patch(ctx context.Context, modifiedRaw runtime.Object) error {
+func (d *Deployer) patch(ctx context.Context, modifiedRaw client.Object) error {
 	modified, ok := modifiedRaw.(metav1.Object)
 	if !ok {
 		return fmt.Errorf("unable to save object %s because is not a metav1.Object", modifiedRaw.GetObjectKind().GroupVersionKind().String())
@@ -123,7 +126,8 @@ func (d *Deployer) patch(ctx context.Context, modifiedRaw runtime.Object) error 
 	}
 
 	rsc, _ := apimeta.UnsafeGuessKindToResource(gvk)
-	originalRaw := modifiedRaw.DeepCopyObject()
+	var originalRaw client.Object
+	copier.Copy(&originalRaw, &modifiedRaw)
 
 	// avoid reading from cache
 	err = d.client.Get(ctx, types.NamespacedName{Namespace: modified.GetNamespace(), Name: modified.GetName()}, originalRaw)
@@ -153,7 +157,7 @@ func (d *Deployer) patch(ctx context.Context, modifiedRaw runtime.Object) error 
 		Resource(rsc.Resource).
 		Name(modified.GetName()).
 		Body(patch).
-		Do().
+		Do(ctx).
 		Into(modifiedRaw)
 }
 
