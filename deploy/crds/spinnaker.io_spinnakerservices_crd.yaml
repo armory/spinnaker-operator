@@ -168,6 +168,7 @@ spec:
               spinnakerConfig:
                 properties:
                   config:
+                    x-kubernetes-preserve-unknown-fields: true
                     description: Main deployment configuration to be passed to Halyard
                     type: object
                   files:
@@ -181,7 +182,9 @@ spec:
                     description: Service profiles will be parsed as YAML
                     type: object
                   service-settings:
+                    x-kubernetes-preserve-unknown-fields: true
                     additionalProperties:
+                      x-kubernetes-preserve-unknown-fields: true
                       type: object
                     description: Parsed service settings - comments are stripped
                     type: object

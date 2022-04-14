@@ -9,7 +9,6 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.0
 	github.com/golang/mock v1.5.0
-	github.com/jinzhu/copier v0.3.5
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/openshift/origin v0.0.0-20160503220234-8f127d736703
@@ -22,13 +21,12 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.2.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.23.5
-	k8s.io/apiextensions-apiserver v0.23.5 // indirect
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.23.5
 	k8s.io/klog v1.0.0
 	k8s.io/kube-openapi v0.0.0-20220324211241-9f9c01d62a3a
-	sigs.k8s.io/controller-runtime v0.11.1
+	sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/yaml v1.3.0
 )
 

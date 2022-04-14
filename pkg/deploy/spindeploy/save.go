@@ -10,7 +10,6 @@ import (
 
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/go-logr/logr"
-	"github.com/jinzhu/copier"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,8 +125,7 @@ func (d *Deployer) patch(ctx context.Context, modifiedRaw client.Object) error {
 	}
 
 	rsc, _ := apimeta.UnsafeGuessKindToResource(gvk)
-	var originalRaw client.Object
-	copier.Copy(&originalRaw, &modifiedRaw)
+	originalRaw := modifiedRaw
 
 	// avoid reading from cache
 	err = d.client.Get(ctx, types.NamespacedName{Namespace: modified.GetNamespace(), Name: modified.GetName()}, originalRaw)
