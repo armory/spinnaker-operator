@@ -8,8 +8,8 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/test"
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 )
 
@@ -265,7 +265,7 @@ func TestSettingsTest(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			v := &kubernetesAccountValidator{account: &c.account}
-			err := v.validateSettings(context.TODO(), logr.Logger{})
+			err := v.validateSettings(context.TODO(), logr.Log.WithName("TestSettingsTest"))
 			assert.Equal(t, c.errExpected, err != nil)
 		})
 	}

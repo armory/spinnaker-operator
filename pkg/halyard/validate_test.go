@@ -3,15 +3,18 @@ package halyard
 import (
 	"context"
 	"fmt"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/ghodss/yaml"
-	"github.com/go-logr/logr"
-	"github.com/stretchr/testify/assert"
+
 	"io/ioutil"
 	"path"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func TestValidationResult(t *testing.T) {
@@ -74,7 +77,7 @@ func TestValidationResult(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := parseValidationResponse([]byte(tt.response), logr.Logger{})
+			err := parseValidationResponse([]byte(tt.response), logr.Log.WithName("TestValidationResult"))
 			tt.expected(t, err)
 		})
 	}

@@ -3,13 +3,14 @@ package validate
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/stretchr/testify/assert"
-	log "github.com/go-logr/logr"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"testing"
-	"time"
 )
 
 type timedValidator struct {
@@ -120,7 +121,7 @@ func TestParallel(t *testing.T) {
 			opts := Options{
 				Ctx: context.TODO(),
 				Req: admission.Request{},
-				Log: log.Logger{},
+				Log: logr.Log.WithName("TestSettingsTest"),
 			}
 			spinsvc := &v1alpha2.SpinnakerService{}
 			spinsvc.Spec.Validation.FailFast = c.failfast
