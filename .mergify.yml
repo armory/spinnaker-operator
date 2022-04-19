@@ -1,3 +1,10 @@
+queue_rules:
+  - name: default
+    conditions:
+      # Conditions to get out of the queue (= merged)
+      - check-success-or-neutral=build
+      - check-success=merged
+
 pull_request_rules:
   - name: Automatically merge into master after build and review
     conditions:
@@ -5,9 +12,9 @@ pull_request_rules:
       - status-success=main
       - "#approved-reviews-by>=1"
     actions:
-      merge:
+      queue:
         method: squash
-        strict: smart
+        name: default
       label:
         add: ["auto merged"]
   - name: Automatically merge into release- after build and approval
@@ -16,9 +23,9 @@ pull_request_rules:
       - status-success=main
       - "#approved-reviews-by>=1"
     actions:
-      merge:
+      queue:
         method: squash
-        strict: smart
+        name: default
       label:
         add: ["auto merged"]
   - name: Automatically merge backport into release branches
@@ -28,9 +35,9 @@ pull_request_rules:
       - base~=^release-
       - status-success=main
     actions:
-      merge:
+      queue:
         method: squash
-        strict: smart
+        name: default
       label:
         add: ["auto merged"]
   - name: Automatically mergify-yaml changes to master
@@ -38,8 +45,8 @@ pull_request_rules:
       - base=master
       - title~=^fix(mergify)
     actions:
-      merge:
+      queue:
         method: squash
-        strict: smart
+        name: default
       label:
         add: ["auto merged"]
