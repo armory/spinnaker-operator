@@ -2,13 +2,14 @@ package x509
 
 import (
 	"context"
+	"testing"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetectortest"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"testing"
 )
 
 func TestIsSpinnakerUpToDate_Nox509ServiceYet(t *testing.T) {
@@ -99,6 +100,7 @@ apiVersion: spinnaker.io/v1alpha2
 kind: SpinnakerService
 metadata:
   name: spinnaker
+  namespace: ns1
 spec:
   spinnakerConfig:
     profiles:

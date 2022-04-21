@@ -1,17 +1,18 @@
 package util
 
 import (
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
-	"time"
 )
 
 func TestNewK8sLookup(t *testing.T) {
@@ -70,7 +71,8 @@ func TestK8sLookup_GetSpinnakerDeployments(t *testing.T) {
 							Labels: map[string]string{
 								"app.kubernetes.io/managed-by": "spinnaker-operator",
 							},
-							Name: "spin-clouddriver",
+							Name:            "spin-clouddriver",
+							ResourceVersion: " ",
 						},
 					},
 					&appsv1.Deployment{
@@ -80,7 +82,8 @@ func TestK8sLookup_GetSpinnakerDeployments(t *testing.T) {
 							Labels: map[string]string{
 								"app.kubernetes.io/managed-by": "spinnaker-operator",
 							},
-							Name: "spin-clouddriver",
+							Name:            "spin-clouddriver",
+							ResourceVersion: " ",
 						},
 					},
 				},
@@ -96,7 +99,8 @@ func TestK8sLookup_GetSpinnakerDeployments(t *testing.T) {
 						Labels: map[string]string{
 							"app.kubernetes.io/managed-by": "spinnaker-operator",
 						},
-						Name: "spin-clouddriver",
+						Name:            "spin-clouddriver",
+						ResourceVersion: " ",
 					},
 				},
 			},
@@ -222,7 +226,8 @@ func TestK8sLookup_GetPodsByDeployment(t *testing.T) {
 							Labels: map[string]string{
 								"app.kubernetes.io/name": "spin-clouddriver",
 							},
-							Name: "spin-clouddriver",
+							Name:            "spin-clouddriver",
+							ResourceVersion: " ",
 						},
 					},
 				},
@@ -236,7 +241,8 @@ func TestK8sLookup_GetPodsByDeployment(t *testing.T) {
 						Labels: map[string]string{
 							"app.kubernetes.io/name": "spin-clouddriver",
 						},
-						Name: "spin-clouddriver",
+						Name:            "spin-clouddriver",
+						ResourceVersion: " ",
 					},
 				},
 			},
@@ -248,7 +254,8 @@ func TestK8sLookup_GetPodsByDeployment(t *testing.T) {
 						Labels: map[string]string{
 							"app.kubernetes.io/name": "spin-clouddriver",
 						},
-						Name: "spin-clouddriver",
+						Name:            "spin-clouddriver",
+						ResourceVersion: " ",
 					},
 				},
 			},
@@ -349,8 +356,9 @@ func TestK8sLookup_GetReplicaSetByPod(t *testing.T) {
 					&appsv1.ReplicaSet{
 						TypeMeta: metav1.TypeMeta{},
 						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "ns1",
-							Name:      "spin-cloudriver",
+							Namespace:       "ns1",
+							Name:            "spin-cloudriver",
+							ResourceVersion: " ",
 						},
 					},
 				},
@@ -374,8 +382,9 @@ func TestK8sLookup_GetReplicaSetByPod(t *testing.T) {
 			want: &appsv1.ReplicaSet{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "spin-cloudriver",
+					Namespace:       "ns1",
+					Name:            "spin-cloudriver",
+					ResourceVersion: " ",
 				},
 			},
 			wantErr: false,
