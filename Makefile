@@ -177,7 +177,7 @@ manifest: build-dirs ## Copies and packages kubernetes manifest files with final
 	@mv ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml.new ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml
 	@cat ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: Always|" > ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml.new
 	@mv ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml.new ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml
-	@cd $(BUILD_MF_DIR) && tar -czf manifests.tgz deploy/ && mv manifests.tgz ..
+	@cd $(BUILD_MF_DIR) && tar -czf manifests.tgz config/ && mv manifests.tgz ..
 
 .PHONY: lint
 lint: ## Executes golint in all source files
