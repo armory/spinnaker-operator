@@ -33,7 +33,7 @@ import (
 // * Use EnqueueRequestForOwner to reconcile the owner of the object the event is for
 // - do this for events for the types the Controller creates.  (e.g. ReplicaSets created by a Deployment Controller)
 //
-// * Use EnqueueRequestFromMapFunc to transform an event for an object to a reconcile of an object
+// * Use EnqueueRequestsFromMapFunc to transform an event for an object to a reconcile of an object
 // of a different type - do this for events for types the Controller may be interested in, but doesn't create.
 // (e.g. If Foo responds to cluster size events, map Node events to Foo objects.)
 //
@@ -75,28 +75,28 @@ type Funcs struct {
 	GenericFunc func(event.GenericEvent, workqueue.RateLimitingInterface)
 }
 
-// Create implements EventHandler
+// Create implements EventHandler.
 func (h Funcs) Create(e event.CreateEvent, q workqueue.RateLimitingInterface) {
 	if h.CreateFunc != nil {
 		h.CreateFunc(e, q)
 	}
 }
 
-// Delete implements EventHandler
+// Delete implements EventHandler.
 func (h Funcs) Delete(e event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	if h.DeleteFunc != nil {
 		h.DeleteFunc(e, q)
 	}
 }
 
-// Update implements EventHandler
+// Update implements EventHandler.
 func (h Funcs) Update(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	if h.UpdateFunc != nil {
 		h.UpdateFunc(e, q)
 	}
 }
 
-// Generic implements EventHandler
+// Generic implements EventHandler.
 func (h Funcs) Generic(e event.GenericEvent, q workqueue.RateLimitingInterface) {
 	if h.GenericFunc != nil {
 		h.GenericFunc(e, q)
