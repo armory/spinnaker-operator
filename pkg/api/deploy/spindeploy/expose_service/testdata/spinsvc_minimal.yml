@@ -1,0 +1,18 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+  namespace: ns1
+spec:
+  spinnakerConfig:
+    config:
+      version: 1.15.1
+      persistentStorage:
+        persistentStoreType: s3
+        s3:
+          bucket: my-bucket
+          region: us-west-2
+          rootFolder: front50
+status:
+  apiUrl: http://acme.com
+  uiUrl: http://acme.com

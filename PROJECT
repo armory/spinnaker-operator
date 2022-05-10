@@ -1,0 +1,28 @@
+domain: spinnaker.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: memcached-operator
+repo: github.com/armory/spinnaker-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: spinnaker.io
+  group: spinnaker.io
+  kind: SpinnakerAccount
+  path: github.com/armory/spinnaker-operator/pkg/api/v1alpha2
+  version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: spinnaker.io
+  group: spinnaker.io
+  kind: SpinnakerService
+  path: github.com/armory/spinnaker-operator/pkg/api/v1alpha2
+  version: v1alpha2
+version: "3"

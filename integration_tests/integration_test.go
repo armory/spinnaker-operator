@@ -1,10 +1,11 @@
+//go:build integration
 // +build integration
 
 package integration_tests
 
 import (
 	"fmt"
-	"github.com/armory/spinnaker-operator/pkg/controller/spinnakerservice"
+	"github.com/armory/spinnaker-operator/controllers/spinnakerservice"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -20,7 +21,7 @@ func init() {
 		BucketDefault:         "operator-int-tests",
 		BucketRegionDefault:   "us-west-2",
 		OperatorKustomizeBase: "testdata/operator/base",
-		CRDManifests:          "../deploy/crds",
+		CRDManifests:          "../config/crd/bases",
 	}
 }
 

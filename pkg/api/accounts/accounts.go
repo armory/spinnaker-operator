@@ -1,0 +1,99 @@
+package accounts
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/armory/spinnaker-operator/pkg/api/accounts/account"
+	"github.com/armory/spinnaker-operator/pkg/api/accounts/kubernetes"
+	"github.com/armory/spinnaker-operator/pkg/api/interfaces"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	SpringProfile     = "accounts"
+	AccountSecretPath = "/var/operator-accounts"
+)
+
+var ServicesWithAccountsFiles = []string{"clouddriver"}
+
+var TypesFactory interfaces.TypesFactory
+var Types = map[interfaces.AccountType]account.SpinnakerAccountType{}
+
+func Register(accountTypes ...account.SpinnakerAccountType) {
+	for _, a := range accountTypes {
+		Types[a.GetType()] = a
+	}
+}
+
+func init() {
+	Register(&kubernetes.AccountType{})
+}
+
+func GetType(tp interfaces.AccountType) (account.SpinnakerAccountType, error) {
+	if t, ok := Types[tp]; ok {
+		return t, nil
+	}
+	tps := make([]string, 0)
+	for _, t := range Types {
+		tps = append(tps, string(t.GetType()))
+	}
+	return nil, fmt.Errorf("account type %s not recognized, valid types are %s", tp, strings.Join(tps, ", "))
+}
+
+func AllValidCRDAccounts(ctx context.Context, c client.Client, ns string) ([]account.Account, error) {
+	spinAccounts := TypesFactory.NewAccountList()
+	if err := c.List(ctx, spinAccounts, client.InNamespace(ns)); err != nil {
+		return nil, err
+	}
+
+	accounts := make([]account.Account, 0)
+	for _, a := range spinAccounts.GetItems() {
+		if !a.GetSpec().Enabled {
+			continue
+		}
+		accountType, err := GetType(a.GetSpec().Type)
+		if err != nil {
+			continue
+		}
+		acc, err := accountType.FromCRD(a)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, acc)
+	}
+	return accounts, nil
+}
+
+// FromSpinnakerConfigSlice builds accounts from a given slice of settings
+func FromSpinnakerConfigSlice(ctx context.Context, accountType account.SpinnakerAccountType, settingsSlice []map[string]interface{}, ignoreInvalid bool) ([]account.Account, error) {
+	ar := make([]account.Account, 0)
+	for _, s := range settingsSlice {
+		a, err := accountType.FromSpinnakerConfig(ctx, s)
+		if err != nil {
+			if !ignoreInvalid {
+				return ar, err
+			}
+		} else {
+			ar = append(ar, a)
+		}
+	}
+	return ar, nil
+}
+
+// GetAllServicesWithAccounts returns all services potentially using accounts defined via CRDs
+func GetAllServicesWithAccounts() []string {
+	// Enable "accounts" profile on all services that have potential accounts
+	m := make(map[string]bool, 0)
+	for _, t := range Types {
+		for _, s := range t.GetServices() {
+			m[s] = true
+		}
+	}
+	svcs := make([]string, 0)
+	for k := range m {
+		svcs = append(svcs, k)
+	}
+	return svcs
+}

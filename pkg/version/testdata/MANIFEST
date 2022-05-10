@@ -1,7 +1,0 @@
-Version=0.3.0-2378828-dirty
-Built-By=Jenkins
-Build-Date=2020-02-28_12:48:47
-Branch=master
-Revision=2378828
-Build-Go-Version=go version go1.13.6 darwin/amd64
-Custom-Version=0.3.0-custom

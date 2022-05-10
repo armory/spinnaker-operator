@@ -27,7 +27,6 @@ PWD 		  	= $(shell pwd)
 REGISTRY        ?= docker.io
 REDHAT_REGISTRY ?= scan.connect.redhat.com
 SRC_DIRS        := cmd pkg integration-tests
-COMMAND         := cmd/manager/main
 BUILD_HOME      := ${PWD}/build
 BUILD_MF_DIR    := ${BUILD_HOME}/manifests
 BUILD_BIN_DIR   := ${BUILD_HOME}/bin/$(OS)_$(ARCH)
@@ -51,11 +50,27 @@ version: ## Prints the version of operator. Version type can be changed providin
 clean: ## Deletes output directory
 	rm -rf $(BUILD_HOME)
 
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
+
+.PHONY: manifests
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0,generateEmbeddedObjectMeta=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+.PHONY: generate
+generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
 .PHONY: build
-build: build-dirs manifest Makefile ## Compiles the code to produce binaries
+build: build-dirs fmt manifest Makefile ## Compiles the code to produce binaries
 	@echo "Operator version: $(VERSION)"
 	@echo "Building: $(BINARY)"
-	@go build -mod=vendor -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
+	@go build -mod=vendor -o ${BINARY} main.go
 
 .PHONY: docker-build
 docker-build: Makefile ## Runs "make build" in a docker container
@@ -130,14 +145,14 @@ reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug loc
 .PHONY: run-dev
 run-dev: ## Runs operator locally
 	@WATCH_NAMESPACE=$(NAMESPACE) && go run \
-	    cmd/manager/main.go \
+	    main.go \
 	    --kubeconfig=${KUBECONFIG}
 
 .PHONY: debug
 debug: ## Debugs operator locally
 	OPERATOR_NAME=local-operator \
     WATCH_NAMESPACE=$(NAMESPACE) \
-	dlv debug --headless --listen=:2345 --headless --log --api-version=2 cmd/manager/main.go -- \
+	dlv debug --headless --listen=:2345 --headless --log --api-version=2 main.go -- \
 	--kubeconfig ${KUBECONFIG} --disable-admission-controller
 
 .PHONY: build-dirs
@@ -156,30 +171,38 @@ manifest: build-dirs ## Copies and packages kubernetes manifest files with final
 	@echo "Revision="$(shell git describe --always) >> $(BUILD_BIN_DIR)/MANIFEST
 	@echo "Build-Go-Version="$(shell go version) >> $(BUILD_BIN_DIR)/MANIFEST
 	@echo "Copying kubernetes manifests"
-	@cp -R deploy ${BUILD_MF_DIR}
-	@if [[ -f ${BUILD_MF_DIR}/deploy/role.yaml ]] ; then rm ${BUILD_MF_DIR}/deploy/role.yaml ; fi
-	@cat ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new
-	@mv ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml
-	@cat ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new
-	@mv ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml
+	@cp -R config ${BUILD_MF_DIR}
+	@if [[ -f ${BUILD_MF_DIR}/config/role.yaml ]] ; then rm ${BUILD_MF_DIR}/config/role.yaml ; fi
+	@cat ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml.new
+	@mv ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml.new ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml
+	@cat ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: Always|" > ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml.new
+	@mv ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml.new ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml
 	@cd $(BUILD_MF_DIR) && tar -czf manifests.tgz deploy/ && mv manifests.tgz ..
 
 .PHONY: lint
 lint: ## Executes golint in all source files
 	@find pkg cmd -name '*.go' | grep -v 'generated' | xargs -L 1 golint
 
-.PHONY: k8s
-k8s: ## Generates "deep copy" code from pkg/apis modules
-	@go run tools/generate.go k8s
+# Image URL to use all building/pushing image targets
+IMG ?= controller:latest
+# New addapi
+.PHONY: bundle
+bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
+	operator-sdk generate kustomize manifests -q
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle $(BUNDLE_GEN_FLAGS)
+	operator-sdk bundle validate ./bundle
 
-.PHONY: openapi
-openapi: ## Generates the CRDs from pkg/apis modules
-	@go run tools/generate.go openapi
+.PHONY: crds
+crds: ## Generates the CRDs from pkg/apis modules
+	@operator-sdk generate bundle --input-dir config
 
-.PHONY: addapi
-addapi: ## Adds a new version of the CRD in pkg/apis
-	@go run tools/add.go ${NEW_API_VERSION}
-	rm deploy/crds/*${NEW_API_VERSION}*
-	@echo "***** MANUAL TODO, YOU'RE NOT FINISHED YET ******"
-	@echo "- Copy the contents of the previous version '_types.go' file into the new version"
-	@echo "- Change storage version to new api by deleting '+kubebuilder:storageversion' comment above SpinnakerService struct from the previous version."
+CONTROLLER_GEN = $(shell pwd)/tools/controller-gen
+.PHONY: controller-gen
+controller-gen: ## Download controller-gen locally if necessary.
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
+
+KUSTOMIZE = $(shell pwd)/tools/kustomize
+.PHONY: kustomize
+kustomize: ## Download kustomize locally if necessary.
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)

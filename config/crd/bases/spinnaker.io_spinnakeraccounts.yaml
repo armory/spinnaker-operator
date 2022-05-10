@@ -1,0 +1,338 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: spinnakeraccounts.spinnaker.io
+spec:
+  group: spinnaker.io
+  names:
+    kind: SpinnakerAccount
+    listKind: SpinnakerAccountList
+    plural: spinnakeraccounts
+    shortNames:
+    - spinaccount
+    singular: spinnakeraccount
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Type
+      jsonPath: .spec.type
+      name: type
+      type: string
+    - description: Last Validated
+      jsonPath: .status.LastValidatedAt
+      name: lastValidated
+      type: date
+    - description: Invalid Reason
+      jsonPath: .status.InvalidReason
+      name: reason
+      type: string
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              enabled:
+                type: boolean
+              kubernetes:
+                properties:
+                  kubeconfig:
+                    properties:
+                      apiVersion:
+                        type: string
+                      clusters:
+                        items:
+                          properties:
+                            cluster:
+                              properties:
+                                certificate-authority:
+                                  type: string
+                                certificate-authority-data:
+                                  format: byte
+                                  type: string
+                                extensions:
+                                  items:
+                                    properties:
+                                      extension:
+                                        type: object
+                                      name:
+                                        type: string
+                                    required:
+                                    - extension
+                                    - name
+                                    type: object
+                                  type: array
+                                insecure-skip-tls-verify:
+                                  type: boolean
+                                proxy-url:
+                                  type: string
+                                server:
+                                  type: string
+                                tls-server-name:
+                                  type: string
+                              required:
+                              - server
+                              type: object
+                            name:
+                              type: string
+                          required:
+                          - cluster
+                          - name
+                          type: object
+                        type: array
+                      contexts:
+                        items:
+                          properties:
+                            context:
+                              properties:
+                                cluster:
+                                  type: string
+                                extensions:
+                                  items:
+                                    properties:
+                                      extension:
+                                        type: object
+                                      name:
+                                        type: string
+                                    required:
+                                    - extension
+                                    - name
+                                    type: object
+                                  type: array
+                                namespace:
+                                  type: string
+                                user:
+                                  type: string
+                              required:
+                              - cluster
+                              - user
+                              type: object
+                            name:
+                              type: string
+                          required:
+                          - context
+                          - name
+                          type: object
+                        type: array
+                      current-context:
+                        type: string
+                      extensions:
+                        items:
+                          properties:
+                            extension:
+                              type: object
+                            name:
+                              type: string
+                          required:
+                          - extension
+                          - name
+                          type: object
+                        type: array
+                      kind:
+                        type: string
+                      preferences:
+                        properties:
+                          colors:
+                            type: boolean
+                          extensions:
+                            items:
+                              properties:
+                                extension:
+                                  type: object
+                                name:
+                                  type: string
+                              required:
+                              - extension
+                              - name
+                              type: object
+                            type: array
+                        type: object
+                      users:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            user:
+                              properties:
+                                as:
+                                  type: string
+                                as-groups:
+                                  items:
+                                    type: string
+                                  type: array
+                                as-user-extra:
+                                  additionalProperties:
+                                    items:
+                                      type: string
+                                    type: array
+                                  type: object
+                                auth-provider:
+                                  properties:
+                                    config:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    name:
+                                      type: string
+                                  required:
+                                  - config
+                                  - name
+                                  type: object
+                                client-certificate:
+                                  type: string
+                                client-certificate-data:
+                                  format: byte
+                                  type: string
+                                client-key:
+                                  type: string
+                                client-key-data:
+                                  format: byte
+                                  type: string
+                                exec:
+                                  properties:
+                                    apiVersion:
+                                      type: string
+                                    args:
+                                      items:
+                                        type: string
+                                      type: array
+                                    command:
+                                      type: string
+                                    env:
+                                      items:
+                                        properties:
+                                          name:
+                                            type: string
+                                          value:
+                                            type: string
+                                        required:
+                                        - name
+                                        - value
+                                        type: object
+                                      type: array
+                                    installHint:
+                                      type: string
+                                    interactiveMode:
+                                      type: string
+                                    provideClusterInfo:
+                                      type: boolean
+                                  required:
+                                  - command
+                                  - provideClusterInfo
+                                  type: object
+                                extensions:
+                                  items:
+                                    properties:
+                                      extension:
+                                        type: object
+                                      name:
+                                        type: string
+                                    required:
+                                    - extension
+                                    - name
+                                    type: object
+                                  type: array
+                                password:
+                                  type: string
+                                token:
+                                  type: string
+                                tokenFile:
+                                  type: string
+                                username:
+                                  type: string
+                              type: object
+                          required:
+                          - name
+                          - user
+                          type: object
+                        type: array
+                    required:
+                    - clusters
+                    - contexts
+                    - current-context
+                    - preferences
+                    - users
+                    type: object
+                  kubeconfigFile:
+                    type: string
+                  kubeconfigSecret:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  useServiceAccount:
+                    type: boolean
+                type: object
+              permissions:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                type: object
+              settings: {}
+              type:
+                type: string
+              validation:
+                properties:
+                  enabled:
+                    type: boolean
+                  failOnError:
+                    type: boolean
+                  frequencySeconds:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    x-kubernetes-int-or-string: true
+                required:
+                - enabled
+                type: object
+            required:
+            - enabled
+            - type
+            type: object
+          status:
+            properties:
+              invalidReason:
+                type: string
+              lastValidatedAt:
+                properties:
+                  nanos:
+                    format: int32
+                    type: integer
+                  seconds:
+                    format: int64
+                    type: integer
+                required:
+                - nanos
+                - seconds
+                type: object
+            required:
+            - invalidReason
+            - lastValidatedAt
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

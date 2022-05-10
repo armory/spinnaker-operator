@@ -1,0 +1,11 @@
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+  namespace: ns1
+spec:
+  spinnakerConfig:
+    config:
+      version: 1.15.1
+  expose:
+    type: ingress
