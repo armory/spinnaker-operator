@@ -26,9 +26,14 @@ require (
 )
 
 require (
-	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.17.0
+	github.com/onsi/ginkgo/v2 v2.1.4
+	github.com/onsi/gomega v1.19.0
 	github.com/operator-framework/operator-lib v0.10.0
+)
+
+require (
+	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc // indirect
+	k8s.io/kube-state-metrics v1.7.2 // indirect
 )
 
 require (
@@ -76,7 +81,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/operator-framework/operator-sdk v0.19.4
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
@@ -90,10 +95,10 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
@@ -104,7 +109,6 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
-	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/apiextensions-apiserver v0.24.0 // indirect
 	k8s.io/component-base v0.24.0 // indirect
@@ -114,8 +118,8 @@ require (
 )
 
 replace (
-	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v1.20.0
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.0
+	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.18.0
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.22.8
 	k8s.io/apimachinery => k8s.io/apimachinery v0.22.8
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20190409021813-1ec86e4da56c
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20190409023024-d644b00f3b79

@@ -102,14 +102,14 @@ spec:
                           items:
                             type: string
                           type: array
-                          x-kubernetes-list-type: set
+                          x-kubernetes-list-type: atomic
                         patchesJson6902:
                           type: string
                         patchesStrategicMerge:
                           items:
                             type: string
                           type: array
-                          x-kubernetes-list-type: set
+                          x-kubernetes-list-type: atomic
                       type: object
                     service:
                       properties:
@@ -117,30 +117,35 @@ spec:
                           items:
                             type: string
                           type: array
-                          x-kubernetes-list-type: set
+                          x-kubernetes-list-type: atomic
                         patchesJson6902:
                           type: string
                         patchesStrategicMerge:
                           items:
                             type: string
                           type: array
-                          x-kubernetes-list-type: set
+                          x-kubernetes-list-type: atomic
                       type: object
                   type: object
                 type: object
               spinnakerConfig:
                 properties:
                   config:
+                    type: object
                     x-kubernetes-preserve-unknown-fields: true
                   files:
                     additionalProperties:
                       type: string
                     type: object
                   profiles:
-                    additionalProperties: {}
+                    additionalProperties:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     type: object
                   service-settings:
-                    additionalProperties: {}
+                    additionalProperties:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                 type: object

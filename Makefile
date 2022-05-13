@@ -172,12 +172,12 @@ manifest: build-dirs ## Copies and packages kubernetes manifest files with final
 	@echo "Build-Go-Version="$(shell go version) >> $(BUILD_BIN_DIR)/MANIFEST
 	@echo "Copying kubernetes manifests"
 	@cp -R config ${BUILD_MF_DIR}
-	@if [[ -f ${BUILD_MF_DIR}/config/role.yaml ]] ; then rm ${BUILD_MF_DIR}/config/role.yaml ; fi
-	@cat ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml.new
-	@mv ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml.new ${BUILD_MF_DIR}/config/operator/basic/deployment.yaml
-	@cat ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: Always|" > ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml.new
-	@mv ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml.new ${BUILD_MF_DIR}/config/operator/cluster/deployment.yaml
-	@cd $(BUILD_MF_DIR) && tar -czf manifests.tgz config/ && mv manifests.tgz ..
+	@if [[ -f ${BUILD_MF_DIR}/deploy/role.yaml ]] ; then rm ${BUILD_MF_DIR}/deploy/role.yaml ; fi
+	@cat ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new
+	@mv ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml
+	@cat ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: Always|" > ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new
+	@mv ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml
+	@cd $(BUILD_MF_DIR) && tar -czf manifests.tgz deploy/ && mv manifests.tgz ..
 
 .PHONY: lint
 lint: ## Executes golint in all source files

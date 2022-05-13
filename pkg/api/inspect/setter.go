@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func SetObjectProp(obj map[string]interface{}, prop string, value interface{}) error {
+func SetObjectProp(obj interface{}, prop string, value interface{}) error {
 	addr := strings.Split(prop, ".")
 
 	c := reflect.ValueOf(obj)

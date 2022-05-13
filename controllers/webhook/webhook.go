@@ -6,19 +6,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/armory/spinnaker-operator/controllers/spinnakerservice"
 	"github.com/armory/spinnaker-operator/pkg/api/util"
-
-	// "github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	apiAdmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	ar_v1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	// "sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -71,28 +68,23 @@ func Start(m manager.Manager) error {
 	hookServer.CertDir = c.certDir
 	hookServer.Port = servicePort
 
-	// for _, r := range registrations {
-	// 	hookServer.Register(r.p, &webhook.Admission{Handler: r.h})
-	// }
+	for _, r := range registrations {
+		hookServer.Register(r.p, &webhook.Admission{Handler: r.h})
+	}
 	// Create validating webhook configuration for registering our webhook with the API server
 	return deployValidatingWebhookConfiguration(name, ns, rawClient, c.signingCert)
 }
 
 func getOperatorNameAndNamespace() (string, string, error) {
-	// name, err := "AAA-TMP", error(nil)
-	acc := spinnakerservice.TypesFactory.NewAccount()
-	name := acc.GetName()
-	// name, err := k8sutil.GetOperatorName()
-	if name != "" {
-		return "", "", nil
+	name, err := k8sutil.GetOperatorName()
+	if err != nil {
+		return "", "", err
 	}
-	// ns, err := "AAA-TMP", error(nil)
-	ns := acc.GetNamespace()
-	// ns, err := k8sutil.GetOperatorNamespace()
-	if ns != "" {
+	ns, err := k8sutil.GetOperatorNamespace()
+	if err != nil {
 		envNs := os.Getenv("ADMISSION_PROXY_NAMESPACE")
 		if envNs == "" {
-			return "", "", fmt.Errorf("unable to determine operator namespace. Error: ADMISSION_PROXY_NAMESPACE env var not set")
+			return "", "", fmt.Errorf("unable to determine operator namespace. Error: %s and ADMISSION_PROXY_NAMESPACE env var not set", err.Error())
 		}
 		ns = envNs
 	}
@@ -128,46 +120,49 @@ func deployWebhookService(ns string, name string, port int, rawClient *kubernete
 }
 
 func deployValidatingWebhookConfiguration(svcName, ns string, rawClient *kubernetes.Clientset, cert []byte) error {
-	webhookConfig := &apiAdmissionregistrationv1.ValidatingWebhookConfiguration{
+	webhookConfig := &ar_v1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "spinnakervalidatingwebhook",
 			Namespace: ns,
 		},
-		Webhooks: []apiAdmissionregistrationv1.ValidatingWebhook{},
+		// Webhooks: []ar_v1.ValidatingWebhook{},
 	}
 
 	for i := range registrations {
 		r := registrations[i]
-		webhookConfig.Webhooks = append(webhookConfig.Webhooks, apiAdmissionregistrationv1.ValidatingWebhook{
+		webhookConfig.Webhooks = append(webhookConfig.Webhooks, ar_v1.ValidatingWebhook{
 			Name: fmt.Sprintf("webhook-%s-%s.%s", r.r, r.kind.Version, strings.ToLower(r.kind.Group)),
-			ClientConfig: apiAdmissionregistrationv1.WebhookClientConfig{
-				Service: &apiAdmissionregistrationv1.ServiceReference{
+			ClientConfig: ar_v1.WebhookClientConfig{
+				Service: &ar_v1.ServiceReference{
 					Namespace: ns,
 					Name:      svcName,
 					Path:      &r.p,
 				},
 				CABundle: cert,
 			},
-			Rules: []apiAdmissionregistrationv1.RuleWithOperations{{
-				Operations: []apiAdmissionregistrationv1.OperationType{
-					apiAdmissionregistrationv1.Create,
-					apiAdmissionregistrationv1.Update,
+			Rules: []ar_v1.RuleWithOperations{{
+				Operations: []ar_v1.OperationType{
+					ar_v1.Create,
+					ar_v1.Update,
 				},
-				Rule: apiAdmissionregistrationv1.Rule{
+				Rule: ar_v1.Rule{
 					APIGroups:   []string{r.kind.Group},
 					APIVersions: []string{r.kind.Version},
 					Resources:   []string{r.r}, // should be "spinnakerservices"
 				},
 			}},
-			SideEffects:             sideEffect(apiAdmissionregistrationv1.SideEffectClassNone),
-			AdmissionReviewVersions: []string{"v1"},
+			SideEffects: sideEffect(ar_v1.SideEffectClassNone),
+			AdmissionReviewVersions: []string{
+				"v1beta1",
+				"v1",
+			},
 		})
 	}
 	return util.CreateOrUpdateValidatingWebhookConfiguration(webhookConfig, rawClient)
 }
 
-func sideEffect(sideEffect apiAdmissionregistrationv1.SideEffectClass) *apiAdmissionregistrationv1.SideEffectClass {
-	s := new(apiAdmissionregistrationv1.SideEffectClass)
+func sideEffect(sideEffect ar_v1.SideEffectClass) *ar_v1.SideEffectClass {
+	s := new(ar_v1.SideEffectClass)
 	*s = sideEffect
 	return s
 }

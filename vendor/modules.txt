@@ -79,6 +79,12 @@ github.com/cenkalti/backoff/v4
 # github.com/cespare/xxhash/v2 v2.1.2
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
+# github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc
+## explicit; go 1.13
+github.com/coreos/prometheus-operator/pkg/apis/monitoring
+github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1
+github.com/coreos/prometheus-operator/pkg/client/versioned/scheme
+github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -238,40 +244,24 @@ github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.2
 ## explicit; go 1.12
 github.com/modern-go/reflect2
-# github.com/nxadm/tail v1.4.8
-## explicit; go 1.13
-github.com/nxadm/tail
-github.com/nxadm/tail/ratelimiter
-github.com/nxadm/tail/util
-github.com/nxadm/tail/watch
-github.com/nxadm/tail/winfile
-# github.com/onsi/ginkgo v1.16.5
-## explicit; go 1.16
-github.com/onsi/ginkgo
-github.com/onsi/ginkgo/config
-github.com/onsi/ginkgo/formatter
-github.com/onsi/ginkgo/internal/codelocation
-github.com/onsi/ginkgo/internal/containernode
-github.com/onsi/ginkgo/internal/failer
-github.com/onsi/ginkgo/internal/global
-github.com/onsi/ginkgo/internal/leafnodes
-github.com/onsi/ginkgo/internal/remote
-github.com/onsi/ginkgo/internal/spec
-github.com/onsi/ginkgo/internal/spec_iterator
-github.com/onsi/ginkgo/internal/specrunner
-github.com/onsi/ginkgo/internal/suite
-github.com/onsi/ginkgo/internal/testingtproxy
-github.com/onsi/ginkgo/internal/writer
-github.com/onsi/ginkgo/reporters
-github.com/onsi/ginkgo/reporters/stenographer
-github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
-github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
-github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.17.0
-## explicit; go 1.16
+# github.com/onsi/ginkgo/v2 v2.1.4
+## explicit; go 1.18
+github.com/onsi/ginkgo/v2
+github.com/onsi/ginkgo/v2/config
+github.com/onsi/ginkgo/v2/formatter
+github.com/onsi/ginkgo/v2/internal
+github.com/onsi/ginkgo/v2/internal/global
+github.com/onsi/ginkgo/v2/internal/interrupt_handler
+github.com/onsi/ginkgo/v2/internal/parallel_support
+github.com/onsi/ginkgo/v2/internal/testingtproxy
+github.com/onsi/ginkgo/v2/reporters
+github.com/onsi/ginkgo/v2/types
+# github.com/onsi/gomega v1.19.0
+## explicit; go 1.18
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/internal
+github.com/onsi/gomega/internal/gutil
 github.com/onsi/gomega/matchers
 github.com/onsi/gomega/matchers/support/goraph/bipartitegraph
 github.com/onsi/gomega/matchers/support/goraph/edge
@@ -285,6 +275,12 @@ github.com/openshift/origin/Godeps/_workspace/src/github.com/stretchr/testify/as
 ## explicit; go 1.17
 github.com/operator-framework/operator-lib/internal/utils
 github.com/operator-framework/operator-lib/leader
+# github.com/operator-framework/operator-sdk v0.19.4 => github.com/operator-framework/operator-sdk v0.18.0
+## explicit; go 1.13
+github.com/operator-framework/operator-sdk/pkg/k8sutil
+github.com/operator-framework/operator-sdk/pkg/kube-metrics
+github.com/operator-framework/operator-sdk/pkg/metrics
+github.com/operator-framework/operator-sdk/version
 # github.com/pierrec/lz4 v2.3.0+incompatible
 ## explicit
 github.com/pierrec/lz4
@@ -364,7 +360,7 @@ go.uber.org/zap/zapcore
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/pbkdf2
-# golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
+# golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -392,7 +388,7 @@ golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
+# golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 ## explicit; go 1.17
 golang.org/x/term
 # golang.org/x/text v0.3.7
@@ -554,9 +550,6 @@ gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
-# gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
-## explicit
-gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
@@ -610,7 +603,7 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apiextensions-apiserver v0.24.0 => k8s.io/apiextensions-apiserver v0.24.0
+# k8s.io/apiextensions-apiserver v0.24.0 => k8s.io/apiextensions-apiserver v0.22.8
 ## explicit; go 1.16
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
@@ -820,6 +813,10 @@ k8s.io/klog/v2/internal/severity
 k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/validation/spec
+# k8s.io/kube-state-metrics v1.7.2
+## explicit
+k8s.io/kube-state-metrics/pkg/metric
+k8s.io/kube-state-metrics/pkg/metrics_store
 # k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 ## explicit; go 1.12
 k8s.io/utils/buffer
@@ -844,7 +841,6 @@ sigs.k8s.io/controller-runtime/pkg/controller
 sigs.k8s.io/controller-runtime/pkg/controller/controllerutil
 sigs.k8s.io/controller-runtime/pkg/conversion
 sigs.k8s.io/controller-runtime/pkg/envtest
-sigs.k8s.io/controller-runtime/pkg/envtest/printer
 sigs.k8s.io/controller-runtime/pkg/event
 sigs.k8s.io/controller-runtime/pkg/handler
 sigs.k8s.io/controller-runtime/pkg/healthz
@@ -886,8 +882,8 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v1.20.0
-# k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.0
+# github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.18.0
+# k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.22.8
 # k8s.io/apimachinery => k8s.io/apimachinery v0.22.8
 # k8s.io/apiserver => k8s.io/apiserver v0.0.0-20190409021813-1ec86e4da56c
 # k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20190409023024-d644b00f3b79

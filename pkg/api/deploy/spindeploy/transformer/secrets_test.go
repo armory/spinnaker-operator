@@ -99,7 +99,7 @@ func TestSetInDeployment(t *testing.T) {
 		namespace: "spinnaker",
 	}
 	s := `
-apiVersion: extensions/v1beta1
+apiVersion: extensions/v1
 kind: Deployment
 spec:
   template:

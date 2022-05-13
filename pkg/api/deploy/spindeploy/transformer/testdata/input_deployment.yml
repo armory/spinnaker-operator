@@ -17,7 +17,7 @@ metadata:
   name: spin-gate
   namespace: german
   resourceVersion: 31509532
-  selfLink: /apis/extensions/v1beta1/namespaces/german/deployments/spin-gate
+  selfLink: /apis/extensions/v1/namespaces/german/deployments/spin-gate
   uid: dec43888-a7d3-11e9-a8c0-067abaf432c8
 spec:
   progressDeadlineSeconds: 600

@@ -8,28 +8,29 @@ import (
 	"path/filepath"
 	"runtime"
 
-	// controller "github.com/armory/spinnaker-operator/controllers"
-	// "github.com/armory/spinnaker-operator/controllers/accountvalidating"
+	controller "github.com/armory/spinnaker-operator/controllers"
+	"github.com/armory/spinnaker-operator/controllers/accountvalidating"
 	"github.com/armory/spinnaker-operator/controllers/spinnakerservice"
-	// "github.com/armory/spinnaker-operator/controllers/spinnakervalidating"
+	"github.com/armory/spinnaker-operator/controllers/spinnakervalidating"
 	"github.com/armory/spinnaker-operator/controllers/webhook"
 	"github.com/armory/spinnaker-operator/pkg/api/version"
 
-	// "github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	// kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
-	// "github.com/operator-framework/operator-sdk/pkg/metrics"
-	// sdkVersion "github.com/operator-framework/operator-sdk/version"			It is no longer possible to import package version
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
+	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/operator-framework/operator-lib/leader"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	// runtimehandler "sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	spinnakeriov1alpha2 "github.com/armory/spinnaker-operator/pkg/api/v1alpha2"
 	"github.com/spf13/pflag"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -52,8 +53,7 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Spinnaker Operator Version: %v", version.GetOperatorVersion()))
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	// log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
-	// GetOperatorVersion
+	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
 func init() {
@@ -103,17 +103,11 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 	// implementing the logr.Logger interface. This logger will
 	// be propagated through the whole operator, generating
 	// uniform and structured logs.
-	// logf.SetLogger(zap.Logger())
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	printVersion()
 
-	acc := spinnakerservice.TypesFactory.NewAccount()
-	namespace := acc.GetNamespace()
-	// namespace := "AAA-TMP"
-	// namespace, _ := meta.NewAccessor().Namespace()
-	// namespace, _ := meta.GetNamespace()
-	// namespace, _ := k8sutil.GetWatchNamespace()
+	namespace, _ := k8sutil.GetWatchNamespace()
 	if namespace != "" {
 		log.Info(fmt.Sprintf("Watching Spinnaker configuration in %s", namespace))
 	} else {
@@ -139,14 +133,13 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "ddafaf11.spinnaker.io",
 		Namespace:              namespace,
 		MapperProvider:         apiutil.NewDiscoveryRESTMapper,
-		// MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+		MetricsBindAddress:     fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	})
 	if err != nil {
 		log.Error(err, "")
@@ -162,16 +155,16 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 	}
 
 	// Add admission controller
-	// if !disableAdmission {
-	// 	controller.Register(spinnakervalidating.Add)
-	// 	controller.Register(accountvalidating.Add)
-	// }
+	if !disableAdmission {
+		controller.Register(spinnakervalidating.Add)
+		controller.Register(accountvalidating.Add)
+	}
 
-	// // Setup all Controllers
-	// if err := controller.AddToManager(mgr); err != nil {
-	// 	log.Error(err, "")
-	// 	os.Exit(1)
-	// }
+	// Setup all Controllers
+	if err := controller.AddToManager(mgr); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
 
 	if !disableAdmission {
 		log.Info("starting webhook server...")
@@ -181,34 +174,28 @@ func Start(apiScheme func(s *kruntime.Scheme) error) {
 		}
 	}
 
-	// gvks, err := getGVKs(mgr)
-	// if err != nil {
-	// 	log.Error(err, "unable to get GroupVersionKind")
-	// 	os.Exit(1)
-	// }
-
-	// runtimehandler.InstrumentedEnqueueRequestForObject
-	// runtimehandler.EnqueueRequestForObject()
-	// metrics := runtimehandler.EnqueueRequestForObject()
-	// metrics.
-	// Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+	gvks, err := getGVKs(mgr)
+	if err != nil {
+		log.Error(err, "unable to get GroupVersionKind")
+		os.Exit(1)
+	}
 
 	// Generates operator specific metrics based on the GVKs.
 	// It serves those metrics on "http://metricsHost:operatorMetricsPort".
-	// err = kubemetrics.GenerateAndServeCRMetrics(cfg, []string{namespace}, gvks, metricsHost, operatorMetricsPort)
-	// if err != nil {
-	// 	log.Info("Could not generate and serve custom resource metrics", "error", err.Error())
-	// }
+	err = kubemetrics.GenerateAndServeCRMetrics(cfg, []string{namespace}, gvks, metricsHost, operatorMetricsPort)
+	if err != nil {
+		log.Info("Could not generate and serve custom resource metrics", "error", err.Error())
+	}
 
-	// servicePorts := []v1.ServicePort{
-	// 	{Port: operatorMetricsPort, Name: metrics.CRPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: operatorMetricsPort}},
-	// 	{Port: metricsPort, Name: metrics.OperatorPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: metricsPort}},
-	// }
-	// // Create Service object to expose the metrics port(s).
-	// _, err = metrics.CreateMetricsService(ctx, cfg, servicePorts)
-	// if err != nil {
-	// 	log.Info(err.Error())
-	// }
+	servicePorts := []v1.ServicePort{
+		{Port: operatorMetricsPort, Name: metrics.CRPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: operatorMetricsPort}},
+		{Port: metricsPort, Name: metrics.OperatorPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: metricsPort}},
+	}
+	// Create Service object to expose the metrics port(s).
+	_, err = metrics.CreateMetricsService(ctx, cfg, servicePorts)
+	if err != nil {
+		log.Info(err.Error())
+	}
 
 	log.Info("Starting the Cmd.")
 
