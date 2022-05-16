@@ -18,14 +18,12 @@ VERSION_TYPE    ?= "snapshot" # Must be one of: "snapshot", "rc", or "release"
 BRANCH_OVERRIDE ?=
 VERSION 	 	?= $(shell build-tools/version.sh $(VERSION_TYPE) $(BRANCH_OVERRIDE))
 REGISTRY_ORG    ?= "armory"
-REDHAT_PID      ?= ""
 OS      	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 1)
 ARCH    	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 2)
 NAMESPACE 	 	?= "spinnaker-operator"
 PWD 		  	= $(shell pwd)
 
 REGISTRY        ?= docker.io
-REDHAT_REGISTRY ?= scan.connect.redhat.com
 SRC_DIRS        := cmd pkg integration-tests
 COMMAND         := cmd/manager/main
 BUILD_HOME      := ${PWD}/build
@@ -34,6 +32,10 @@ BUILD_BIN_DIR   := ${BUILD_HOME}/bin/$(OS)_$(ARCH)
 BINARY 			:= ${BUILD_BIN_DIR}/spinnaker-operator
 KUBECONFIG		?= ${HOME}/.kube/config
 .DEFAULT_GOAL   := help
+TOOLS_DIR := hack/tools
+TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
+CONTROLLER_GEN := $(TOOLS_BIN_DIR)/controller-gen
+CG_WRAPPER := $(TOOLS_BIN_DIR)/cg_wrapper.sh
 
 
 .PHONY: help
@@ -55,7 +57,7 @@ clean: ## Deletes output directory
 build: build-dirs manifest Makefile ## Compiles the code to produce binaries
 	@echo "Operator version: $(VERSION)"
 	@echo "Building: $(BINARY)"
-	@go build -mod=vendor -i ${LDFLAGS} -o ${BINARY} cmd/manager/main.go
+	@go build -mod=vendor -o ${BINARY} cmd/manager/main.go
 
 .PHONY: docker-build
 docker-build: Makefile ## Runs "make build" in a docker container
@@ -90,31 +92,14 @@ docker-package: Makefile ## Builds the docker image to distribute
 	-f build-tools/Dockerfile build-tools
 	@echo "Successfully built image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)"
 
-.PHONY: docker-package-ubi
-docker-package-ubi: Makefile ## Builds the ubi image to distribute
-	@echo "Packaging final docker image"
-	@docker build \
-	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi \
-	--build-arg BUILDER=docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
-	--build-arg CACHE_DATE=$(shell date +%s) \
-	-f build-tools/Dockerfile.ubi build-tools
-	@echo "Successfully built image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi"
-
 .PHONY: docker-push
 docker-push: ## Pushes the docker image to the docker registry with the full "version" tag
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)
-	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: docker-push-dev
 docker-push-dev: ## Pushes the docker image under "dev" tag
 	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
 	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
-
-.PHONY: docker-push-ubi
-docker-push-ubi: ## Pushes the ubi image
-	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
-	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)-ubi
-	@docker push $(REDHAT_REGISTRY)/$(REDHAT_PID)/spinnaker-operator:$(VERSION)-ubi
 
 .PHONY: reverse-proxy
 reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug locally
@@ -158,9 +143,9 @@ manifest: build-dirs ## Copies and packages kubernetes manifest files with final
 	@echo "Copying kubernetes manifests"
 	@cp -R deploy ${BUILD_MF_DIR}
 	@if [[ -f ${BUILD_MF_DIR}/deploy/role.yaml ]] ; then rm ${BUILD_MF_DIR}/deploy/role.yaml ; fi
-	@cat ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new
+	@cat ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new
 	@mv ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml.new ${BUILD_MF_DIR}/deploy/operator/basic/deployment.yaml
-	@cat ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: armory/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new
+	@cat ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml | sed "s|image: armory/spinnaker-operator:.*|image: $(REGISTRY_ORG)/spinnaker-operator:$(VERSION)|" | sed "s|image: armory/halyard:.*|image: armory/halyard:$(shell cat halyard-version | head -1)|" | sed "s|imagePullPolicy:.*|imagePullPolicy: IfNotPresent|" > ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new
 	@mv ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml.new ${BUILD_MF_DIR}/deploy/operator/cluster/deployment.yaml
 	@cd $(BUILD_MF_DIR) && tar -czf manifests.tgz deploy/ && mv manifests.tgz ..
 
@@ -174,7 +159,18 @@ k8s: ## Generates "deep copy" code from pkg/apis modules
 
 .PHONY: openapi
 openapi: ## Generates the CRDs from pkg/apis modules
-	@go run tools/generate.go openapi
+	@$(CG_WRAPPER)
+
+.PHONY: openapi-internal
+openapi-internal: build-dirs $(CONTROLLER_GEN)
+	@$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=deploy/crds
+
+$(CONTROLLER_GEN): $(TOOLS_DIR)/go.mod # Build controller-gen from tools folder.
+	cd $(TOOLS_DIR) && go build -tags=tools -o bin/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
+
+.PHONY: generate
+generate: $(CONTROLLER_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: addapi
 addapi: ## Adds a new version of the CRD in pkg/apis

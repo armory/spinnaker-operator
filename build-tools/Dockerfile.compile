@@ -1,4 +1,4 @@
-FROM golang:1.13.8-alpine3.11
+FROM golang:1.18.0-alpine3.15
 
 ARG VERSION
 
@@ -6,9 +6,10 @@ ARG VERSION
 # so we fetch golint before running make
 # and setting the env variable
 RUN apk update && apk add git make bash build-base gcc bc
-RUN go get -u golang.org/x/lint/golint
+RUN go install golang.org/x/lint/golint@v0.0.0-20210508222113-6edffad5e616
 
 ENV GO111MODULE=on GOOS=linux GOARCH=amd64
 WORKDIR /opt/spinnaker-operator/build/
 ADD ./ /opt/spinnaker-operator/build/
+RUN go mod vendor && go mod tidy
 RUN make build VERSION=${VERSION} OS=linux ARCH=amd64

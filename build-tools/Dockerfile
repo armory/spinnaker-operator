@@ -1,7 +1,7 @@
 ARG BUILDER
 FROM ${BUILDER} as builder
 
-FROM python:3.7-alpine3.12
+FROM python:3.7-alpine3.15
 
 ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_UID=1001 \

@@ -80,3 +80,7 @@ func (f *TypesFactory) GetGroupVersion() schema.GroupVersion {
 func (f *TypesFactory) DeepCopyLatestTypesFactory() interfaces.TypesFactory {
 	return f.DeepCopy()
 }
+
+func (f *TypesFactory) GetContinue() string {
+	return f.DeepCopyLatestTypesFactory().GetContinue()
+}

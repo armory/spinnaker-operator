@@ -127,7 +127,7 @@ func (a *accountValidator) Validate(spinSvc interfaces.SpinnakerService, options
 }
 
 func getHashPatch(key, hash string, t time.Time) *jsonpatch.JsonPatchOperation {
-	p := jsonpatch.NewPatch("replace", fmt.Sprintf("/status/lastDeployed/%s", key), interfaces.HashStatus{
+	p := jsonpatch.NewOperation("replace", fmt.Sprintf("/status/lastDeployed/%s", key), interfaces.HashStatus{
 		Hash:          hash,
 		LastUpdatedAt: metav1.NewTime(t),
 	})

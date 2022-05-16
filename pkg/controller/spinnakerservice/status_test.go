@@ -2,6 +2,10 @@ package spinnakerservice
 
 import (
 	"context"
+
+	"testing"
+	"time"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
@@ -15,8 +19,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
-	"time"
 )
 
 func Test_statusChecker_checks(t *testing.T) {
@@ -42,8 +44,10 @@ func Test_statusChecker_checks(t *testing.T) {
 		status  string
 	}{
 		{
-			name:   "Spinsvc should have Ok status",
-			fields: fields{},
+			name: "Spinsvc should have Ok status",
+			fields: fields{
+				logger: log,
+			},
 			args: args{
 				instance: spinSvc,
 				mockedPods: []v1.Pod{{
@@ -64,11 +68,13 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedExceededTime: false,
 			},
 			wantErr: false,
-			status:  Ok,
+			status:  string(Ok),
 		},
 		{
-			name:   "Spinsvc should have Failure status",
-			fields: fields{},
+			name: "Spinsvc should have Failure status",
+			fields: fields{
+				logger: log,
+			},
 			args: args{
 				instance: spinSvc,
 				mockedPods: []v1.Pod{{
@@ -80,11 +86,13 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedExceededTime: false,
 			},
 			wantErr: false,
-			status:  Failure,
+			status:  string(Failure),
 		},
 		{
-			name:   "Spinsvc should have Updating status because the container is being created",
-			fields: fields{},
+			name: "Spinsvc should have Updating status because the container is being created",
+			fields: fields{
+				logger: log,
+			},
 			args: args{
 				instance: spinSvc,
 				mockedPods: []v1.Pod{{
@@ -110,11 +118,13 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedExceededTime: false,
 			},
 			wantErr: false,
-			status:  Updating,
+			status:  string(Updating),
 		},
 		{
-			name:   "Spinsvc should have Failure status because time has exceeded",
-			fields: fields{},
+			name: "Spinsvc should have Failure status because time has exceeded",
+			fields: fields{
+				logger: log,
+			},
 			args: args{
 				instance: spinSvc,
 				mockedPods: []v1.Pod{{
@@ -126,11 +136,13 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedExceededTime: true,
 			},
 			wantErr: false,
-			status:  Failure,
+			status:  string(Failure),
 		},
 		{
-			name:   "Spinsvc should have Failure status because pod status is unknown",
-			fields: fields{},
+			name: "Spinsvc should have Failure status because pod status is unknown",
+			fields: fields{
+				logger: log,
+			},
 			args: args{
 				instance: spinSvc,
 				mockedPods: []v1.Pod{{
@@ -142,11 +154,13 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedExceededTime: true,
 			},
 			wantErr: false,
-			status:  Failure,
+			status:  string(Failure),
 		},
 		{
-			name:   "Spinsvc should have N/A status because there is not services managed by operator",
-			fields: fields{},
+			name: "Spinsvc should have N/A status because there is not services managed by operator",
+			fields: fields{
+				logger: log,
+			},
 			args: args{
 				instance:           spinSvc,
 				mockedPods:         []v1.Pod{},
@@ -154,17 +168,17 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedExceededTime: false,
 			},
 			wantErr: false,
-			status:  Na,
+			status:  string(Na),
 		},
 		{
-			name:   "Spinsvc should have Updating status because pods are terminating",
-			fields: fields{},
+			name: "Spinsvc should have Updating status because pods are terminating",
+			fields: fields{
+				logger: log,
+			},
 			args: args{
 				instance: spinSvc,
 				mockedPods: []v1.Pod{{
-					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &metav1.Time{Time: time.Now()},
-					},
+					ObjectMeta: metav1.ObjectMeta{},
 					Status: v1.PodStatus{
 						Phase: v1.PodRunning,
 						ContainerStatuses: []v1.ContainerStatus{
@@ -188,7 +202,7 @@ func Test_statusChecker_checks(t *testing.T) {
 				mockedExceededTime: false,
 			},
 			wantErr: false,
-			status:  Updating,
+			status:  string(Updating),
 		},
 	}
 	for _, tt := range tests {
@@ -199,9 +213,13 @@ func Test_statusChecker_checks(t *testing.T) {
 			mkl := util.NewMockIk8sLookup(ctrl)
 
 			mkl.EXPECT().GetSpinnakerDeployments(gomock.Any()).Return(tt.args.mockedDeployments, nil)
-			mkl.EXPECT().GetSpinnakerServiceImageFromDeployment(gomock.Any()).Return("armory/clouddriver")
-			mkl.EXPECT().GetPodsByDeployment(gomock.Any(), gomock.Any()).Return(tt.args.mockedPods, nil)
-			mkl.EXPECT().HasExceededMaxWaitingTime(gomock.Any(), gomock.Any()).Return(tt.args.mockedExceededTime, nil)
+			if len(tt.args.mockedPods) > 0 {
+				mkl.EXPECT().GetSpinnakerServiceImageFromDeployment(gomock.Any()).Return("armory/clouddriver")
+				mkl.EXPECT().GetPodsByDeployment(gomock.Any(), gomock.Any()).Return(tt.args.mockedPods, nil)
+				if tt.args.mockedPods[0].Status.Phase == v1.PodRunning || tt.args.mockedPods[0].Status.Phase == v1.PodPending {
+					mkl.EXPECT().HasExceededMaxWaitingTime(gomock.Any(), gomock.Any()).Return(tt.args.mockedExceededTime, nil)
+				}
+			}
 
 			ss := scheme.Scheme
 			ss.AddKnownTypes(tt.args.instance.GetObjectKind().GroupVersionKind().GroupVersion(), tt.args.instance)

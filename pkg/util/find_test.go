@@ -1,13 +1,14 @@
 package util
 
 import (
+	"testing"
+
 	"github.com/armory/spinnaker-operator/pkg/generated"
 	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"testing"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGetMountedSecretNameInDeployment(t *testing.T) {
@@ -99,7 +100,7 @@ spec:
 
 	config := &generated.ServiceConfig{
 		Deployment: deployment,
-		Resources:  []runtime.Object{secret},
+		Resources:  []client.Object{secret},
 	}
 
 	// when

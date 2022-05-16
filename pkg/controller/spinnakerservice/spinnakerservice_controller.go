@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -104,13 +104,12 @@ type ReconcileSpinnakerService struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileSpinnakerService) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileSpinnakerService) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("reconciling SpinnakerService")
 
 	// Fetch the SpinnakerService instance
 	instance := TypesFactory.NewService()
-	ctx := secrets.NewContext(context.TODO(), r.restConfig, request.Namespace)
 	defer secrets.Cleanup(ctx)
 
 	err := r.client.Get(ctx, request.NamespacedName, instance)
