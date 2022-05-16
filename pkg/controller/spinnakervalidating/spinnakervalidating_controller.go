@@ -32,8 +32,6 @@ const (
 	DefaultValidationFreqSeconds = 10
 )
 
-// +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io,admissionReviewVersions=v1,sideEffects=none
-
 // spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
 	client     client.Client

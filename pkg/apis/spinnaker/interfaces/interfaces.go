@@ -47,7 +47,6 @@ type TypesFactory interface {
 	NewAccountList() SpinnakerAccountList
 	GetGroupVersion() schema.GroupVersion
 	DeepCopyLatestTypesFactory() TypesFactory
-	GetContinue() string
 }
 
 // +kubebuilder:object:generate=false
@@ -364,10 +363,6 @@ func (f *TypesFactoryImpl) GetGroupVersion() schema.GroupVersion {
 
 func (f *TypesFactoryImpl) DeepCopyLatestTypesFactory() TypesFactory {
 	return f.Factories[LatestVersion].DeepCopyLatestTypesFactory()
-}
-
-func (f *TypesFactoryImpl) GetContinue() string {
-	return f.Factories[LatestVersion].GetContinue()
 }
 
 func IsNil(i interface{}) bool {

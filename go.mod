@@ -21,7 +21,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.23.5
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20220324211241-9f9c01d62a3a
+	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 	sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -33,15 +33,14 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/coreos/prometheus-operator v0.41.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-logr/zapr v1.2.0 // indirect
-	github.com/go-openapi/jsonpointer v0.19.3 // indirect
-	github.com/go-openapi/jsonreference v0.19.3 // indirect
-	github.com/go-openapi/swag v0.19.9 // indirect
+	github.com/go-openapi/jsonpointer v0.19.5 // indirect
+	github.com/go-openapi/jsonreference v0.19.5 // indirect
+	github.com/go-openapi/swag v0.19.14 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -64,7 +63,7 @@ require (
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/mailru/easyjson v0.7.1 // indirect
+	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
@@ -83,7 +82,7 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
@@ -105,28 +104,17 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
 
-// Pinned to kubernetes-1.14.1
-replace (
-	k8s.io/api => k8s.io/api v0.23.5
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.5
-	k8s.io/apimachinery => k8s.io/apimachinery v0.22.8
-	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20190409021813-1ec86e4da56c
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20190409023024-d644b00f3b79
-	k8s.io/client-go => k8s.io/client-go v0.22.8
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.0.0-20190409023720-1bc0c81fa51d
-	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
-	k8s.io/component-base => k8s.io/component-base v0.20.15
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.0.0-20190409022021-00b8e31abe9d
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211104224443-923526ac052c
-	k8s.io/kubernetes => k8s.io/kubernetes v1.14.1
+require (
+	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc // indirect
+	github.com/josharian/intern v1.0.0 // indirect
 )
 
-// Remove when controller-tools v0.2.2 is released
-replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.2-0.20190919011008-6ed4ff330711
-
-// replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.18.0
-replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4
-
-replace github.com/operator-framework/operator-registry => github.com/operator-framework/operator-registry v1.2.0
+replace (
+	k8s.io/api => k8s.io/api v0.23.5
+	k8s.io/apimachinery => k8s.io/apimachinery v0.22.8
+	k8s.io/client-go => k8s.io/client-go v0.22.8
+	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
+	k8s.io/component-base => k8s.io/component-base v0.20.15
+)
 
 go 1.18

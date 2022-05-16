@@ -82,7 +82,8 @@ jobs:
 
       - name: Build
         run: |
-          make manifest ${{ steps.build_type.outputs.make_args }}
+          go mod vendor && go mod tidy
+          make build ${{ steps.build_type.outputs.make_args }}
           make docker-build ${{ steps.build_type.outputs.make_args }}
 
       - name: Unit tests
