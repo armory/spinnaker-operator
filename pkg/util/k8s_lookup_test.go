@@ -380,7 +380,10 @@ func TestK8sLookup_GetReplicaSetByPod(t *testing.T) {
 				},
 			},
 			want: &appsv1.ReplicaSet{
-				TypeMeta: metav1.TypeMeta{},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ReplicaSet",
+					APIVersion: "apps/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:       "ns1",
 					Name:            "spin-cloudriver",
@@ -444,7 +447,7 @@ func TestK8sLookup_GetReplicaSetByPod(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetReplicaSetByPod() got = %v, want %v", got, tt.want)
+				t.Errorf("GetReplicaSetByPod() got = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

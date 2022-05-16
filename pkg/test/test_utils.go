@@ -2,18 +2,19 @@ package test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"testing"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/v1alpha2"
 	"github.com/armory/spinnaker-operator/pkg/generated"
-	"io/ioutil"
-	"k8s.io/api/apps/v1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
-	"testing"
 )
 
 func init() {
@@ -98,4 +99,43 @@ func AddServiceToGenConfig(gen *generated.SpinnakerGeneratedConfig, svcName stri
 	gen.Config[svcName] = generated.ServiceConfig{
 		Service: svc,
 	}
+}
+
+func GetSpinnakerService() (interfaces.SpinnakerService, error) {
+	s := `
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+ name: test
+spec:
+ spinnakerConfig:
+   config:
+     providers:
+       enabled: true
+       dockerRegistry:
+         accounts:
+         - name: dockerhub
+           requiredGroupMembership: []
+           providerVersion: V1
+           permissions: {}
+           address: https://index.docker.io
+           username: user
+           email: test@spinnaker.io
+           cacheIntervalSeconds: 120
+           clientTimeoutMillis: 120000
+           cacheThreads: 2
+           paginateSize: 100
+           sortTagsByDate: true
+           trackDigests: true
+           insecureRegistry: false
+           repositories:
+             - org/image-1
+             - org/image-2
+`
+	spinsvc := interfaces.DefaultTypesFactory.NewService()
+	err := yaml.Unmarshal([]byte(s), spinsvc)
+	if err != nil {
+		return nil, err
+	}
+	return spinsvc, nil
 }
