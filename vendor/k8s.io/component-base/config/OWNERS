@@ -7,11 +7,8 @@ approvers:
 - api-approvers
 reviewers:
 - api-reviewers
-emeritus_reviewers:
 - luxas
 - mtaufen
 - sttts
 labels:
 - kind/api-change
-- sig/api-machinery
-- sig/scheduling

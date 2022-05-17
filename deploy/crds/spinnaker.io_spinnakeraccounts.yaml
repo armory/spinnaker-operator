@@ -107,6 +107,19 @@ spec:
                                     check for the server's certificate. This will
                                     make your HTTPS connections insecure.
                                   type: boolean
+                                proxy-url:
+                                  description: "ProxyURL is the URL to the proxy to
+                                    be used for all requests made by this client.
+                                    URLs with \"http\", \"https\", and \"socks5\"
+                                    schemes are supported.  If this configuration
+                                    is not provided or the empty string, the client
+                                    attempts to construct a proxy configuration from
+                                    http_proxy and https_proxy environment variables.
+                                    If these environment variables are not set, the
+                                    client does not attempt to proxy requests. \n
+                                    socks5 proxying does not currently support spdy
+                                    streaming endpoints (exec, attach, port forward)."
+                                  type: string
                                 server:
                                   description: Server is the address of the kubernetes
                                     cluster (https://hostname:port).
@@ -337,8 +350,40 @@ spec:
                                         - value
                                         type: object
                                       type: array
+                                    installHint:
+                                      description: This text is shown to the user
+                                        when the executable doesn't seem to be present.
+                                        For example, `brew install foo-cli` might
+                                        be a good InstallHint for foo-cli on Mac OS
+                                        systems.
+                                      type: string
+                                    interactiveMode:
+                                      description: "InteractiveMode determines this
+                                        plugin's relationship with standard input.
+                                        Valid values are \"Never\" (this exec plugin
+                                        never uses standard input), \"IfAvailable\"
+                                        (this exec plugin wants to use standard input
+                                        if it is available), or \"Always\" (this exec
+                                        plugin requires standard input to function).
+                                        See ExecInteractiveMode values for more details.
+                                        \n If APIVersion is client.authentication.k8s.io/v1alpha1
+                                        or client.authentication.k8s.io/v1beta1, then
+                                        this field is optional and defaults to \"IfAvailable\"
+                                        when unset. Otherwise, this field is required."
+                                      type: string
+                                    provideClusterInfo:
+                                      description: ProvideClusterInfo determines whether
+                                        or not to provide cluster information, which
+                                        could potentially contain very large CA data,
+                                        to this exec plugin as a part of the KUBERNETES_EXEC_INFO
+                                        environment variable. By default, it is set
+                                        to false. Package k8s.io/client-go/tools/auth/exec
+                                        provides helper methods for reading this environment
+                                        variable.
+                                      type: boolean
                                   required:
                                   - command
+                                  - provideClusterInfo
                                   type: object
                                 extensions:
                                   description: Extensions holds additional information.
