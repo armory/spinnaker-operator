@@ -26,13 +26,6 @@ import (
 	"k8s.io/klog"
 )
 
-const (
-	logLevelDebug string = "debug"
-	logLevelInfo  string = "info"
-	logLevelError string = "error"
-	logLevelPanic string = "panic"
-)
-
 var (
 	zapFlagSet *pflag.FlagSet
 
@@ -116,20 +109,9 @@ type levelValue struct {
 
 func (v *levelValue) Set(l string) error {
 	v.set = true
-	lower := strings.ToLower(l)
-	var lvl int
-	var err error
-	switch lower {
-	case logLevelDebug:
-		lvl = -1
-	case logLevelInfo:
-		lvl = 0
-	case logLevelError:
-		lvl = 2
-	default:
-		if lvl, err = parseIntLogLevel(lower); err != nil {
-			return err
-		}
+	lvl, err := intLogLevel(l)
+	if err != nil {
+		return err
 	}
 
 	v.level = zapcore.Level(int8(lvl))
@@ -160,22 +142,9 @@ type stackLevelValue struct {
 
 func (v *stackLevelValue) Set(l string) error {
 	v.set = true
-	lower := strings.ToLower(l)
-	var lvl int
-	var err error
-	switch lower {
-	case logLevelDebug:
-		lvl = -1
-	case logLevelInfo:
-		lvl = 0
-	case logLevelError:
-		lvl = 2
-	case logLevelPanic:
-		lvl = 4
-	default:
-		if lvl, err = parseIntLogLevel(lower); err != nil {
-			return err
-		}
+	lvl, err := intLogLevel(l)
+	if err != nil {
+		return err
 	}
 
 	v.level = zapcore.Level(int8(lvl))
@@ -187,24 +156,34 @@ func (v stackLevelValue) String() string {
 		return v.level.String()
 	}
 
-	return logLevelError
+	return "error"
 }
 
 func (v stackLevelValue) Type() string {
 	return "level"
 }
 
-func parseIntLogLevel(l string) (int, error) {
+func intLogLevel(l string) (int, error) {
+	lower := strings.ToLower(l)
 	var lvl int
-	i, err := strconv.Atoi(l)
-	if err != nil {
-		return lvl, fmt.Errorf("invalid log level \"%s\"", l)
-	}
+	switch lower {
+	case "debug":
+		lvl = -1
+	case "info":
+		lvl = 0
+	case "error":
+		lvl = 2
+	default:
+		i, err := strconv.Atoi(lower)
+		if err != nil {
+			return lvl, fmt.Errorf("invalid log level \"%s\"", l)
+		}
 
-	if i > 0 {
-		lvl = -1 * i
-	} else {
-		return lvl, fmt.Errorf("invalid log level \"%s\"", l)
+		if i > 0 {
+			lvl = -1 * i
+		} else {
+			return lvl, fmt.Errorf("invalid log level \"%s\"", l)
+		}
 	}
 	return lvl, nil
 }
