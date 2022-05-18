@@ -1,12 +1,13 @@
 package interfaces
 
 import (
+	"reflect"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"reflect"
 )
 
 const (
@@ -37,6 +38,8 @@ type AccountType string
 type AccountPermissions map[Authorization][]string
 type Authorization string
 
+// +kubebuilder:object:generate=false
+// +kubebuilder:object:root=false
 type TypesFactory interface {
 	NewService() SpinnakerService
 	NewServiceList() SpinnakerServiceList
@@ -46,6 +49,7 @@ type TypesFactory interface {
 	DeepCopyLatestTypesFactory() TypesFactory
 }
 
+// +kubebuilder:object:generate=false
 type SpinnakerService interface {
 	v1.Object
 	runtime.Object
@@ -59,12 +63,22 @@ type SpinnakerService interface {
 	DeepCopySpinnakerService() SpinnakerService
 }
 
+// +kubebuilder:object:generate=false
 type SpinnakerServiceList interface {
 	runtime.Object
 	GetItems() []SpinnakerService
 	DeepCopySpinnakerServiceList() SpinnakerServiceList
+	GetContinue() string
+	GetRemainingItemCount() *int64
+	GetResourceVersion() string
+	GetSelfLink() string
+	SetContinue(c string)
+	SetRemainingItemCount(c *int64)
+	SetResourceVersion(c string)
+	SetSelfLink(c string)
 }
 
+// +kubebuilder:object:generate=false
 type SpinnakerAccount interface {
 	v1.Object
 	runtime.Object
@@ -74,18 +88,30 @@ type SpinnakerAccount interface {
 	DeepCopySpinnakerAccount() SpinnakerAccount
 }
 
+// +kubebuilder:object:generate=false
 type SpinnakerAccountList interface {
 	runtime.Object
 	GetItems() []SpinnakerAccount
 	DeepCopySpinnakerAccountList() SpinnakerAccountList
+	GetResourceVersion() string
+	SetResourceVersion(c string)
+	GetSelfLink() string
+	SetSelfLink(c string)
+	GetContinue() string
+	SetContinue(c string)
+	GetRemainingItemCount() *int64
+	SetRemainingItemCount(c *int64)
 }
 
 type SpinnakerConfig struct {
 	// Supporting files for the Spinnaker config
 	Files map[string]string `json:"files,omitempty"`
 	// Parsed service settings - comments are stripped
+	// +kubebuilder:validation:Type=object
+	// +kubebuilder:validation:XPreserveUnknownFields
 	ServiceSettings map[string]FreeForm `json:"service-settings,omitempty"`
 	// Service profiles will be parsed as YAML
+	// +kubebuilder:validation:Type=object
 	Profiles map[string]FreeForm `json:"profiles,omitempty"`
 	// Main deployment configuration to be passed to Halyard
 	Config FreeForm `json:"config,omitempty"`
@@ -104,7 +130,7 @@ type Kustomization struct {
 	// https://github.com/kubernetes/community/blob/master/contributors/devel/strategic-merge-patch.md
 	// URLs and globs are not supported.
 	// +optional
-	// +listType=list
+	// +listType=atomic
 	PatchesStrategicMerge []PatchStrategicMerge `json:"patchesStrategicMerge,omitempty" yaml:"patchesStrategicMerge,omitempty"`
 	// JSONPatches is a list of JSONPatch for applying JSON patch.
 	// Format documented at https://tools.ietf.org/html/rfc6902
@@ -116,7 +142,7 @@ type Kustomization struct {
 	// Strategic Merge Patch or a JSON patch.
 	// Each patch can be applied to multiple target objects.
 	// +optional
-	// +listType=list
+	// +listType=atomic
 	Patches []Patch `json:"patches,omitempty" yaml:"patches,omitempty"`
 }
 
@@ -310,6 +336,7 @@ type SpinnakerAccountStatus struct {
 
 var _ TypesFactory = &TypesFactoryImpl{}
 
+// +kubebuilder:object:generate=false
 type TypesFactoryImpl struct {
 	Factories map[Version]TypesFactory
 }

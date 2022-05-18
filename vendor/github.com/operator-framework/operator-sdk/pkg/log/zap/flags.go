@@ -26,6 +26,13 @@ import (
 	"k8s.io/klog"
 )
 
+const (
+	logLevelDebug string = "debug"
+	logLevelInfo  string = "info"
+	logLevelError string = "error"
+	logLevelPanic string = "panic"
+)
+
 var (
 	zapFlagSet *pflag.FlagSet
 
@@ -34,15 +41,21 @@ var (
 	levelVal        levelValue
 	sampleVal       sampleValue
 	timeEncodingVal timeEncodingValue
+	stacktraceLevel stackLevelValue
 )
 
 func init() {
 	zapFlagSet = pflag.NewFlagSet("zap", pflag.ExitOnError)
-	zapFlagSet.BoolVar(&development, "zap-devel", false, "Enable zap development mode (changes defaults to console encoder, debug log level, and disables sampling)")
+	zapFlagSet.BoolVar(&development, "zap-devel", false, "Enable zap development mode"+
+		" (changes defaults to console encoder, debug log level, disables sampling and stacktrace from 'warning' level)")
 	zapFlagSet.Var(&encoderVal, "zap-encoder", "Zap log encoding ('json' or 'console')")
 	zapFlagSet.Var(&levelVal, "zap-level", "Zap log level (one of 'debug', 'info', 'error' or any integer value > 0)")
-	zapFlagSet.Var(&sampleVal, "zap-sample", "Enable zap log sampling. Sampling will be disabled for integer log levels > 1")
-	zapFlagSet.Var(&timeEncodingVal, "zap-time-encoding", "Sets the zap time format ('epoch', 'millis', 'nano', or 'iso8601')")
+	zapFlagSet.Var(&sampleVal, "zap-sample",
+		"Enable zap log sampling. Sampling will be disabled for integer log levels > 1")
+	zapFlagSet.Var(&timeEncodingVal, "zap-time-encoding",
+		"Sets the zap time format ('epoch', 'millis', 'nano', or 'iso8601')")
+	zapFlagSet.Var(&stacktraceLevel, "zap-stacktrace-level",
+		"Set the minimum log level that triggers stacktrace generation")
 }
 
 // FlagSet - The zap logging flagset.
@@ -105,25 +118,20 @@ func (v *levelValue) Set(l string) error {
 	v.set = true
 	lower := strings.ToLower(l)
 	var lvl int
+	var err error
 	switch lower {
-	case "debug":
+	case logLevelDebug:
 		lvl = -1
-	case "info":
+	case logLevelInfo:
 		lvl = 0
-	case "error":
+	case logLevelError:
 		lvl = 2
 	default:
-		i, err := strconv.Atoi(lower)
-		if err != nil {
-			return fmt.Errorf("invalid log level \"%s\"", l)
-		}
-
-		if i > 0 {
-			lvl = -1 * i
-		} else {
-			return fmt.Errorf("invalid log level \"%s\"", l)
+		if lvl, err = parseIntLogLevel(lower); err != nil {
+			return err
 		}
 	}
+
 	v.level = zapcore.Level(int8(lvl))
 	// If log level is greater than debug, set glog/klog level to that level.
 	if lvl < -3 {
@@ -143,6 +151,62 @@ func (v levelValue) String() string {
 
 func (v levelValue) Type() string {
 	return "level"
+}
+
+type stackLevelValue struct {
+	set   bool
+	level zapcore.Level
+}
+
+func (v *stackLevelValue) Set(l string) error {
+	v.set = true
+	lower := strings.ToLower(l)
+	var lvl int
+	var err error
+	switch lower {
+	case logLevelDebug:
+		lvl = -1
+	case logLevelInfo:
+		lvl = 0
+	case logLevelError:
+		lvl = 2
+	case logLevelPanic:
+		lvl = 4
+	default:
+		if lvl, err = parseIntLogLevel(lower); err != nil {
+			return err
+		}
+	}
+
+	v.level = zapcore.Level(int8(lvl))
+	return nil
+}
+
+func (v stackLevelValue) String() string {
+	if v.set {
+		return v.level.String()
+	}
+
+	return logLevelError
+}
+
+func (v stackLevelValue) Type() string {
+	return "level"
+}
+
+func parseIntLogLevel(l string) (int, error) {
+	var lvl int
+	i, err := strconv.Atoi(l)
+	if err != nil {
+		return lvl, fmt.Errorf("invalid log level \"%s\"", l)
+	}
+
+	if i > 0 {
+		lvl = -1 * i
+	} else {
+		return lvl, fmt.Errorf("invalid log level \"%s\"", l)
+	}
+	return lvl, nil
 }
 
 type sampleValue struct {

@@ -2,11 +2,12 @@ package expose_service
 
 import (
 	"context"
+	"testing"
+
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/changedetectortest"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // Running Status: No services exist
@@ -106,6 +107,7 @@ apiVersion: spinnaker.io/v1alpha2
 kind: SpinnakerService
 metadata:
   name: spinnaker
+  namespace: ns1
 spec:
   expose:
     type: service

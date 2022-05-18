@@ -36,3 +36,12 @@ func (s *SpinnakerAccountList) GetItems() []interfaces.SpinnakerAccount {
 func (s *SpinnakerAccountList) DeepCopySpinnakerAccountList() interfaces.SpinnakerAccountList {
 	return s.DeepCopy()
 }
+
+func (s *SpinnakerAccountList) GetResourceVersion() string        { return s.ResourceVersion }
+func (s *SpinnakerAccountList) SetResourceVersion(version string) { s.ResourceVersion = version }
+func (s *SpinnakerAccountList) GetSelfLink() string               { return s.SelfLink }
+func (s *SpinnakerAccountList) SetSelfLink(selfLink string)       { s.SelfLink = selfLink }
+func (s *SpinnakerAccountList) GetContinue() string               { return s.Continue }
+func (s *SpinnakerAccountList) SetContinue(c string)              { s.Continue = c }
+func (s *SpinnakerAccountList) GetRemainingItemCount() *int64     { return s.RemainingItemCount }
+func (s *SpinnakerAccountList) SetRemainingItemCount(c *int64)    { s.RemainingItemCount = c }

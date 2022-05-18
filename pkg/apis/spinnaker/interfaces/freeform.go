@@ -1,5 +1,7 @@
 package interfaces
 
+// +kubebuilder:validation:XPreserveUnknownFields
+// +kubebuilder:validation:Type=object
 type FreeForm map[string]interface{}
 
 func (f *FreeForm) DeepCopy() *FreeForm {

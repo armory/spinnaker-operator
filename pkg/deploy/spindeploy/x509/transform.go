@@ -2,6 +2,8 @@ package x509
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/expose_service"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
@@ -12,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
 type x509Transformer struct {
@@ -92,7 +93,7 @@ func (t *x509Transformer) scheduleForRemovalIfNeeded(gateConfig generated.Servic
 		return nil
 	}
 	gen.Config["gate-x509"] = generated.ServiceConfig{
-		ToDelete: []runtime.Object{x509Svc},
+		ToDelete: []client.Object{x509Svc},
 	}
 	return nil
 }

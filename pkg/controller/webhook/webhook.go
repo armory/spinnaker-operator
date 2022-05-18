@@ -3,19 +3,20 @@ package webhook
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"k8s.io/api/admissionregistration/v1beta1"
+	apiAdmissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"strings"
 )
 
 const (
@@ -119,45 +120,46 @@ func deployWebhookService(ns string, name string, port int, rawClient *kubernete
 }
 
 func deployValidatingWebhookConfiguration(svcName, ns string, rawClient *kubernetes.Clientset, cert []byte) error {
-	webhookConfig := &v1beta1.ValidatingWebhookConfiguration{
+	webhookConfig := &apiAdmissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "spinnakervalidatingwebhook",
 			Namespace: ns,
 		},
-		Webhooks: []v1beta1.Webhook{},
+		Webhooks: []apiAdmissionregistrationv1.ValidatingWebhook{},
 	}
 
 	for i := range registrations {
 		r := registrations[i]
-		webhookConfig.Webhooks = append(webhookConfig.Webhooks, v1beta1.Webhook{
+		webhookConfig.Webhooks = append(webhookConfig.Webhooks, apiAdmissionregistrationv1.ValidatingWebhook{
 			Name: fmt.Sprintf("webhook-%s-%s.%s", r.r, r.kind.Version, strings.ToLower(r.kind.Group)),
-			ClientConfig: v1beta1.WebhookClientConfig{
-				Service: &v1beta1.ServiceReference{
+			ClientConfig: apiAdmissionregistrationv1.WebhookClientConfig{
+				Service: &apiAdmissionregistrationv1.ServiceReference{
 					Namespace: ns,
 					Name:      svcName,
 					Path:      &r.p,
 				},
 				CABundle: cert,
 			},
-			Rules: []v1beta1.RuleWithOperations{{
-				Operations: []v1beta1.OperationType{
-					v1beta1.Create,
-					v1beta1.Update,
+			Rules: []apiAdmissionregistrationv1.RuleWithOperations{{
+				Operations: []apiAdmissionregistrationv1.OperationType{
+					apiAdmissionregistrationv1.Create,
+					apiAdmissionregistrationv1.Update,
 				},
-				Rule: v1beta1.Rule{
+				Rule: apiAdmissionregistrationv1.Rule{
 					APIGroups:   []string{r.kind.Group},
 					APIVersions: []string{r.kind.Version},
 					Resources:   []string{r.r}, // should be "spinnakerservices"
 				},
 			}},
-			SideEffects: sideEffect(v1beta1.SideEffectClassNone),
+			SideEffects:             sideEffect(apiAdmissionregistrationv1.SideEffectClassNone),
+			AdmissionReviewVersions: []string{"v1"},
 		})
 	}
 	return util.CreateOrUpdateValidatingWebhookConfiguration(webhookConfig, rawClient)
 }
 
-func sideEffect(sideEffect v1beta1.SideEffectClass) *v1beta1.SideEffectClass {
-	s := new(v1beta1.SideEffectClass)
+func sideEffect(sideEffect apiAdmissionregistrationv1.SideEffectClass) *apiAdmissionregistrationv1.SideEffectClass {
+	s := new(apiAdmissionregistrationv1.SideEffectClass)
 	*s = sideEffect
 	return s
 }

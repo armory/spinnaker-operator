@@ -18,8 +18,12 @@ package v1
 
 type AlertmanagerExpansion interface{}
 
+type PodMonitorExpansion interface{}
+
 type PrometheusExpansion interface{}
 
 type PrometheusRuleExpansion interface{}
 
 type ServiceMonitorExpansion interface{}
+
+type ThanosRulerExpansion interface{}

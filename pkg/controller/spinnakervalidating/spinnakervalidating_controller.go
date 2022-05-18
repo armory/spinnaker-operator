@@ -6,33 +6,31 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/controller/webhook"
 	"github.com/armory/spinnaker-operator/pkg/halyard"
 	"github.com/armory/spinnaker-operator/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/validate"
 	"gomodules.xyz/jsonpatch/v2"
-	"k8s.io/api/admission/v1beta1"
+	v1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"time"
 )
 
 const (
 	ValidationConfigHashKey      = "validation"
 	DefaultValidationFreqSeconds = 10
 )
-
-// +kubebuilder:webhook:path=/validate-v1-spinnakerservice,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
 
 // spinnakerValidatingController performs preflight checks
 type spinnakerValidatingController struct {
@@ -101,7 +99,7 @@ func (v *spinnakerValidatingController) Handle(ctx context.Context, req admissio
 		return admission.Denied(errorMsg)
 	}
 	// Update the status with any admission status change, only if there's already an existing SpinnakerService
-	if req.AdmissionRequest.Operation == v1beta1.Update {
+	if req.AdmissionRequest.Operation == v1.Update {
 		if len(validationResult.StatusPatches) > 0 {
 			validationResult.StatusPatches = append(validationResult.StatusPatches, v.addLastValidation(svc))
 			log.Info(fmt.Sprintf("patching SpinnakerService status with %v", validationResult.StatusPatches), "metadata.name", svc.GetName())
@@ -133,7 +131,7 @@ func (v *spinnakerValidatingController) getHash(config interface{}) (string, err
 
 func (v *spinnakerValidatingController) addLastValidation(svc interfaces.SpinnakerService) jsonpatch.JsonPatchOperation {
 	hash, _ := v.getHash(svc.GetStatus())
-	return jsonpatch.NewPatch("replace", fmt.Sprintf("/status/lastDeployed/%s", ValidationConfigHashKey), interfaces.HashStatus{
+	return jsonpatch.NewOperation("replace", fmt.Sprintf("/status/lastDeployed/%s", ValidationConfigHashKey), interfaces.HashStatus{
 		Hash:          hash,
 		LastUpdatedAt: metav1.NewTime(time.Now()),
 	})
@@ -165,6 +163,6 @@ func (p *precomputedPatch) Type() types.PatchType {
 	return types.JSONPatchType
 }
 
-func (p *precomputedPatch) Data(obj runtime.Object) ([]byte, error) {
+func (p *precomputedPatch) Data(obj client.Object) ([]byte, error) {
 	return json.Marshal(p.validationResult.StatusPatches)
 }

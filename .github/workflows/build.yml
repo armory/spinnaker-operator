@@ -17,10 +17,10 @@ jobs:
       - name: Fetch full history
         run: git fetch --prune --tags --unshallow
 
-      - name: Set up Go 1.13.15
+      - name: Set up Go 1.18.2
         uses: actions/setup-go@v2
         with:
-          go-version: 1.13.15
+          go-version: 1.18.2
 
       - name: Determine build type
         id: build_type
@@ -60,7 +60,7 @@ jobs:
             registry=armory-docker-local.jfrog.io
           fi
 
-          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override REDHAT_PID=${{ secrets.REDHAT_PID }}"
+          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
           version=$(make version $make_args)
           echo "Version: $version"
 
@@ -73,9 +73,17 @@ jobs:
           echo "##[set-output name=version;]$version"
           echo "##[set-output name=make_args;]$make_args"
 
+        # We need to do this for at least a few versions so that we don't force
+        # users to manually fix the CRDs when migrating from v1beta1 to v1.
+      - name: Modify spinsvc CRD to assist with migration
+        uses: mikefarah/yq@v4.25.1
+        with:
+          cmd: yq -i '.spec.preserveUnknownFields = false' deploy/crds/spinnaker.io_spinnakerservices.yaml
+
       - name: Build
         run: |
-          make manifest ${{ steps.build_type.outputs.make_args }}
+          go mod vendor && go mod tidy
+          make build ${{ steps.build_type.outputs.make_args }}
           make docker-build ${{ steps.build_type.outputs.make_args }}
 
       - name: Unit tests
@@ -85,11 +93,6 @@ jobs:
       - name: Package
         run: |
           make docker-package ${{ steps.build_type.outputs.make_args }}
-
-      - name: Package UBI
-        run: |
-          docker login -u ${{ secrets.REDHATREGISTRY_USER }} -p "${{ secrets.REDHATREGISTRY_PASSWORD }}" registry.redhat.io
-          make docker-package-ubi ${{ steps.build_type.outputs.make_args }}
 
       - name: Login to docker registry
         run: |
@@ -105,8 +108,6 @@ jobs:
       - name: Push
         run: |
           make docker-push ${{ steps.build_type.outputs.make_args }}
-          docker login -u unused -p "${{ secrets.REDHATREGISTRY_TOKEN }}" scan.connect.redhat.com
-          make docker-push-ubi ${{ steps.build_type.outputs.make_args }}
           if [[ ${{ github.ref }} = "refs/heads/master" ]]
           then
             make docker-push-dev ${{ steps.build_type.outputs.make_args }}

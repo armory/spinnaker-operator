@@ -52,7 +52,7 @@ func GetSecretContent(c *rest.Config, namespace, name, key string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	sec, err := cl.Secrets(namespace).Get(name, metav1.GetOptions{})
+	sec, err := cl.Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
