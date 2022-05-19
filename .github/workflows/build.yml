@@ -123,9 +123,9 @@ jobs:
       - name: Install load balancer
         if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
-          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/f04afd7c4c85b50cb02e2910adbb38d56a2cdd99/manifests/namespace.yaml
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
           kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
-          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/f04afd7c4c85b50cb02e2910adbb38d56a2cdd99/manifests/metallb.yaml
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/metallb.yaml
           kubectl apply -f integration_tests/kind/metallb-configmap.yaml
           until [ "$(kubectl get pods --all-namespaces --no-headers | grep -cEv '([0-9]+)/\1')" -eq 0 ]; do
            sleep 5s
