@@ -94,26 +94,23 @@ jobs:
         run: |
           make docker-package ${{ steps.build_type.outputs.make_args }}
 
-      - name: Login to docker registry
-        run: |
-          if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
-          then
-            echo "Logging in to dockerhub"
-            uses: docker/login-action@v1
-            # use service account flow defined at: https://github.com/docker/login-action#service-account-based-authentication-1
-            with:
-              registry: docker.io
-              username: ${{ secrets.DOCKERHUB_USER }}
-              password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          else
-            echo "Logging in to jfrog"
-            uses: docker/login-action@v1
-            # use service account flow defined at: https://github.com/docker/login-action#service-account-based-authentication-1
-            with:
-              registry: armory-docker-local.jfrog.io
-              username: ${{ secrets.JFROG_USER }}
-              password: ${{ secrets.JFROG_PASSWORD }}
-          fi
+      - name: Login to docker.io registry
+        if: ${{ steps.build_type.outputs.registry == "docker.io"}}
+        # use service account flow defined at: https://github.com/docker/login-action#service-account-based-authentication-1
+        uses: docker/login-action@v1
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      
+      - name: Login to jfrog.io registry
+        if: ${{ steps.build_type.outputs.registry == "armory-docker-local.jfrog.io"}}
+        # use service account flow defined at: https://github.com/docker/login-action#service-account-based-authentication-1
+        uses: docker/login-action@v1
+        with:
+          registry: armory-docker-local.jfrog.io
+          username: ${{ secrets.JFROG_USER }}
+          password: ${{ secrets.JFROG_PASSWORD }}
 
       - name: Push
         run: |
