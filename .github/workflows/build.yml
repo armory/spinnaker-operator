@@ -99,10 +99,20 @@ jobs:
           if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
           then
             echo "Logging in to dockerhub"
-            echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login --username '${{ secrets.DOCKERHUB_USER }}' --password-stdin docker.io
+            uses: docker/login-action@v1
+            # use service account flow defined at: https://github.com/docker/login-action#service-account-based-authentication-1
+            with:
+              registry: docker.io
+              username: ${{ secrets.DOCKERHUB_USER }}
+              password: ${{ secrets.DOCKERHUB_PASSWORD }}
           else
             echo "Logging in to jfrog"
-            echo ${{ secrets.JFROG_PASSWORD }} | docker login --username '${{ secrets.JFROG_USER }}' --password-stdin armory-docker-local.jfrog.io
+            uses: docker/login-action@v1
+            # use service account flow defined at: https://github.com/docker/login-action#service-account-based-authentication-1
+            with:
+              registry: armory-docker-local.jfrog.io
+              username: ${{ secrets.JFROG_USER }}
+              password: ${{ secrets.JFROG_PASSWORD }}
           fi
 
       - name: Push
