@@ -89,6 +89,29 @@ func (d *Deployer) deleteObject(ctx context.Context, obj client.Object) error {
 	return d.client.Delete(ctx, obj)
 }
 
+func (d *Deployer) checkPatchErrors(patch []byte) error {
+	// CreateThreeWayJSONMergePatch sometimes produces patch with all fields as null
+	// Tring to apply this patch causes errors so we need to filter it out
+
+	var patchMap map[string]map[string]interface{}
+	err := json.Unmarshal(patch, &patchMap)
+	if err != nil {
+		return err
+	}
+	nonNilFieldsPresent := false
+	patchSpec := patchMap["spec"]
+	for _, value := range patchSpec {
+		if value != nil {
+			nonNilFieldsPresent = true
+			break
+		}
+	}
+	if !nonNilFieldsPresent {
+		return fmt.Errorf("all fields of patch object are nil")
+	}
+	return nil
+}
+
 func (d *Deployer) patch(ctx context.Context, modifiedRaw client.Object) error {
 	modified, ok := modifiedRaw.(metav1.Object)
 	if !ok {
@@ -150,13 +173,21 @@ func (d *Deployer) patch(ctx context.Context, modifiedRaw client.Object) error {
 		return err
 	}
 
-	return i.Patch(types.MergePatchType).
-		Namespace(modified.GetNamespace()).
-		Resource(rsc.Resource).
-		Name(modified.GetName()).
-		Body(patch).
-		Do(ctx).
-		Into(modifiedRaw)
+	patchErrors := d.checkPatchErrors(patch)
+	if patchErrors == nil {
+		err = i.Patch(types.MergePatchType).
+			Namespace(modified.GetNamespace()).
+			Resource(rsc.Resource).
+			Name(modified.GetName()).
+			Body(patch).
+			Do(ctx).
+			Into(modifiedRaw)
+
+		return err
+	} else {
+		d.log.Info(fmt.Sprintf("Patch %s not applied because of errors: %s", string(patch), patchErrors))
+	}
+	return nil
 }
 
 // createDeleteJson creates a json with potential fields to be removed from the original object

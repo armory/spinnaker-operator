@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"path"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -212,12 +213,15 @@ func (s *secretsTransformer) TransformManifests(ctx context.Context, gen *genera
 	for svc, cfg := range gen.Config {
 		kCollector := &kubernetesSecretCollector{svc: svc, namespace: s.svc.GetNamespace()}
 		for k := range cfg.Resources {
-			sec, ok := cfg.Resources[k].(*v1.Secret)
-			if ok {
-				err := kCollector.mapSecrets(sec)
-				if err != nil {
-					return err
-				}
+			sec, ok := cfg.Resources[k].(*unstructured.Unstructured)
+			if ok && sec.Object["kind"] == "Secret" {
+				var secret v1.Secret
+				runtime.DefaultUnstructuredConverter.FromUnstructured(sec.Object, &secret)
+					err := kCollector.mapSecrets(&secret)
+					if err != nil {
+						return err
+					}
+				cfg.Resources[k] = &secret
 			}
 		}
 		err := kCollector.mapAwsKeys(s.k8sSecrets)
