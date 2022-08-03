@@ -2,8 +2,6 @@ package integration_tests
 
 import (
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
-	"github.com/stretchr/testify/assert"
 	"html/template"
 	"io/ioutil"
 	"math/rand"
@@ -14,13 +12,16 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cenkalti/backoff/v4"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
 	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
-	MaxChecksWaitingForSpinnakerStability  = 450 // (300 * 2s) / 60 = 15 minutes
+	MaxChecksWaitingForSpinnakerStability  = 690 // (690 * 2s) / 60 = 23 minutes
 	MaxChecksWaitingForLBStability         = 450 // (300 * 2s) / 60 = 15 minutes
 )
 
@@ -152,7 +153,7 @@ func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) boo
 		if len(parts) == 3 && strings.TrimSpace(parts[0]) == strings.TrimSpace(parts[1]) && strings.TrimSpace(parts[2]) == "" {
 			return !t.Failed()
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(120 * time.Second)
 	}
 	pods, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
 	t.Errorf("Waited too much for deployment %s to become ready, giving up. Pods: \n%s", name, pods)
@@ -289,7 +290,7 @@ func ExponentialBackOff(operation backoff.Operation, minutes time.Duration) erro
 }
 
 func GetLocalHost(t *testing.T) string {
-	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane", t)
+	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' minikube", t)
 	return fmt.Sprintf(`https://%s:6443`, strings.TrimSpace(host))
 }
 
