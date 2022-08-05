@@ -23,6 +23,8 @@ type ServiceConfig struct {
 	Service    *corev1.Service    `json:"service,omitempty"`
 	Resources  []client.Object    `json:"resources,omitempty"`
 	ToDelete   []client.Object    `json:"todelete,omitempty"`
+	// Resources []runtime.Object `json:"resources,omitempty"`
+	// ToDelete  []runtime.Object `json:"todelete,omitempty"`
 }
 
 func (r *ServiceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -63,6 +65,7 @@ func (r *ServiceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	l, ok := val.([]interface{})
 	if ok {
 		rs := make([]client.Object, 0)
+		// rs := make([]runtime.Object, 0)
 		for i := range l {
 			o, err := translate(l[i], dser)
 			if err != nil {
@@ -72,6 +75,7 @@ func (r *ServiceConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			var rsuf unstructured.Unstructured
 			rsuf.SetUnstructuredContent(rsu)
 			rs = append(rs, rsuf.DeepCopy())
+			// rs = append(rs, o)
 		}
 		r.Resources = rs
 	}

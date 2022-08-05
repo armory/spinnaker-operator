@@ -38,8 +38,6 @@ type AccountType string
 type AccountPermissions map[Authorization][]string
 type Authorization string
 
-// +kubebuilder:object:generate=false
-// +kubebuilder:object:root=false
 type TypesFactory interface {
 	NewService() SpinnakerService
 	NewServiceList() SpinnakerServiceList
@@ -49,7 +47,6 @@ type TypesFactory interface {
 	DeepCopyLatestTypesFactory() TypesFactory
 }
 
-// +kubebuilder:object:generate=false
 type SpinnakerService interface {
 	v1.Object
 	runtime.Object
@@ -63,7 +60,7 @@ type SpinnakerService interface {
 	DeepCopySpinnakerService() SpinnakerService
 }
 
-// +kubebuilder:object:generate=false
+// +kubebuilder:skipversion
 type SpinnakerServiceList interface {
 	runtime.Object
 	GetItems() []SpinnakerService
@@ -79,6 +76,7 @@ type SpinnakerServiceList interface {
 }
 
 // +kubebuilder:object:generate=false
+// +kubebuilder:skipversion
 type SpinnakerAccount interface {
 	v1.Object
 	runtime.Object
@@ -89,6 +87,7 @@ type SpinnakerAccount interface {
 }
 
 // +kubebuilder:object:generate=false
+// +kubebuilder:skipversion
 type SpinnakerAccountList interface {
 	runtime.Object
 	GetItems() []SpinnakerAccount
@@ -112,6 +111,7 @@ type SpinnakerConfig struct {
 	ServiceSettings map[string]FreeForm `json:"service-settings,omitempty"`
 	// Service profiles will be parsed as YAML
 	// +kubebuilder:validation:Type=object
+	// +kubebuilder:validation:XPreserveUnknownFields
 	Profiles map[string]FreeForm `json:"profiles,omitempty"`
 	// Main deployment configuration to be passed to Halyard
 	Config FreeForm `json:"config,omitempty"`
@@ -224,6 +224,7 @@ type AccountConfig struct {
 
 // SpinnakerServiceSpec defines the desired state of SpinnakerService
 // +k8s:openapi-gen=true
+// +kubebuilder:resource:path=spinnakerservices,scope=Namespaced
 type SpinnakerServiceSpec struct {
 	SpinnakerConfig SpinnakerConfig `json:"spinnakerConfig" protobuf:"bytes,1,opt,name=spinnakerConfig"`
 	// +optional
@@ -292,6 +293,7 @@ type HashStatus struct {
 
 // SpinnakerAccountSpec defines the desired state of SpinnakerAccount
 // +k8s:openapi-gen=true
+// +kubebuilder:resource:path=spinnakeraccounts,scope=Namespaced
 type SpinnakerAccountSpec struct {
 	Enabled bool        `json:"enabled"`
 	Type    AccountType `json:"type"`

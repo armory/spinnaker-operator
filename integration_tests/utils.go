@@ -2,7 +2,6 @@ package integration_tests
 
 import (
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"

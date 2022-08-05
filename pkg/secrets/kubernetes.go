@@ -3,11 +3,12 @@ package secrets
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/armory/go-yaml-tools/pkg/secrets"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
-	"strings"
 )
 
 type KubernetesDecrypter struct {
@@ -16,7 +17,6 @@ type KubernetesDecrypter struct {
 	restConfig *rest.Config
 	namespace  string
 	isFile     bool
-	ctx        context.Context
 }
 
 func NewKubernetesSecretDecrypter(ctx context.Context, isFile bool, params string) (secrets.Decrypter, error) {
@@ -24,7 +24,7 @@ func NewKubernetesSecretDecrypter(ctx context.Context, isFile bool, params strin
 	if err != nil {
 		return nil, err
 	}
-	k := &KubernetesDecrypter{restConfig: c.RestConfig, namespace: c.Namespace, isFile: isFile, ctx: ctx}
+	k := &KubernetesDecrypter{restConfig: c.RestConfig, namespace: c.Namespace, isFile: isFile}
 	if err := k.parse(params); err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (k *KubernetesDecrypter) Decrypt() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Error creating kubernetes client:\n  %w", err)
 	}
-	sec, err := client.Secrets(k.namespace).Get(k.ctx, k.name, metav1.GetOptions{})
+	sec, err := client.Secrets(k.namespace).Get(context.TODO(), k.name, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("Error reading secret with name '%s' from kubernetes:\n  %w", k.name, err)
 	}

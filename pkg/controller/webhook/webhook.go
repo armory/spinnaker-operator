@@ -151,8 +151,11 @@ func deployValidatingWebhookConfiguration(svcName, ns string, rawClient *kuberne
 					Resources:   []string{r.r}, // should be "spinnakerservices"
 				},
 			}},
-			SideEffects:             sideEffect(apiAdmissionregistrationv1.SideEffectClassNone),
-			AdmissionReviewVersions: []string{"v1"},
+			SideEffects: sideEffect(apiAdmissionregistrationv1.SideEffectClassNone),
+			AdmissionReviewVersions: []string{
+				"v1beta1",
+				"v1",
+			},
 		})
 	}
 	return util.CreateOrUpdateValidatingWebhookConfiguration(webhookConfig, rawClient)

@@ -3,13 +3,14 @@ package validate
 import (
 	"context"
 	"fmt"
+	"time"
+
 	accounts "github.com/armory/spinnaker-operator/pkg/accounts"
 	"github.com/armory/spinnaker-operator/pkg/accounts/account"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"gomodules.xyz/jsonpatch/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 // GetAccountValidationsFor inspects all known providers, retrieves their accounts,
@@ -128,6 +129,7 @@ func (a *accountValidator) Validate(spinSvc interfaces.SpinnakerService, options
 
 func getHashPatch(key, hash string, t time.Time) *jsonpatch.JsonPatchOperation {
 	p := jsonpatch.NewOperation("replace", fmt.Sprintf("/status/lastDeployed/%s", key), interfaces.HashStatus{
+	// p := jsonpatch.NewPatch("replace", fmt.Sprintf("/status/lastDeployed/%s", key), interfaces.HashStatus{
 		Hash:          hash,
 		LastUpdatedAt: metav1.NewTime(t),
 	})

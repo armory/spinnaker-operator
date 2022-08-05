@@ -8,7 +8,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SpinnakerService is the Schema for the spinnakerservices API
-// +k8s:openapi-gen=true
+// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="version",type="string",JSONPath=".status.version",description="Version"
 // +kubebuilder:printcolumn:name="lastConfigured",type="date",JSONPath=".status.lastDeployed.config.lastUpdatedAt",description="Last Configured"
@@ -16,6 +16,7 @@ import (
 // +kubebuilder:printcolumn:name="services",type="number",JSONPath=".status.serviceCount",description="Services"
 // +kubebuilder:printcolumn:name="url",type="string",JSONPath=".status.uiUrl",description="URL"
 // +kubebuilder:printcolumn:name="apiUrl",type="string",JSONPath=".status.apiUrl",description="API URL",priority=1
+// +kubebuilder:printcolumn:name="registrationId",type="string",JSONPath=".status.registrationId",description="REGISTRATION ID"
 // +kubebuilder:resource:path=spinnakerservices,shortName=spinsvc
 type SpinnakerService struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -26,6 +27,7 @@ type SpinnakerService struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // SpinnakerServiceList contains a list of SpinnakerService
 type SpinnakerServiceList struct {
