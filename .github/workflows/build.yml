@@ -90,10 +90,6 @@ jobs:
         run: |
           make docker-test ${{ steps.build_type.outputs.make_args }}
 
-      - name: Package
-        run: |
-          make docker-package ${{ steps.build_type.outputs.make_args }}
-
       - name: Login to docker registry
         run: |
           if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
@@ -105,12 +101,13 @@ jobs:
             docker login -u ${{ secrets.JFROG_USER }} -p "${{ secrets.JFROG_PASSWORD }}" armory-docker-local.jfrog.io
           fi
 
-      - name: Push
+      - name: Package and Push
         run: |
-          make docker-push ${{ steps.build_type.outputs.make_args }}
           if [[ ${{ github.ref }} = "refs/heads/master" ]]
           then
-            make docker-push-dev ${{ steps.build_type.outputs.make_args }}
+            make docker-package-push-with-dev ${{ steps.build_type.outputs.make_args }}
+          else
+          make docker-package-push ${{ steps.build_type.outputs.make_args }}
           fi
 
       - name: Push git tag
