@@ -121,7 +121,7 @@ jobs:
 
       - uses: medyagh/setup-minikube@latest
       - name: Install load balancer
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        # if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         with:
           minikube-version: 1.26.1
           driver: docker
@@ -136,7 +136,7 @@ jobs:
           done
 
       - name: Run tests
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        # if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         env:
           S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
