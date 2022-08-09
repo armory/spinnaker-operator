@@ -20,7 +20,7 @@ import (
 const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
-	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
+	MaxChecksWaitingForDeploymentStability = 120 // (120 * 2s) / 60 = 4 minutes (large images may need to be downloaded + startup time)
 	MaxChecksWaitingForSpinnakerStability  = 690 // (690 * 2s) / 60 = 23 minutes
 	MaxChecksWaitingForLBStability         = 450 // (300 * 2s) / 60 = 15 minutes
 )
@@ -153,7 +153,7 @@ func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) boo
 		if len(parts) == 3 && strings.TrimSpace(parts[0]) == strings.TrimSpace(parts[1]) && strings.TrimSpace(parts[2]) == "" {
 			return !t.Failed()
 		}
-		time.Sleep(120 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 	pods, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
 	t.Errorf("Waited too much for deployment %s to become ready, giving up. Pods: \n%s", name, pods)
