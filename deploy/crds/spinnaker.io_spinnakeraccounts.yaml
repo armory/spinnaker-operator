@@ -261,15 +261,18 @@ spec:
                               description: AuthInfo holds the auth information
                               properties:
                                 as:
-                                  description: Impersonate is the username to imperonate.  The
+                                  description: Impersonate is the username to impersonate.  The
                                     name matches the flag.
                                   type: string
                                 as-groups:
                                   description: ImpersonateGroups is the groups to
-                                    imperonate.
+                                    impersonate.
                                   items:
                                     type: string
                                   type: array
+                                as-uid:
+                                  description: ImpersonateUID is the uid to impersonate.
+                                  type: string
                                 as-user-extra:
                                   additionalProperties:
                                     items:
