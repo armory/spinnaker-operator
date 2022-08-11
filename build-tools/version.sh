@@ -33,7 +33,7 @@ read -r major minor patch rc <<< "${v//./ }" && patch=$(echo "$patch" | sed 's|[
 
 case $VERSION_TYPE in
     snapshot)
-        if [ "x$(git status --porcelain)" != "x" ] ; then u=".uncommitted"; fi
+        # if [ "x$(git status --porcelain)" != "x" ] ; then u=".uncommitted"; fi
         br=$(echo ".$BRANCH" | sed 's|[-/_]|.|g')
         commit=$(git rev-parse --short HEAD)
         if [[ "x$rc" = "x" ]]
