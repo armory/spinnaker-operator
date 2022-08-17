@@ -85,6 +85,9 @@ func (t *exposeTransformer) setStatusAndOverrideBaseUrl(ctx context.Context, ser
 // findStatusUrl returns the overrideBaseUrl or load balancer url, indicating if it came from overrideBaseUrl
 func (t *exposeTransformer) findStatusUrl(ctx context.Context, serviceName string, overrideUrlName string) (string, bool, error) {
 	// ignore error, overrideBaseUrl may not be set in hal config
+	if strings.HasSuffix(overrideUrlName, "/") {
+		overrideUrlName = overrideUrlName[:len(overrideUrlName) - 1]
+	}
 	statusUrl, _ := t.svc.GetSpinnakerConfig().GetHalConfigPropString(ctx, overrideUrlName)
 	if statusUrl != "" {
 		return statusUrl, true, nil
