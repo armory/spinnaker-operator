@@ -4,11 +4,13 @@ on:
     branches:
       - master
       - release-*
-
-  pull_request:
+        
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   build:
+    if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -85,10 +87,6 @@ jobs:
           go mod vendor && go mod tidy
           make build ${{ steps.build_type.outputs.make_args }}
           make docker-build ${{ steps.build_type.outputs.make_args }}
-
-      - name: Unit tests
-        run: |
-          make docker-test ${{ steps.build_type.outputs.make_args }}
 
       - name: Package
         run: |
@@ -168,11 +166,3 @@ jobs:
           asset_path: ./build/manifests.tgz
           asset_name: manifests.tgz
           asset_content_type: application/zip
-
-      - name: Test Coverage
-        run: go test -v -mod=vendor -covermode atomic -coverprofile=profile.cov ./...
-
-      - name: Send Coverage
-        uses: shogo82148/actions-goveralls@v1
-        with:
-          path-to-profile: profile.cov

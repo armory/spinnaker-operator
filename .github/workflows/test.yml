@@ -1,0 +1,84 @@
+name: spinnaker-operator
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Fetch full history
+        run: git fetch --prune --tags --unshallow
+      - name: Set up Go 1.18.2
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18.2
+      - name: Determine build type
+        id: build_type
+        run: |
+          echo "github.ref: ${{ github.ref }}"
+          echo "github.base_ref: ${{ github.base_ref }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
+          echo "branch: $(git rev-parse --abbrev-ref HEAD)"
+
+          if [[ ${{github.event_name }} = "pull_request" ]] ; then branch_override=${{ github.head_ref }} ; fi
+
+          # On PRs to release branches, build RC releases for target release branch
+          if [[ ${{github.event_name }} = "pull_request" && "x${{ github.base_ref }}" =~ ^xrelease-* ]]
+          then
+            echo "Building release candidate"
+            build_type=rc
+            branch_override=${{ github.base_ref }}
+            registry=docker.io
+
+          # On any build running on master branch, build RC versions
+          elif [[ ${{ github.ref }} = "refs/heads/master" ]]
+          then
+            echo "Building release candidate"
+            build_type=rc
+            registry=docker.io
+
+          # On any build running on release branches, build final release
+          elif [[ ${{ github.ref }} =~ ^refs/heads/release-* ]]
+          then
+            echo "Building final release"
+            build_type=release
+            registry=docker.io
+
+          else
+            echo "Building snapshot"
+            build_type=snapshot
+            registry=armory-docker-local.jfrog.io
+          fi
+
+          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
+          version=$(make version $make_args)
+          echo "Version: $version"
+
+          # Make sure the version can be used as a tag
+          git tag v$version
+          git tag -d v$version
+
+          echo "##[set-output name=build_type;]$build_type"
+          echo "##[set-output name=registry;]$registry"
+          echo "##[set-output name=version;]$version"
+          echo "##[set-output name=make_args;]$make_args"
+
+      - name: Build
+        run: |
+          go mod vendor && go mod tidy
+          make build ${{ steps.build_type.outputs.make_args }}
+          make docker-build ${{ steps.build_type.outputs.make_args }}
+
+      - name: Unit tests
+        run: |
+          make docker-test ${{ steps.build_type.outputs.make_args }}
+
+      - name: Test Coverage
+        run: go test -v -mod=vendor -covermode atomic -coverprofile=profile.cov ./...
+
+      - name: Send Coverage
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: profile.cov
