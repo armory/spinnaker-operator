@@ -19,6 +19,8 @@ BRANCH_OVERRIDE ?=
 VERSION 	 	?= $(shell build-tools/version.sh $(VERSION_TYPE) $(BRANCH_OVERRIDE))
 REGISTRY_ORG    ?= "armory"
 OS      	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 1)
+GOOS			:=${OS}
+GOARCH			:=${ARCH}
 ARCH    	 	?= $(shell go version | cut -d' ' -f 4 | cut -d'/' -f 2)
 NAMESPACE 	 	?= "spinnaker-operator"
 PWD 		  	= $(shell pwd)
@@ -62,10 +64,10 @@ build: build-dirs manifest Makefile ## Compiles the code to produce binaries
 .PHONY: docker-build
 docker-build: Makefile ## Runs "make build" in a docker container
 	@echo "Running \"make build\" in docker"
-	@docker build \
+	@docker buildx build \
 	-t docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
 	--build-arg VERSION=${VERSION} \
-	-f build-tools/Dockerfile.compile .
+	-f build-tools/Dockerfile .
 
 .PHONY: test
 test: Makefile ## Run unit tests. Doesn't need to compile the code.
@@ -74,32 +76,36 @@ test: Makefile ## Run unit tests. Doesn't need to compile the code.
 .PHONY: docker-test
 docker-test: Makefile ## Runs "make test" in a docker container
 	@echo "Running \"make test\" in docker"
-	@docker build \
-	--build-arg BUILDER=docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
-	-f build-tools/Dockerfile.test build-tools
+	@docker buildx build \
+	--target tests \
+	-f build-tools/Dockerfile .
 
 .PHONY: integration-test
 integration-test: build-dirs Makefile ## Run integration tests. See requirements in integration_tests/README.md
 	@go test -tags=integration -mod=vendor -timeout=40m -run IntegrationTests/Operator= ./integration_tests/...
 
-.PHONY: docker-package
-docker-package: Makefile ## Builds the docker image to distribute
-	@echo "Packaging final docker image"
-	@docker build \
+.PHONY: docker-package-push
+docker-package-push: Makefile ## Builds and pushes the docker image to distribute
+	@echo "Packaging and pushing final docker image"
+	@docker  buildx build \
+	--platform=linux/arm64,linux/amd64 \
 	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) \
-	--build-arg BUILDER=docker-local/$(REGISTRY_ORG)/spinnaker-operator-builder:$(VERSION) \
+	--push \
 	--build-arg CACHE_DATE=$(shell date +%s) \
-	-f build-tools/Dockerfile build-tools
-	@echo "Successfully built image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)"
-
-.PHONY: docker-push
-docker-push: ## Pushes the docker image to the docker registry with the full "version" tag
-	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)
-
-.PHONY: docker-push-dev
-docker-push-dev: ## Pushes the docker image under "dev" tag
-	@docker tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
-	@docker push $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
+	-f build-tools/Dockerfile .
+	@echo "Successfully built and pushed image with tag $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION)"
+	
+.PHONY: docker-package-push-with-dev
+docker-package-push-with-dev: Makefile ## Builds and pushes the docker image to distribute
+	@echo "Packaging and pushing final docker image"
+	@docker buildx build \
+	--platform=linux/arm64,linux/amd64 \
+	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) \
+	-t $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev
+	--push \
+	--build-arg CACHE_DATE=$(shell date +%s) \
+	-f build-tools/Dockerfile .
+	@echo "Successfully built and pushed image with tags: $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:$(VERSION) $(REGISTRY)/$(REGISTRY_ORG)/spinnaker-operator:dev"
 
 .PHONY: reverse-proxy
 reverse-proxy: ## Installs a reverse proxy in Kubernetes to be able to debug locally
