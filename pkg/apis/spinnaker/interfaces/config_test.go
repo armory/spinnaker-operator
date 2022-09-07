@@ -2,9 +2,10 @@ package interfaces
 
 import (
 	"context"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 func TestGetHalconfigObjectArray(t *testing.T) {
@@ -12,7 +13,7 @@ func TestGetHalconfigObjectArray(t *testing.T) {
 	ctx := context.TODO()
 	var c = `
  name: default
- version: 1.14.2
+ version: 1.28.1
  providers:
    kubernetes:
      accounts:
