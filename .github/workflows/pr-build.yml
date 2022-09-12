@@ -5,8 +5,12 @@ on:
       - master
       - release-*
 
+  pull_request_review:
+    types: [submitted]
+
 jobs:
   build:
+    if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -28,26 +32,14 @@ jobs:
           echo "github.head_ref: ${{ github.head_ref }}"
           echo "branch: $(git rev-parse --abbrev-ref HEAD)"
 
+          if [[ ${{github.event_name }} = "pull_request" ]] ; then branch_override=${{ github.head_ref }} ; fi
+
           # On PRs to release branches, build RC releases for target release branch
-          if [[ "x${{ github.base_ref }}" =~ ^xrelease-* ]]
+          if [[ ${{github.event_name }} = "pull_request" && "x${{ github.base_ref }}" =~ ^xrelease-* ]]
           then
             echo "Building release candidate"
             build_type=rc
             branch_override=${{ github.base_ref }}
-            registry=docker.io
-
-          # On any build running on master branch, build RC versions
-          elif [[ ${{ github.ref }} = "refs/heads/master" ]]
-          then
-            echo "Building release candidate"
-            build_type=rc
-            registry=docker.io
-
-          # On any build running on release branches, build final release
-          elif [[ ${{ github.ref }} =~ ^refs/heads/release-* ]]
-          then
-            echo "Building final release"
-            build_type=release
             registry=docker.io
 
           else
@@ -100,20 +92,16 @@ jobs:
       - name: Push
         run: |
           make docker-push ${{ steps.build_type.outputs.make_args }}
-          if [[ ${{ github.ref }} = "refs/heads/master" ]]
-          then
-            make docker-push-dev ${{ steps.build_type.outputs.make_args }}
-          fi
 
       - name: Push git tag
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        if: steps.build_type.outputs.build_type == 'rc'
         run: |
           git tag v${{ steps.build_type.outputs.version }}
           git push origin v${{ steps.build_type.outputs.version }}
 
       - uses: engineerd/setup-kind@v0.5.0
       - name: Install load balancer
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        if: steps.build_type.outputs.build_type == 'rc'
         run: |
           kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
           kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
@@ -124,7 +112,7 @@ jobs:
           done
 
       - name: Run tests
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        if: steps.build_type.outputs.build_type == 'rc'
         env:
           S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
@@ -137,26 +125,3 @@ jobs:
           halyard=$(cat halyard-version | head -1)
           export HALYARD_IMAGE="armory/halyard:$halyard"
           make integration-test
-
-      - name: Create Release
-        if: steps.build_type.outputs.build_type == 'release'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.build_type.outputs.version }}
-          release_name: v${{ steps.build_type.outputs.version }}
-          draft: false
-          prerelease: false
-
-      - name: Upload manifests
-        if: steps.build_type.outputs.build_type == 'release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build/manifests.tgz
-          asset_name: manifests.tgz
-          asset_content_type: application/zip
