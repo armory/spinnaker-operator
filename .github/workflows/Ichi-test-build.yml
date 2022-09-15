@@ -1,9 +1,6 @@
 name: spinnaker-operator
 on:
-  push:
-    branches:
-      - master
-      - release-*
+  pull_request:
 
 jobs:
   build:
@@ -120,7 +117,6 @@ jobs:
         uses: medyagh/setup-minikube@latest
 
       - name: Install load balancer
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
           kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
           kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
@@ -131,7 +127,6 @@ jobs:
           done
 
       - name: Run tests
-        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         env:
           S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
