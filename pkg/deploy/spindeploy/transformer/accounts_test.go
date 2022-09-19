@@ -170,6 +170,7 @@ spec:
 	g := &generated.SpinnakerGeneratedConfig{
 		Config: map[string]generated.ServiceConfig{
 			"clouddriver": generated.ServiceConfig{
+				// Resources: []runtime.Object{dcs1, dcs2},
 				Resources:  []client.Object{dcs1, dcs2},
 				Deployment: dcd,
 			},

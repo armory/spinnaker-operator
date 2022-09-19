@@ -111,7 +111,14 @@ jobs:
           git tag v${{ steps.build_type.outputs.version }}
           git push origin v${{ steps.build_type.outputs.version }}
 
-      - uses: engineerd/setup-kind@v0.5.0
+      - name: Install Minikube
+        id: minikube
+        with:
+          minikube-version: 1.26.1
+          driver: docker
+          kubernetes-version: v1.24.3
+        uses: medyagh/setup-minikube@latest
+
       - name: Install load balancer
         if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
@@ -133,7 +140,7 @@ jobs:
           AWS_EC2_METADATA_DISABLED: true
           OPERATOR_IMAGE: ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
         run: |
-          kind load docker-image ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
+          minikube image load ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
           halyard=$(cat halyard-version | head -1)
           export HALYARD_IMAGE="armory/halyard:$halyard"
           make integration-test

@@ -101,6 +101,7 @@ spec:
 	config := &generated.ServiceConfig{
 		Deployment: deployment,
 		Resources:  []client.Object{secret},
+		// Resources: []runtime.Object{secret},
 	}
 
 	// when

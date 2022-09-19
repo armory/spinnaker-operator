@@ -2,9 +2,6 @@ package integration_tests
 
 import (
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
-	"github.com/stretchr/testify/assert"
-	"html/template"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -13,14 +10,18 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
+
+	"github.com/cenkalti/backoff/v4"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
 	SpinServiceName                        = "spinnaker"
 	MaxErrorsWaitingForStability           = 3
-	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
-	MaxChecksWaitingForSpinnakerStability  = 450 // (300 * 2s) / 60 = 15 minutes
+	MaxChecksWaitingForDeploymentStability = 120 // (120 * 2s) / 60 = 4 minutes (large images may need to be downloaded + startup time)
+	MaxChecksWaitingForSpinnakerStability  = 690 // (690 * 2s) / 60 = 23 minutes
 	MaxChecksWaitingForLBStability         = 450 // (300 * 2s) / 60 = 15 minutes
 )
 
@@ -289,7 +290,7 @@ func ExponentialBackOff(operation backoff.Operation, minutes time.Duration) erro
 }
 
 func GetLocalHost(t *testing.T) string {
-	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane", t)
+	host, _ := RunCommandSilent("docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' minikube", t)
 	return fmt.Sprintf(`https://%s:6443`, strings.TrimSpace(host))
 }
 

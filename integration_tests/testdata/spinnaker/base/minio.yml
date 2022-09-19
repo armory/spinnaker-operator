@@ -1,0 +1,67 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  labels:
+    app: minio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+spec:
+  replicas: 1
+  serviceName: minio
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:RELEASE.2021-08-20T18-32-01Z
+          command:
+          - /bin/sh
+          - -c
+          - 'mkdir -p /storage/spinnaker && /usr/bin/minio server /storage'
+          env:
+            # MinIO access key and secret key
+            - name: MINIO_ACCESS_KEY
+              value: "minio"
+            - name: MINIO_SECRET_KEY
+              value: "minioAccessKey"
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - name: storage
+              mountPath: "/storage"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 65535
+        fsGroup: 65535
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: minio-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+spec:
+  ports:
+    - port: 9000
+      targetPort: 9000
+      protocol: TCP
+  selector:
+    app: minio

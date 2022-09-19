@@ -50,7 +50,7 @@ func (k *kubernetesAccountValidator) Validate(spinSvc interfaces.SpinnakerServic
 	if config == nil {
 		return nil
 	}
-	return k.validateAccess(ctx, config)
+	return k.validateAccess(config)
 }
 
 func (k *kubernetesAccountValidator) makeClient(ctx context.Context, spinSvc interfaces.SpinnakerService, c client.Client) (*rest.Config, error) {
@@ -277,7 +277,7 @@ type authSettings struct {
 	OAuthScopes         []string `json:"oAuthScopes,omitempty"`
 }
 
-func (k *kubernetesAccountValidator) validateAccess(ctx context.Context, cc *rest.Config) error {
+func (k *kubernetesAccountValidator) validateAccess(cc *rest.Config) error {
 	clientset, err := kubernetes.NewForConfig(cc)
 	if err != nil {
 		return fmt.Errorf("unable to build kubernetes clientset from rest config: %w", err)
@@ -287,13 +287,13 @@ func (k *kubernetesAccountValidator) validateAccess(ctx context.Context, cc *res
 	if err != nil || len(ns) == 0 {
 		// If namespaces are not defined, a list namespaces call should be successful
 		// The test is analogous to what is done in Halyard
-		_, err = clientset.CoreV1().Namespaces().List(ctx, v13.ListOptions{})
+		_, err = clientset.CoreV1().Namespaces().List(context.TODO(), v13.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("error listing namespaces in account \"%s\":\n  %w", k.account.Name, err)
 		}
 	} else {
 		// Otherwise read resources just for the first namespace configured
-		_, err = clientset.CoreV1().Pods(ns[0]).List(ctx, v13.ListOptions{})
+		_, err = clientset.CoreV1().Pods(ns[0]).List(context.TODO(), v13.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("error listing pods in account \"%s\", namespace \"%s\":\n  %w", k.account.Name, ns[0], err)
 		}

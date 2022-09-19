@@ -6,11 +6,11 @@ FROM python:3.7-alpine3.15
 ENV OPERATOR=/usr/local/bin/spinnaker-operator \
     USER_UID=1001 \
     USER_NAME=spinnaker-operator \
-    AWS_AIM_AUTHENTICATOR_VERSION=0.4.0 \
-    KUBECTL_RELEASE=1.17.7 \
-    AWS_CLI_VERSION=1.18.109 \
+    AWS_AIM_AUTHENTICATOR_VERSION=0.5.9 \
+    KUBECTL_RELEASE=1.22.0 \
+    AWS_CLI_VERSION=1.25.40 \
     OPERATOR_HOME=/opt/spinnaker-operator \
-    GOOGLE_CLOUD_SDK_VERSION=313.0.1 \
+    GOOGLE_CLOUD_SDK_VERSION=401.0.0 \
     PATH="$PATH:/usr/local/bin/:/opt/google-cloud-sdk/bin/:/usr/local/bin/aws-iam-authenticator"
 
 EXPOSE 8383

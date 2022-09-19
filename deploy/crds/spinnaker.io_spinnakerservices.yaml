@@ -43,6 +43,10 @@ spec:
       name: apiUrl
       priority: 1
       type: string
+    - description: REGISTRATION ID
+      jsonPath: .status.registrationId
+      name: registrationId
+      type: string
     name: v1alpha2
     schema:
       openAPIV3Schema:
@@ -183,6 +187,7 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                     description: Service profiles will be parsed as YAML
                     type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   service-settings:
                     additionalProperties:
                       type: object

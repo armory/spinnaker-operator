@@ -1,0 +1,164 @@
+name: spinnaker-operator
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Fetch full history
+        run: git fetch --prune --tags --unshallow
+
+      - name: Set up Go 1.18.2
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18.2
+
+      - name: Determine build type
+        id: build_type
+        run: |
+          echo "github.ref: ${{ github.ref }}"
+          echo "github.base_ref: ${{ github.base_ref }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
+          echo "branch: $(git rev-parse --abbrev-ref HEAD)"
+
+          # On PRs to release branches, build RC releases for target release branch
+          if [[ "x${{ github.base_ref }}" =~ ^xrelease-* ]]
+          then
+            echo "Building release candidate"
+            build_type=rc
+            branch_override=${{ github.base_ref }}
+            registry=docker.io
+
+          # On any build running on master branch, build RC versions
+          elif [[ ${{ github.ref }} = "refs/heads/master" ]]
+          then
+            echo "Building release candidate"
+            build_type=rc
+            registry=docker.io
+
+          # On any build running on release branches, build final release
+          elif [[ ${{ github.ref }} =~ ^refs/heads/release-* ]]
+          then
+            echo "Building final release"
+            build_type=release
+            registry=docker.io
+
+          else
+            echo "Building snapshot"
+            build_type=snapshot
+            registry=armory-docker-local.jfrog.io
+          fi
+
+          make_args="VERSION_TYPE=$build_type REGISTRY=$registry REGISTRY_ORG=armory BRANCH_OVERRIDE=$branch_override"
+          version=$(make version $make_args)
+          echo "Version: $version"
+
+          # Make sure the version can be used as a tag
+          git tag v$version
+          git tag -d v$version
+
+          echo "##[set-output name=build_type;]$build_type"
+          echo "##[set-output name=registry;]$registry"
+          echo "##[set-output name=version;]$version"
+          echo "##[set-output name=make_args;]$make_args"
+
+        # We need to do this for at least a few versions so that we don't force
+        # users to manually fix the CRDs when migrating from v1beta1 to v1.
+      - name: Modify spinsvc CRD to assist with migration
+        uses: mikefarah/yq@v4.25.1
+        with:
+          cmd: yq -i '.spec.preserveUnknownFields = false' deploy/crds/spinnaker.io_spinnakerservices.yaml
+
+      - name: Build
+        run: |
+          go mod vendor && go mod tidy
+          make build ${{ steps.build_type.outputs.make_args }}
+          make docker-build ${{ steps.build_type.outputs.make_args }}
+
+      - name: Package
+        run: |
+          make docker-package ${{ steps.build_type.outputs.make_args }}
+
+      - name: Login to docker registry
+        run: |
+          if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
+          then
+            echo "Logging in to dockerhub"
+            docker login -u ${{ secrets.DOCKERHUB_USER }} -p "${{ secrets.DOCKERHUB_PASSWORD }}" docker.io
+          else
+            echo "Logging in to jfrog"
+            docker login -u ${{ secrets.JFROG_USER }} -p "${{ secrets.JFROG_PASSWORD }}" armory-docker-local.jfrog.io
+          fi
+
+      - name: Push
+        run: |
+          make docker-push ${{ steps.build_type.outputs.make_args }}
+          if [[ ${{ github.ref }} = "refs/heads/master" ]]
+          then
+            make docker-push-dev ${{ steps.build_type.outputs.make_args }}
+          fi
+
+      - name: Push git tag
+        if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
+        run: |
+          git tag v${{ steps.build_type.outputs.version }}
+          git push origin v${{ steps.build_type.outputs.version }}
+
+      - name: Install Minikube
+        id: minikube
+        with:
+          minikube-version: 1.26.1
+          driver: docker
+          kubernetes-version: v1.24.3
+        uses: medyagh/setup-minikube@latest
+
+      - name: Install load balancer
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
+          kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/metallb.yaml
+          kubectl apply -f integration_tests/kind/metallb-configmap.yaml
+          until [ "$(kubectl get pods --all-namespaces --no-headers | grep -cEv '([0-9]+)/\1')" -ne 0 ]; do
+           sleep 5s
+          done
+
+      - name: Run tests
+        env:
+          S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.INTEGRATION_TEST_S3_USER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INTEGRATION_TEST_S3_PASSWORD }}
+          AWS_DEFAULT_REGION: ${{ secrets.INTEGRATION_TEST_S3_BUCKET_REGION }}
+          AWS_EC2_METADATA_DISABLED: true
+          OPERATOR_IMAGE: ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
+        run: |
+          minikube image load ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}
+          halyard=$(cat halyard-version | head -1)
+          export HALYARD_IMAGE="armory/halyard:$halyard"
+          make integration-test
+
+      - name: Create Release
+        if: steps.build_type.outputs.build_type == 'release'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.build_type.outputs.version }}
+          release_name: v${{ steps.build_type.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload manifests
+        if: steps.build_type.outputs.build_type == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/manifests.tgz
+          asset_name: manifests.tgz
+          asset_content_type: application/zip

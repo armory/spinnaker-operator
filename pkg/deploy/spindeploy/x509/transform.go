@@ -93,6 +93,7 @@ func (t *x509Transformer) scheduleForRemovalIfNeeded(gateConfig generated.Servic
 		return nil
 	}
 	gen.Config["gate-x509"] = generated.ServiceConfig{
+		// ToDelete: []runtime.Object{x509Svc},
 		ToDelete: []client.Object{x509Svc},
 	}
 	return nil
