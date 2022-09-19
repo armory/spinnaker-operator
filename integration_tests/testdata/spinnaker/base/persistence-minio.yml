@@ -1,0 +1,22 @@
+#-----------------------------------------------------------------------------------------------------------------
+# Example configuration for using minio as spinnaker persistent store
+#-----------------------------------------------------------------------------------------------------------------
+# apiVersion: spinnaker.armory.io/v1alpha2
+apiVersion: spinnaker.io/v1alpha2
+kind: SpinnakerService
+metadata:
+  name: spinnaker
+spec:
+  spinnakerConfig:
+    config:
+      persistentStorage:
+        persistentStoreType: s3
+        s3:
+          bucket: spinnaker                     # The name of an S3 bucket that Spinnaker will use to save information like applications and pipelines.
+          rootFolder: front50                   # The root folder in the chosen bucket to place all of Spinnaker's persistent data in.
+          region: us-west-2                     # (Optional).
+          accessKeyId: minio                    # (Optional). Your AWS Access Key ID. If not provided, Operator/Spinnaker will try to find AWS credentials as described at http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html#credentials-default
+          secretAccessKey: minioAccessKey       # (Secret, Optional). Your AWS Secret Key.
+          pathStyleAccess: true                 # (Optional). When true, use path-style to access bucket; when false, use virtual hosted-style to access bucket.
+          endpoint: http://minio:9000           # (Optional). An alternate endpoint that your S3-compatible storage can be found at. This is intended for self-hosted storage services with S3-compatible APIs, e.g. Minio. If supplied, this storage type cannot be validated.
+#          serverSideEncryption: AES256         # (Optional). Use Amazon Server-Side Encryption ('x-amz-server-side-encryption' header). Supports 'AES256' (for Amazon S3-managed encryption keys, equivalent to a header value of 'AES256') and 'AWSKMS' (for AWS KMS-managed encryption keys, equivalent to a header value of 'aws:kms'.
