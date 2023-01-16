@@ -112,6 +112,8 @@ jobs:
           git push origin v${{ steps.build_type.outputs.version }}
 
       - uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: "v0.11.1"
       - name: Install load balancer
         if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
