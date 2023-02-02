@@ -139,6 +139,7 @@ jobs:
           S3_BUCKET: ${{ secrets.INTEGRATION_TEST_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
           AWS_DEFAULT_REGION: ${{ secrets.INTEGRATION_TEST_S3_BUCKET_REGION }}
           AWS_EC2_METADATA_DISABLED: true
           OPERATOR_IMAGE: ${{ steps.build_type.outputs.registry }}/armory/spinnaker-operator:${{ steps.build_type.outputs.version }}

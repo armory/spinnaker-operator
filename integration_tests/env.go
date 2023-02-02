@@ -22,6 +22,7 @@ const (
 	BucketRegionVar                      = "AWS_DEFAULT_REGION"
 	BucketAccessKeyIdVar                 = "AWS_ACCESS_KEY_ID"
 	BucketSecretAccessKeyVar             = "AWS_SECRET_ACCESS_KEY"
+	BucketSessionTokenVar                = "AWS_SESSION_TOKEN"
 	MaxChecksWaitingForAccountsAvailable = 20 // 20 * 2s = 40 seconds
 )
 
@@ -71,6 +72,7 @@ type Vars struct {
 	S3BucketRegion    string
 	S3AccessKeyId     string
 	S3SecretAccessKey string
+	S3SessionToken    string
 	SpinNamespace     string
 }
 
@@ -152,6 +154,7 @@ func resolveEnvVars(d Defaults, t *testing.T) Vars {
 		S3BucketRegion:    r,
 		S3AccessKeyId:     a,
 		S3SecretAccessKey: s,
+		S3SessionToken:    os.Getenv(BucketSessionTokenVar),
 	}
 }
 
