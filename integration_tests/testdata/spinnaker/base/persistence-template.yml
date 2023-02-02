@@ -7,10 +7,5 @@ spec:
     config:
       persistentStorage:
         s3:
-          bucket: spinnaker
-          rootFolder: front50
-          region: us-west-2
-          accessKeyId: minio
-          secretAccessKey: minioAccessKey
-          pathStyleAccess: true
-          endpoint: http://minio:9000
+          bucket: {{.S3Bucket}}
+          region: {{.S3BucketRegion}}
