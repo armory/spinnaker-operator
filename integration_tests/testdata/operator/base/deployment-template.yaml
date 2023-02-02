@@ -30,6 +30,8 @@ spec:
               value: {{.S3AccessKeyId}}
             - name: AWS_SECRET_ACCESS_KEY
               value: {{.S3SecretAccessKey}}
+            - name: AWS_SESSION_TOKEN
+              value: "{{.S3SessionToken}}"
             - name: AWS_DEFAULT_REGION
               value: {{.S3BucketRegion}}
         - name: halyard
@@ -40,6 +42,8 @@ spec:
               value: {{.S3AccessKeyId}}
             - name: AWS_SECRET_ACCESS_KEY
               value: {{.S3SecretAccessKey}}
+            - name: AWS_SESSION_TOKEN
+              value: "{{.S3SessionToken}}"
             - name: AWS_DEFAULT_REGION
               value: {{.S3BucketRegion}}
           ports:
