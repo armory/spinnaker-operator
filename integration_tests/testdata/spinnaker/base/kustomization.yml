@@ -1,5 +1,6 @@
 resources:
+- minio.yml
 - spinnakerservice.yml
 
 patchesStrategicMerge:
-- persistence-generated.yml
+- persistence-template.yml
