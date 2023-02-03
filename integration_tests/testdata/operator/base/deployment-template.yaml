@@ -32,8 +32,8 @@ spec:
               value: {{.S3SecretAccessKey}}
             - name: AWS_SESSION_TOKEN
               value: {{.S3SessionToken}}
-            - name: AWS_DEFAULT_REGION
-              value: {{.S3BucketRegion}}
+#            - name: AWS_DEFAULT_REGION
+#              value: {{.S3BucketRegion}}
         - name: halyard
           image: {{.HalyardImage}}
           imagePullPolicy: Always
@@ -44,8 +44,8 @@ spec:
               value: {{.S3SecretAccessKey}}
             - name: AWS_SESSION_TOKEN
               value: {{.S3SessionToken}}
-            - name: AWS_DEFAULT_REGION
-              value: {{.S3BucketRegion}}
+#            - name: AWS_DEFAULT_REGION
+#              value: {{.S3BucketRegion}}
           ports:
             - containerPort: 8064
               protocol: TCP
