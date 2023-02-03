@@ -154,7 +154,7 @@ func resolveEnvVars(d Defaults, t *testing.T) Vars {
 		S3BucketRegion:    r,
 		S3AccessKeyId:     a,
 		S3SecretAccessKey: s,
-		S3SessionToken:    os.Getenv(BucketSessionTokenVar),
+		S3SessionToken:    strings.TrimSpace(os.Getenv(BucketSessionTokenVar)),
 	}
 }
 
