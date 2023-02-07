@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/stretchr/testify/assert"
-	"html/template"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 )
 
