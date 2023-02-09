@@ -53,11 +53,11 @@ spec:
             httpGet:
               path: /health
               port: 8064
-            failureThreshold: 20
-            periodSeconds: 5
-            initialDelaySeconds: 20
+            failureThreshold: 60
+            periodSeconds: 20
+            initialDelaySeconds: 120
           livenessProbe:
             tcpSocket:
               port: 8064
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 20

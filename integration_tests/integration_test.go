@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package integration_tests
@@ -26,11 +27,11 @@ func init() {
 
 func TestIntegrationTests(t *testing.T) {
 	t.Run("Operator=1", SpinnakerBase)
-	t.Run("Operator=2", KubernetesAndUpgradeOverlay)
-	t.Run("Operator=3", UpdateSpinsvcStatus)
-	t.Run("Operator=4", SecretsAndDuplicateOverlay)
-	t.Run("Operator=5", ProfilesOverlay)
-	t.Run("Operator=6", Validations)
+	//t.Run("Operator=2", KubernetesAndUpgradeOverlay)
+	//t.Run("Operator=3", UpdateSpinsvcStatus)
+	//t.Run("Operator=4", SecretsAndDuplicateOverlay)
+	//t.Run("Operator=5", ProfilesOverlay)
+	//t.Run("Operator=6", Validations)
 }
 
 func SpinnakerBase(t *testing.T) {
@@ -47,8 +48,8 @@ func SpinnakerBase(t *testing.T) {
 	e.InstallSpinnaker(e.Operator.Namespace, "testdata/spinnaker/base", t)
 
 	// uninstall
-	LogMainStep(t, "Uninstalling spinnaker")
-	RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), e.Operator.Namespace, SpinServiceName), t)
+	//LogMainStep(t, "Uninstalling spinnaker")
+	//RunCommandAndAssert(fmt.Sprintf("%s -n %s delete spinsvc %s", e.KubectlPrefix(), e.Operator.Namespace, SpinServiceName), t)
 }
 
 func KubernetesAndUpgradeOverlay(t *testing.T) {

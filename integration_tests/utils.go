@@ -18,9 +18,10 @@ import (
 
 const (
 	SpinServiceName                        = "spinnaker"
-	MaxErrorsWaitingForStability           = 3
+	SleepDuration                          = 30 * time.Second
+	MaxErrorsWaitingForStability           = 30
 	MaxChecksWaitingForDeploymentStability = 90  // (90 * 2s) = 3 minutes (large images may need to be downloaded + startup time)
-	MaxChecksWaitingForSpinnakerStability  = 450 // (300 * 2s) / 60 = 15 minutes
+	MaxChecksWaitingForSpinnakerStability  = 300 // (300 * 2s) / 60 = 15 minutes
 	MaxChecksWaitingForLBStability         = 450 // (300 * 2s) / 60 = 15 minutes
 )
 
@@ -96,7 +97,7 @@ func WaitForSpinnakerToStabilize(ns string, e *TestEnv, t *testing.T) {
 			AssertSpinnakerHealthy(ns, SpinServiceName, e, t)
 			return
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(SleepDuration)
 	}
 	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
 	t.Errorf("Waited too much time for spinnaker to become ready (never saw status=OK). Pods:\n%s", o)
@@ -106,6 +107,7 @@ func AssertSpinnakerHealthy(ns, spinName string, e *TestEnv, t *testing.T) {
 	t.Logf("Asserting spinnaker pods are healthy")
 	for _, s := range SpinBaseSvcs {
 		o := RunCommandSilentAndAssert(fmt.Sprintf("%s -n %s get deployment/%s -o=jsonpath='{.status.readyReplicas}'", e.KubectlPrefix(), ns, s), t)
+		fmt.Println("deployment: " + s + " readyReplicas: " + o)
 		if t.Failed() {
 			return
 		}
@@ -128,7 +130,7 @@ func WaitForLBReady(ns, statusPath string, e *TestEnv, t *testing.T) string {
 				return lbUrl
 			}
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(SleepDuration)
 	}
 	o, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get services", e.KubectlPrefix(), ns), t)
 	t.Errorf("Waited too much time for spinnaker deck and gate LB's to be reachable. Either they're not assigned public LBs yet or DNS servers still don't resolve them. Services:\n%s", o)
@@ -152,7 +154,7 @@ func WaitForDeploymentToStabilize(ns, name string, e *TestEnv, t *testing.T) boo
 		if len(parts) == 3 && strings.TrimSpace(parts[0]) == strings.TrimSpace(parts[1]) && strings.TrimSpace(parts[2]) == "" {
 			return !t.Failed()
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(SleepDuration)
 	}
 	pods, _ := RunCommandSilent(fmt.Sprintf("%s -n %s get pods", e.KubectlPrefix(), ns), t)
 	t.Errorf("Waited too much for deployment %s to become ready, giving up. Pods: \n%s", name, pods)

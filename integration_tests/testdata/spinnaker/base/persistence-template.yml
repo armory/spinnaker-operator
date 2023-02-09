@@ -8,3 +8,10 @@ spec:
       persistentStorage:
         s3:
           bucket: {{.S3Bucket}}
+    service-settings:
+      spinnaker:
+        env:
+          AWS_ACCESS_KEY_ID: {{.S3AccessKeyId}}
+          AWS_SECRET_ACCESS_KEY: {{.S3SecretAccessKey}}
+          AWS_SESSION_TOKEN: "{{.S3SessionToken}}"
+          AWS_DEFAULT_REGION: {{.S3BucketRegion}}
