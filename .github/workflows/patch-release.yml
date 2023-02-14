@@ -11,9 +11,9 @@ jobs:
         run: |
           branch=release-$(echo ${{ github.event.client_payload.version }} | cut -d '.' -f 1,2).x
           echo "Derived release branch: $branch (this branch must already exist for patch releases)"
-          echo "##[set-output name=branch;]$branch"
+          echo "branch=$branch" >> $GITHUB_OUTPUT
       - name: Checkout branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: ${{ steps.branch_step.outputs.branch }}
       - name: Fetch tags

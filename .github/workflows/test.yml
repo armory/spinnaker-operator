@@ -7,11 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Fetch full history
         run: git fetch --prune --tags --unshallow
       - name: Set up Go 1.18.2
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18.2
       - name: Determine build type
@@ -60,10 +60,10 @@ jobs:
           git tag v$version
           git tag -d v$version
 
-          echo "##[set-output name=build_type;]$build_type"
-          echo "##[set-output name=registry;]$registry"
-          echo "##[set-output name=version;]$version"
-          echo "##[set-output name=make_args;]$make_args"
+          echo "build_type=$build_type" >> $GITHUB_OUTPUT
+          echo "registry=$registry" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "make_args=$make_args" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |
