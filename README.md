@@ -27,6 +27,16 @@ The validating admission controller [requires](https://kubernetes.io/docs/refere
 
 Note: If you can't use the validation webhook, pass the `--disable-admission-controller` to the operator (like in `deploy/operator/basic/deployment.yaml`).
 
+### Kubernetes' compatibility matrix
+
+| Kubernetes / Spinnaker Operator | 1.3.x               | 1.2.x              |
+|---------------------------------|---------------------|--------------------|
+| 1.25                            | :white_check_mark:  | :x:                |
+| 1.24                            | :white_check_mark:  | :x:                |
+| 1.23                            | :white_check_mark:  | :x:                |
+| 1.22                            | :white_check_mark:  | :x:                |
+| 1.21                            | :white_check_mark:  | :white_check_mark: |
+
 ## Quick Start
 
 This is a high-level view of the commands you need to run for those who want to jump right in. More explanation can be found in the sections after this one.
@@ -43,11 +53,29 @@ $ kubectl apply -f deploy/crds/
 $ kubectl create ns spinnaker-operator
 $ kubectl -n spinnaker-operator apply -f deploy/operator/cluster
 
-# Update deploy/spinnaker/basic/spinnakerservice.yml to change Spinnaker's persistence bucket name to a unique name (persistentStorage.s3.bucket value)
+```
 
-# Install Spinnaker in "spinnaker" namespace
-$ kubectl create ns spinnaker
-$ kubectl -n spinnaker apply -f deploy/spinnaker/basic
+### Deploy Spinnaker
+
+You can use our [Spinnaker kustomize patches](https://github.com/armory/spinnaker-kustomize-patches)
+to deploy Spinnaker.
+
+```shell
+# Clone the project
+git clone git@github.com:armory/spinnaker-kustomize-patches.git
+cd spinnaker-kustomize-patches
+
+# Delete default recipe
+rm kustomization.yml
+
+# Create symlink for oss recipe
+ln -s ./recipes/kustomization-oss-minimum.yml kustomization.yml
+
+# Create the spinnaker namespace
+kubectl create ns spinnaker
+
+# Build the kustomize template and deploy in kubernetes
+kustomize build . | kubectl apply -f -
 
 # Watch the install progress, check out the pods being created too!
 $ kubectl -n spinnaker get spinsvc spinnaker -w
