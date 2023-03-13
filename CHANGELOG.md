@@ -14,43 +14,19 @@ Breaking change:
 in the same namespace as Spinnaker that point to Gate or Deck. It will then compute these services' hostnames
 using (`spec.rules[].host` or `status.loadBalancer.ingress[0].hostname`).
 
-Both `extensions` and `networking.k8s.io` ingresses are supported and queried.
+The `networking.k8s.io/v1` ingress is supported and queried.
 
 For Gate, the operator also checks for the path and sets up Spinnaker to support relative path.
-
-e.g. the following will setup Spinnaker's UI (Deck) at http://acme.com and API (Gate) at http://acme.com/api
-```yaml
-kind: Ingress
-apiVersion: extensions/v1beta1
-metadata:
-  name: my-ingress
-  namespace: spinnaker
-spec:
-  rules:
-    - http:
-        paths:
-          - path: /api
-            backend:
-              serviceName: spin-gate
-              servicePort: http
-          - path: /
-            backend:
-              serviceName: spin-deck
-              servicePort: 9000
-status:
-  loadBalancer:
-    ingress:
-      - hostname: acme.com
-```
 
 Another example with UI (Deck) at https://acme.com and API (Gate) at https://acme.com/api/v1
 ```yaml
 kind: Ingress
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: my-ingress
   namespace: spinnaker
 spec:
+  ingressClassName: nginx
   tls:
     - hosts: [ 'example.com', 'acme.com'] # That's how we know TLS is supported
   rules:
@@ -59,12 +35,16 @@ spec:
         paths:
           - path: /api
             backend:
-              serviceName: spin-gate
-              servicePort: http
+              service:
+                name: spin-gate
+                port:
+                  name: http
           - path: /
             backend:
-              serviceName: spin-deck
-              servicePort: 9000
+              service:
+                name: spin-deck
+                port:
+                  number: 9000
 ```
  
 Note: Roles have changed to allow for ingress list.

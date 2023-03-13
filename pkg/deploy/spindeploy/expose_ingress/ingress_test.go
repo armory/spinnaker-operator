@@ -2,13 +2,14 @@ package expose_ingress
 
 import (
 	"context"
+	"testing"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformertest"
 	"github.com/armory/spinnaker-operator/pkg/inspect"
 	"github.com/armory/spinnaker-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/extensions/v1beta1"
-	"testing"
+	v1 "k8s.io/api/networking/v1"
 )
 
 func TestExposeFromIngress(t *testing.T) {
@@ -23,10 +24,10 @@ func TestExposeFromIngress(t *testing.T) {
 			"both ingress as http",
 			`
 kind: IngressList
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 items:
   - kind: Ingress
-    apiVersion: extensions/v1beta1
+    apiVersion: networking.k8s.io/v1
     metadata:
       name: my-ingress
       namespace: ns1
@@ -37,12 +38,16 @@ items:
             paths:
               - path: /api
                 backend:
-                  serviceName: spin-gate
-                  servicePort: http 
+                  service:
+                    name: spin-gate
+                    port: 
+                      name: http 
               - path: /
                 backend:
-                  serviceName: spin-deck
-                  servicePort: 9000
+                  service:
+                    name: spin-deck
+                    port: 
+                      number: 9000
 `,
 			"http://acme.com/api",
 			"http://acme.com/",
@@ -52,10 +57,10 @@ items:
 			"both ingress as https",
 			`
 kind: IngressList
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 items:
   - kind: Ingress
-    apiVersion: extensions/v1beta1
+    apiVersion: networking.k8s.io/v1
     metadata:
       name: my-ingress
       namespace: ns1
@@ -68,12 +73,16 @@ items:
             paths:
               - path: /api
                 backend:
-                  serviceName: spin-gate
-                  servicePort: http 
+                  service:
+                    name: spin-gate
+                    port: 
+                      name: http 
               - path: /
                 backend:
-                  serviceName: spin-deck
-                  servicePort: 9000
+                  service:
+                    name: spin-deck
+                    port: 
+                      number: 9000
 `,
 			"https://acme.com/api",
 			"https://acme.com/",
@@ -83,10 +92,10 @@ items:
 			"only API ingress as https",
 			`
 kind: IngressList
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 items:
   - kind: Ingress
-    apiVersion: extensions/v1beta1
+    apiVersion: networking.k8s.io/v1
     metadata:
       name: my-ingress
       namespace: ns1
@@ -99,8 +108,10 @@ items:
             paths:
               - path: /api
                 backend:
-                  serviceName: spin-gate
-                  servicePort: http 
+                  service:
+                    name: spin-gate
+                    port: 
+                      name: http
 `,
 			"https://acme.com/api",
 			"",
@@ -110,7 +121,7 @@ items:
 			"no ingress found",
 			`
 kind: IngressList
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 items: []
 `,
 			"",
@@ -121,10 +132,10 @@ items: []
 			"ingress no host default to load balancer",
 			`
 kind: IngressList
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 items:
   - kind: Ingress
-    apiVersion: extensions/v1beta1
+    apiVersion: networking.k8s.io/v1
     metadata:
       name: my-ingress
       namespace: ns1
@@ -134,12 +145,16 @@ items:
             paths:
               - path: /api
                 backend:
-                  serviceName: spin-gate
-                  servicePort: http
+                  service:
+                    name: spin-gate
+                    port: 
+                      name: http
               - path: /
                 backend:
-                  serviceName: spin-deck
-                  servicePort: 9000
+                  service:
+                    name: spin-deck
+                    port: 
+                      number: 9000
     status:
       loadBalancer:
         ingress:
@@ -159,10 +174,10 @@ items:
 			"ingress, load balancer with IP",
 			`
 kind: IngressList
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 items:
   - kind: Ingress
-    apiVersion: extensions/v1beta1
+    apiVersion: networking.k8s.io/v1
     metadata:
       name: my-ingress
       namespace: ns1
@@ -172,12 +187,16 @@ items:
             paths:
               - path: /api
                 backend:
-                  serviceName: spin-gate
-                  servicePort: http
+                  service:
+                    name: spin-gate
+                    port: 
+                      name: http
               - path: /
                 backend:
-                  serviceName: spin-deck
-                  servicePort: 9000
+                  service:
+                    name: spin-deck
+                    port: 
+                      number: 9000
     status:
       loadBalancer:
         ingress:
@@ -196,14 +215,14 @@ items:
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			netIngress := &v1beta1.IngressList{}
+			netIngress := &v1.IngressList{}
 			test.ReadYamlString([]byte(c.ingressList), netIngress, t)
 			tr, spinsvc := transformertest.SetupTransformerFromSpinFile(&TransformerGenerator{}, "testdata/spinsvc_expose_ingress.yml", t, netIngress)
 			exp, ok := tr.(*ingressTransformer)
 			if !assert.True(t, ok) {
 				return
 			}
-			v1beta1.AddToScheme(exp.scheme)
+			v1.AddToScheme(exp.scheme)
 			err := tr.TransformConfig(context.TODO())
 			assert.Nil(t, err)
 			url, err := spinsvc.GetSpinnakerConfig().GetHalConfigPropString(context.TODO(), "security.apiSecurity.overrideBaseUrl")
