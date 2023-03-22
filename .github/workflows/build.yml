@@ -91,10 +91,10 @@ jobs:
           if [[ ${{ steps.build_type.outputs.registry }} = "docker.io" ]]
           then
             echo "Logging in to dockerhub"
-            docker login -u ${{ secrets.DOCKERHUB_USER }} -p "${{ secrets.DOCKERHUB_PASSWORD }}" docker.io
+            docker login -u ${{ secrets.DOCKER_HUB_USER }} -p "${{ secrets.DOCKER_HUB_PASS }}" docker.io
           else
             echo "Logging in to jfrog"
-            docker login -u ${{ secrets.JFROG_USER }} -p "${{ secrets.JFROG_PASSWORD }}" armory-docker-local.jfrog.io
+            docker login -u ${{ secrets.ARTIFACTORY_USER }} -p "${{ secrets.ARTIFACTORY_TOKEN }}" armory-docker-local.jfrog.io
           fi
 
       - name: Push
