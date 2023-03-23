@@ -69,10 +69,19 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "make_args=$make_args" >> $GITHUB_OUTPUT
 
+      - name: Update manifests version
+        uses: mikefarah/yq@v4.30.7
+        with:
+          cmd: |
+            yq -i '.spec.template.spec.containers[0].image = "armory/spinnaker-operator:${{ steps.build_type.outputs.version }}"' deploy/operator/basic/deployment.yaml
+            yq -i '.spec.template.spec.containers[0].image = "armory/spinnaker-operator:${{ steps.build_type.outputs.version }}"' deploy/operator/cluster/deployment.yaml
+            yq -i '.spec.template.spec.containers[1].image = "armory/halyard:${{ steps.build_type.outputs.version }}"' deploy/operator/basic/deployment.yaml
+            yq -i '.spec.template.spec.containers[1].image = "armory/halyard:${{ steps.build_type.outputs.version }}"' deploy/operator/cluster/deployment.yaml
+
         # We need to do this for at least a few versions so that we don't force
         # users to manually fix the CRDs when migrating from v1beta1 to v1.
       - name: Modify spinsvc CRD to assist with migration
-        uses: mikefarah/yq@v4.25.1
+        uses: mikefarah/yq@v4.30.7
         with:
           cmd: yq -i '.spec.preserveUnknownFields = false' deploy/crds/spinnaker.io_spinnakerservices.yaml
 
@@ -108,6 +117,11 @@ jobs:
       - name: Push git tag
         if: steps.build_type.outputs.build_type == 'rc' || steps.build_type.outputs.build_type == 'release'
         run: |
+          git add .
+          git status
+          git config user.email "githubactions@fake.com"
+          git config user.name "Github Actions"
+          git commit -m "chore(release): Manifests update"
           git tag v${{ steps.build_type.outputs.version }}
           git push origin v${{ steps.build_type.outputs.version }}
 
