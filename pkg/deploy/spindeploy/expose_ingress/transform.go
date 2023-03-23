@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/deploy/spindeploy/transformer"
 	"github.com/armory/spinnaker-operator/pkg/generated"
@@ -14,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -134,7 +135,7 @@ func (t *ingressTransformer) findUrlInIngress(ctx context.Context, serviceName s
 		}
 		t.ing = ing
 	}
-	t.log.V(5).Info(fmt.Sprintf("looking for service %s ingress in %d / %dingresses retrieved", serviceName, len(t.ing.extensionIngresses), len(t.ing.networkingIngresses)))
+	t.log.V(5).Info(fmt.Sprintf("looking for service %s ingress in %d ingresses retrieved", serviceName, len(t.ing.networkingIngresses)))
 	// Try to determine URL from ingress
 	return t.ing.getIngressUrl(serviceName, servicePort), nil
 }

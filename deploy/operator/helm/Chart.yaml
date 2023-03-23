@@ -2,7 +2,7 @@ apiVersion: v1
 appVersion: 0.1.0
 description: Provides easy installation of Spinnaker
 name: spinnaker-operator
-version: 0.1.0
+version: 0.1.1
 sources:
   - https://github.com/armory/spinnaker-operator
 maintainers:

@@ -5,8 +5,7 @@ import (
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/util"
 	"github.com/go-logr/logr"
-	"k8s.io/api/extensions/v1beta1"
-	v1beta12 "k8s.io/api/networking/v1beta1"
+	"k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"net/url"
@@ -18,36 +17,27 @@ type ingressExplorer struct {
 	log                 logr.Logger
 	client              client.Client
 	scheme              *runtime.Scheme
-	networkingIngresses []v1beta12.Ingress
-	extensionIngresses  []v1beta1.Ingress
+	networkingIngresses []v1.Ingress
 }
 
 func (i *ingressExplorer) loadIngresses(ctx context.Context, ns string) error {
 	// Already loaded
-	if i.networkingIngresses != nil || i.extensionIngresses != nil {
+	if i.networkingIngresses != nil {
 		return nil
 	}
 	var errNet, errExt error
 	g := wait.Group{}
-	networkingIngresses := &v1beta12.IngressList{}
-	extensionIngresses := &v1beta1.IngressList{}
+	networkingIngresses := &v1.IngressList{}
 
-	if i.scheme.Recognizes(v1beta12.SchemeGroupVersion.WithKind("Ingress")) {
+	if i.scheme.Recognizes(v1.SchemeGroupVersion.WithKind("Ingress")) {
 		g.StartWithContext(ctx, func(ctx context.Context) {
 			errNet = i.client.List(ctx, networkingIngresses, client.InNamespace(ns))
-		})
-	}
-
-	if i.scheme.Recognizes(v1beta1.SchemeGroupVersion.WithKind("Ingress")) {
-		g.StartWithContext(ctx, func(ctx context.Context) {
-			errExt = i.client.List(ctx, extensionIngresses, client.InNamespace(ns))
 		})
 	}
 
 	g.Wait()
 
 	i.networkingIngresses = networkingIngresses.Items
-	i.extensionIngresses = extensionIngresses.Items
 
 	// Return either error
 	if errExt != nil {
@@ -57,51 +47,7 @@ func (i *ingressExplorer) loadIngresses(ctx context.Context, ns string) error {
 }
 
 func (i *ingressExplorer) getIngressUrl(serviceName string, servicePort int32) *url.URL {
-	if url := i.getExtensionIngressUrl(serviceName, servicePort); url != nil {
-		return url
-	}
 	return i.getNetworkingIngressUrl(serviceName, servicePort)
-}
-
-func (i *ingressExplorer) getExtensionIngressUrl(serviceName string, servicePort int32) *url.URL {
-	// Find the service name
-	for _, ing := range i.extensionIngresses {
-		for _, rule := range ing.Spec.Rules {
-			if rule.HTTP != nil {
-				for _, path := range rule.HTTP.Paths {
-					if path.Backend.ServiceName == serviceName {
-						// Are we referencing the service name?
-						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == servicePort {
-							host := i.getActualExtensionHost(rule.Host, ing)
-							if host == "" {
-								return nil
-							}
-							return &url.URL{
-								Scheme: i.getSchemeFromExtensionIngress(ing, host),
-								Host:   host,
-								Path:   path.Path,
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (i *ingressExplorer) getActualExtensionHost(host string, ingress v1beta1.Ingress) string {
-	if host != "" {
-		return host
-	}
-	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
-		return ""
-	}
-	// Take first host defined for the ingress
-	if ingress.Status.LoadBalancer.Ingress[0].Hostname != "" {
-		return ingress.Status.LoadBalancer.Ingress[0].Hostname
-	}
-	return ingress.Status.LoadBalancer.Ingress[0].IP
 }
 
 func (i *ingressExplorer) getNetworkingIngressUrl(serviceName string, servicePort int32) *url.URL {
@@ -110,9 +56,9 @@ func (i *ingressExplorer) getNetworkingIngressUrl(serviceName string, servicePor
 		for _, rule := range ing.Spec.Rules {
 			if rule.HTTP != nil {
 				for _, path := range rule.HTTP.Paths {
-					if path.Backend.ServiceName == serviceName {
+					if path.Backend.Service.Name == serviceName {
 						// Are we referencing the service name?
-						if path.Backend.ServicePort.StrVal == "http" || path.Backend.ServicePort.IntVal == servicePort {
+						if path.Backend.Service.Port.Name == "http" || path.Backend.Service.Port.Number == servicePort {
 							host := i.getActualNetworkingHost(rule.Host, ing)
 							if host == "" {
 								return nil
@@ -131,14 +77,17 @@ func (i *ingressExplorer) getNetworkingIngressUrl(serviceName string, servicePor
 	return nil
 }
 
-func (i *ingressExplorer) getActualNetworkingHost(host string, ingress v1beta12.Ingress) string {
+func (i *ingressExplorer) getActualNetworkingHost(host string, ingress v1.Ingress) string {
 	if host != "" {
 		return host
 	}
 	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
 		return ""
 	}
-	return ingress.Status.LoadBalancer.Ingress[0].Hostname
+	if ingress.Status.LoadBalancer.Ingress[0].Hostname != "" {
+		return ingress.Status.LoadBalancer.Ingress[0].Hostname
+	}
+	return ingress.Status.LoadBalancer.Ingress[0].IP
 }
 
 func guessGatePort(ctx context.Context, svc interfaces.SpinnakerService) int32 {
@@ -150,18 +99,7 @@ func guessGatePort(ctx context.Context, svc interfaces.SpinnakerService) int32 {
 	return util.GateDefaultPort
 }
 
-func (i *ingressExplorer) getSchemeFromExtensionIngress(ingress v1beta1.Ingress, host string) string {
-	for _, tls := range ingress.Spec.TLS {
-		for _, h := range tls.Hosts {
-			if h == host {
-				return "https"
-			}
-		}
-	}
-	return "http"
-}
-
-func (i *ingressExplorer) getSchemeFromNetworkingIngress(ingress v1beta12.Ingress, host string) string {
+func (i *ingressExplorer) getSchemeFromNetworkingIngress(ingress v1.Ingress, host string) string {
 	for _, tls := range ingress.Spec.TLS {
 		for _, h := range tls.Hosts {
 			if h == host {
