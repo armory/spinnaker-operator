@@ -15,7 +15,7 @@ spec:
       serviceAccountName: spinnaker-operator
       containers:
         - name: spinnaker-operator
-          image: armory/spinnaker-operator:dev # Moving label, replaced at build time with a fixed version in "build" dir
+          image: armory/spinnaker-operator:1.4.0 # Moving label, replaced at build time with a fixed version in "build" dir
           command:
             - spinnaker-operator
           args:
@@ -33,7 +33,7 @@ spec:
             - name: OPERATOR_NAME
               value: "spinnaker-operator"
         - name: halyard
-          image: armory/halyard:operator-dev # Moving label, replaced at build time with a fixed version in "build" dir
+          image: armory/halyard:1.4.0 # Moving label, replaced at build time with a fixed version in "build" dir
           imagePullPolicy: Always
           ports:
             - containerPort: 8064
