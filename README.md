@@ -117,21 +117,20 @@ Note: `SpinnakerAccount` CRD is optional.
 ### Step 2: Install Operator
 
 There are two modes for the operator:
-- **Basic mode** installs Spinnaker in a single namespace without validating admission webhook.
+- **Basic mode** installs Spinnaker into the same namespace as the Spinnaker Opertor without validating admission webhook.
 - **Cluster mode** works across namespaces and requires a `ClusterRole` to perform validation.
 
 The main difference between the two modes is that basic only requires a `Role` (vs a `ClusterRole`) and has no validating webhook.
 
-Once installed, you should see a new deployment representing the operator. The operator watches for changes to the `SpinnakerService` objects. You can check on the status of the operator using `kubectl`.
+Once installed, you should see a new deployment representing the Operator. The Operator watches for changes to the `SpinnakerService` objects. You can check on the status of the Operator using `kubectl`.
 
 #### Basic install (no validating webhook)
+Decide what namespace you want to use for Operator and create that namespace. We suggest `spinnaker-operator`.
 To install Operator run:
 
 ```bash
-$ kubectl apply -n <namespace> -f deploy/operator/basic
+$ kubectl apply -n spinnaker-operator -f deploy/operator/basic
 ```
-
-`namespace` is the namespace where you want the operator to live and deploy to.
 
 #### Cluster install
 To install Operator:
@@ -154,11 +153,10 @@ Spinnaker. It is likely different from the operator's namespace.
 
 ### Example 1: Basic Install
 
-In `deploy/spinnaker/basic/spinnakerservice.yml`, change the `config.persistentStorage` section to point to an S3 bucket you own or use a different persistent storage. Also make sure to update the Spinnaker version to the [desired version](https://www.spinnaker.io/community/releases/versions/#latest-stable).
+In `deploy/spinnaker/basic/spinnakerservice.yml`, change the `config.persistentStorage` section to point to an S3 bucket you own or use a different persistent storage. Also make sure to update the Spinnaker version to the [desired version](https://www.spinnaker.io/community/releases/versions/#latest-stable). Since you installed Operator in `basic` mode, you must use the `spinnaker-operator` namespace. The permissions in `basic` mode are scoped to a single namespace so it doesn't see anything in other namespaces.
 
 ```bash
-$ kubectl create ns <spinnaker-namespace>
-$ kubectl -n <spinnaker-namespace> apply -f deploy/spinnaker/basic/spinnakerservice.yml
+$ $ kubectl -n spinnaker-operator apply -f deploy/spinnaker/basic/spinnakerservice.yml
 ```
 
 This configuration does not contain any connected accounts, just a persistent storage.
