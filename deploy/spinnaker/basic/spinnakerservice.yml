@@ -5,7 +5,7 @@ metadata:
 spec:
   spinnakerConfig:
     config:
-      version: 1.17.1   # the version of Spinnaker to be deployed
+      version: 1.28.1   # the version of Spinnaker to be deployed
       persistentStorage:
         persistentStoreType: s3
         s3:

@@ -12,7 +12,7 @@ spec:
   spinnakerConfig:
     # spec.spinnakerConfig.config - This section contains the contents of a deployment found in a halconfig .deploymentConfigurations[0].
     config:
-      version: 1.17.1   # - The version of Spinnaker that gets deployed.
+      version: 1.28.1   # - The version of Spinnaker that gets deployed.
       persistentStorage:
         persistentStoreType: s3
         s3:
@@ -137,7 +137,7 @@ For instance, given the following:
 currentDeployment: default
 deploymentConfigurations:
 - name: default
-  version: 1.17.1
+  version: 1.28.1
   persistentStorage:
     persistentStoreType: s3
     s3:
@@ -151,7 +151,7 @@ We get the following `spec.spinnakerConfig`:
 spec:
   spinnakerConfig:
     config:
-      version: 1.17.1
+      version: 1.28.1
       persistentStorage:
         persistentStoreType: s3
         s3:

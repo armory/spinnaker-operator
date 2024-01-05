@@ -105,7 +105,7 @@ func KubernetesAndUpgradeOverlay(t *testing.T) {
 	}
 	time.Sleep(20 * time.Second)
 	v = RunCommandAndAssert(fmt.Sprintf("%s -n %s get spinsvc %s -o=jsonpath='{.status.version}'", e.KubectlPrefix(), ns, SpinServiceName), t)
-	if t.Failed() || !assert.Equal(t, "1.17.1", strings.TrimSpace(v)) {
+	if t.Failed() || !assert.Equal(t, "1.28.1", strings.TrimSpace(v)) {
 		return
 	}
 	LogMainStep(t, "Upgrade successful")
