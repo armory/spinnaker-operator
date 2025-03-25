@@ -1,7 +1,38 @@
 queue_rules:
-  - name: default
-    conditions:
+  - name: duplicated default from Automatically merge into master after build and
+      review
+    queue_conditions:
+      - base=master
       - status-success=main
+      - "#approved-reviews-by>=1"
+    merge_conditions:
+      - status-success=main
+    merge_method: squash
+  - name: duplicated default from Automatically merge into release- after build and
+      approval
+    queue_conditions:
+      - base~=^release-
+      - status-success=main
+      - "#approved-reviews-by>=1"
+    merge_conditions:
+      - status-success=main
+    merge_method: squash
+  - name: duplicated default from Automatically merge backport into release branches
+    queue_conditions:
+      - head~=mergify/bp
+      - author~=mergify
+      - base~=^release-
+      - status-success=main
+    merge_conditions:
+      - status-success=main
+    merge_method: squash
+  - name: duplicated default from Automatically mergify-yaml changes to master
+    queue_conditions:
+      - base=master
+      - title~=^fix(mergify)
+    merge_conditions:
+      - status-success=main
+    merge_method: squash
 
 pull_request_rules:
   - name: Automatically merge into master after build and review
@@ -10,9 +41,6 @@ pull_request_rules:
       - status-success=main
       - "#approved-reviews-by>=1"
     actions:
-      queue:
-        method: squash
-        name: default
       label:
         add: ["auto merged"]
   - name: Automatically merge into release- after build and approval
@@ -21,9 +49,6 @@ pull_request_rules:
       - status-success=main
       - "#approved-reviews-by>=1"
     actions:
-      queue:
-        method: squash
-        name: default
       label:
         add: ["auto merged"]
   - name: Automatically merge backport into release branches
@@ -33,9 +58,6 @@ pull_request_rules:
       - base~=^release-
       - status-success=main
     actions:
-      queue:
-        method: squash
-        name: default
       label:
         add: ["auto merged"]
   - name: Automatically mergify-yaml changes to master
@@ -43,8 +65,11 @@ pull_request_rules:
       - base=master
       - title~=^fix(mergify)
     actions:
-      queue:
-        method: squash
-        name: default
       label:
         add: ["auto merged"]
+  - name: Automatically merge backport into release branches + Automatically merge
+      into master after build and review + Automatically merge into release- after
+      build and approval + Automatically mergify-yaml changes to master
+    conditions: []
+    actions:
+      queue:
