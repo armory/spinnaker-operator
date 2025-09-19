@@ -24,7 +24,7 @@ RUN wget -nv https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-c
   && mkdir -p /opt && cd /opt \
   && tar -xzf /google-cloud-sdk-${GOOGLE_CLOUD_SDK_VERSION}-linux-x86_64.tar.gz \
   && rm /google-cloud-sdk-${GOOGLE_CLOUD_SDK_VERSION}-linux-x86_64.tar.gz \
-  && CLOUDSDK_PYTHON="python3" /opt/google-cloud-sdk/install.sh --usage-reporting=false --bash-completion=false  --additional-components app-engine-java app-engine-go \
+  && CLOUDSDK_PYTHON="python3" /opt/google-cloud-sdk/install.sh --usage-reporting=false --bash-completion=false  --additional-components app-engine-java \
   && rm -rf ~/.config/gcloud \
   && gcloud components remove --quiet anthoscli \
   && rm -rf /opt/google-cloud-sdk/.install/.backup

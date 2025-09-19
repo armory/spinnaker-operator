@@ -3,6 +3,9 @@ package transformer
 import (
 	"context"
 	"fmt"
+	"path"
+	"strings"
+
 	secups "github.com/armory/go-yaml-tools/pkg/secrets"
 	"github.com/armory/spinnaker-operator/pkg/apis/spinnaker/interfaces"
 	"github.com/armory/spinnaker-operator/pkg/generated"
@@ -15,9 +18,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"path"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 const (
@@ -31,6 +32,8 @@ const (
 	awsCanary               = "canary"
 	monitoringContainerName = "monitoring-daemon"
 )
+
+var clouddriverServices = []string{"clouddriver", "clouddriver-ro", "clouddriver-rw", "clouddriver-ro-deck", "clouddriver-caching"}
 
 // secretsTransformer maps Kubernetes secrets onto the deployment of the service that requires it
 // Either as a mounted file (encryptedFile) or an environment variable (tokens, passwords...)
@@ -90,7 +93,22 @@ func (s *secretsTransformer) replaceK8sSecretsFromAwsKeys(spinCfg *interfaces.Sp
 		return err
 	}
 	if artifactKeys != nil {
-		s.k8sSecrets.awsCredsByService["clouddriver"] = artifactKeys
+		// Merge artifact keys with existing provider keys instead of overwriting
+		var finalKeys *awsCredentials
+		if existingKeys, exists := s.k8sSecrets.awsCredsByService["clouddriver"]; exists {
+			finalKeys = s.mergeAwsCredentials(existingKeys, artifactKeys)
+		} else {
+			finalKeys = artifactKeys
+		}
+		// Apply the merged credentials to all clouddriver service variants
+		for _, svcName := range clouddriverServices {
+			s.k8sSecrets.awsCredsByService[svcName] = finalKeys
+		}
+	} else if providerKeys != nil {
+		// If only provider keys exist, apply them to all clouddriver service variants
+		for _, svcName := range clouddriverServices {
+			s.k8sSecrets.awsCredsByService[svcName] = providerKeys
+		}
 	}
 	can, ok := spinCfg.Config[awsCanary]
 	if !ok {
@@ -130,8 +148,20 @@ func (s *secretsTransformer) getAndReplace(svc, accessKeyProp, secretKeyProp str
 	if err != nil {
 		return nil, err
 	}
+	var genAccessKey v1.EnvVar
+	// Check if access key is also a Kubernetes secret reference
+	if secups.IsEncryptedSecret(accessKeyRaw) {
+		accessKeySecretName, accessKeySecretKey, err := secrets.ParseKubernetesSecretParams(accessKeyRaw)
+		if err != nil {
+			return nil, err
+		}
+		genAccessKey = envVarFromSecretReference("AWS_ACCESS_KEY_ID", accessKeySecretName, accessKeySecretKey)
+	} else {
+		// Access key is plain text
+		genAccessKey = envVarFromRawString("AWS_ACCESS_KEY_ID", accessKeyRaw)
+	}
 	return &awsCredentials{
-		genAccessKey:  envVarFromRawString("AWS_ACCESS_KEY_ID", accessKeyRaw),
+		genAccessKey:  genAccessKey,
 		genSecretKey:  envVarFromSecretReference("AWS_SECRET_ACCESS_KEY", secretName, secretKey),
 		svcSecretKeys: []v1.EnvVar{envVarFromSecretReference(envVarName, secretName, secretKey)},
 	}, nil
@@ -164,7 +194,17 @@ func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, se
 		if !ok {
 			return nil, fmt.Errorf("aws secret access key specified without access key under %s", root)
 		}
-		genAccessKey = envVarFromRawString("AWS_ACCESS_KEY_ID", accessKey)
+		// Check if access key is also a Kubernetes secret reference
+		if secups.IsEncryptedSecret(accessKey) {
+			accessKeySecretName, accessKeySecretKey, err := secrets.ParseKubernetesSecretParams(accessKey)
+			if err != nil {
+				return nil, err
+			}
+			genAccessKey = envVarFromSecretReference("AWS_ACCESS_KEY_ID", accessKeySecretName, accessKeySecretKey)
+		} else {
+			// Access key is plain text
+			genAccessKey = envVarFromRawString("AWS_ACCESS_KEY_ID", accessKey)
+		}
 		genSecretKey = envVarFromSecretReference("AWS_SECRET_ACCESS_KEY", secretName, secretKey)
 		svcSecretKeys = append(svcSecretKeys, envVarFromSecretReference(envVarName, secretName, secretKey))
 	}
@@ -186,6 +226,25 @@ func (s *secretsTransformer) getAndReplaceArray(svc, rootProp, accessKeyProp, se
 		genSecretKey:  genSecretKey,
 		svcSecretKeys: svcSecretKeys,
 	}, nil
+}
+
+// mergeAwsCredentials merges two awsCredentials structs, preserving both sets of credentials
+func (s *secretsTransformer) mergeAwsCredentials(existing, new *awsCredentials) *awsCredentials {
+	merged := &awsCredentials{
+		// Use the new credentials for generic AWS keys (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+		// This follows the "last one wins" pattern from getAndReplaceArray
+		genAccessKey: new.genAccessKey,
+		genSecretKey: new.genSecretKey,
+		// Combine service-specific secret keys from both credentials
+		svcSecretKeys: make([]v1.EnvVar, 0, len(existing.svcSecretKeys)+len(new.svcSecretKeys)),
+	}
+
+	// Add new service-specific keys first (artifact credentials)
+	merged.svcSecretKeys = append(merged.svcSecretKeys, new.svcSecretKeys...)
+	// Add existing service-specific keys after (provider credentials)
+	merged.svcSecretKeys = append(merged.svcSecretKeys, existing.svcSecretKeys...)
+
+	return merged
 }
 
 func (s *secretsTransformer) sanitizeK8sSecret(object interface{}, ctx context.Context) (interface{}, error) {
@@ -217,10 +276,10 @@ func (s *secretsTransformer) TransformManifests(ctx context.Context, gen *genera
 			if ok && sec.Object["kind"] == "Secret" {
 				var secret v1.Secret
 				runtime.DefaultUnstructuredConverter.FromUnstructured(sec.Object, &secret)
-					err := kCollector.mapSecrets(&secret)
-					if err != nil {
-						return err
-					}
+				err := kCollector.mapSecrets(&secret)
+				if err != nil {
+					return err
+				}
 				cfg.Resources[k] = &secret
 			}
 		}
